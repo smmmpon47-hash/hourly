@@ -3,182 +3,212 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>บันทึกยอดรายชั่วโมง</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <title>บันทึกยอดรายชั่วโมง (Output/hr)</title>
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- LIFF SDK -->
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
-    body { 
-      font-family: 'Prompt', sans-serif; 
-      background-color: #F8FAFC; 
-      color: #0F172A;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
   </style>
 </head>
-<body class="p-4 max-w-md mx-auto min-h-screen flex flex-col justify-center">
+<body class="bg-slate-100 min-h-screen flex items-center justify-center p-4">
 
-  <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl space-y-4">
-    
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-200">
     <!-- Header -->
-    <div class="text-center pb-2 border-b border-slate-100">
-      <h1 class="text-xl font-bold text-slate-800 tracking-wide">⏱️ รายงานยอดรายชั่วโมง</h1>
-      <p class="text-xs text-slate-400 mt-1">บันทึกผลการผลิตจริงประจำรอบเวลา</p>
+    <div class="text-center mb-6">
+      <div class="inline-flex p-3 rounded-full bg-sky-100 text-sky-600 mb-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <h1 class="text-xl font-bold text-slate-800">บันทึกยอดรายชั่วโมง</h1>
+      <p class="text-sm text-slate-500">Output / Hour Report</p>
     </div>
 
-    <!-- Alert / Status Banner -->
-    <div id="statusBanner" class="hidden p-3 rounded-xl text-xs font-medium"></div>
-
-    <form id="hourlyForm" onsubmit="handleSubmit(event)" class="space-y-4">
+    <!-- Form -->
+    <form id="hourlyForm" class="space-y-4" onsubmit="event.preventDefault(); submitForm();">
       
-      <!-- 1. LINE Dropdown -->
+      <!-- เลือก LINE -->
       <div>
-        <label class="block text-xs font-semibold text-slate-600 mb-1">LINE การผลิต <span class="text-rose-500">*</span></label>
-        <div class="relative">
-          <select id="lineCode" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 appearance-none focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all outline-none text-sm" onchange="loadLineInfo()" required>
-            <option value="" disabled selected>-- เลือก LINE --</option>
-            <option value="B">LINE B</option>
-            <option value="C">LINE C</option>
-            <option value="D">LINE D</option>
-            <option value="E">LINE E</option>
-            <option value="F">LINE F</option>
-            <option value="G">LINE G</option>
-          </select>
-          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400 text-xs">▼</div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">เลือก Production Line</label>
+        <select id="lineSelect" onchange="loadLineInfo()" class="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:outline-none" required>
+          <option value="" disabled selected>-- เลือก Line การผลิต --</option>
+          <option value="B">LINE B</option>
+          <option value="C">LINE C</option>
+          <option value="D">LINE D</option>
+          <option value="E">LINE E</option>
+          <option value="F">LINE F</option>
+          <option value="G">LINE G</option>
+        </select>
+      </div>
+
+      <!-- ข้อมูลสรุปประจำวัน (Auto Fetch) -->
+      <div id="infoBox" class="hidden bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-500">LOT No.:</span>
+          <span id="dispLot" class="font-semibold text-slate-800">-</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-500">Model:</span>
+          <span id="dispModel" class="font-semibold text-slate-800">-</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-500">เป้าหมายประจำชั่วโมง:</span>
+          <span id="dispTargetHr" class="font-bold text-sky-600">- ชิ้น/ชั่วโมง</span>
         </div>
       </div>
 
-      <!-- 2. วันที่ & รอบเวลา (Auto & Locked) -->
-      <div class="grid grid-cols-2 gap-2">
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">วันที่ (อัตโนมัติ)</label>
-          <input type="text" id="reportDate" class="w-full p-3 bg-slate-100 border border-slate-200 rounded-xl text-xs font-medium text-slate-500 cursor-not-allowed" readonly>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">รอบเวลา (อัตโนมัติ)</label>
-          <input type="text" id="timeSlot" class="w-full p-3 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-emerald-600 cursor-not-allowed" readonly>
-        </div>
-      </div>
-
-      <!-- 3. ข้อมูลเป้าหมาย (แสดงอัตโนมัติเมื่อเลือก LINE) -->
-      <div id="infoCard" class="hidden p-4 bg-slate-50 border border-emerald-200/80 rounded-2xl space-y-2 text-xs">
-        <div class="flex justify-between items-center border-b border-slate-200/60 pb-1.5">
-          <span class="text-slate-500">LOT / Model</span>
-          <span id="infoLotModel" class="font-bold text-slate-800 text-xs">-</span>
-        </div>
-        <div class="flex justify-between items-center">
-          <span class="text-slate-500">เป้าหมายชั่วโมงนี้ (Target/hr)</span>
-          <span id="infoTargetHr" class="font-bold text-emerald-600 text-base">- ชิ้น</span>
-        </div>
-      </div>
-
-      <!-- 4. Output/hr -->
+      <!-- เลือกช่วงเวลา -->
       <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">Output / hr (ยอดทำได้จริง) <span class="text-rose-500">*</span></label>
-        <input type="number" id="outputActual" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-2xl text-emerald-600 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all outline-none placeholder:text-slate-300 placeholder:font-normal placeholder:text-base" placeholder="กรอกจำนวนชิ้น" required>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">รอบเวลา (Time Slot)</label>
+        <select id="timeSlot" class="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:outline-none" required>
+          <option value="" disabled selected>-- เลือกรอบเวลา --</option>
+          <option value="08:00 - 09:00">08:00 - 09:00</option>
+          <option value="09:00 - 10:00">09:00 - 10:00</option>
+          <option value="10:00 - 11:00">10:00 - 11:00</option>
+          <option value="11:00 - 12:00">11:00 - 12:00</option>
+          <option value="13:00 - 14:00">13:00 - 14:00</option>
+          <option value="14:00 - 15:00">14:00 - 15:00</option>
+          <option value="15:00 - 16:00">15:00 - 16:00</option>
+          <option value="16:00 - 17:00">16:00 - 17:00</option>
+          <option value="17:00 - 18:00">17:00 - 18:00 (OT)</option>
+          <option value="18:00 - 19:00">18:00 - 19:00 (OT)</option>
+          <option value="19:00 - 20:00">19:00 - 20:00 (OT)</option>
+        </select>
       </div>
 
-      <!-- 5. Note -->
+      <!-- ยอดผลิตจริงประจำชั่วโมง -->
       <div>
-        <label class="block text-xs font-semibold text-slate-600 mb-1">Note (หมายเหตุ / เหตุผลชะลอตัว)</label>
-        <textarea id="note" rows="2" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all outline-none placeholder:text-slate-300" placeholder="ระบุเหตุผลกรณีไม่ได้ตามเป้า (ถ้ามี)"></textarea>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">ยอดผลิตจริงประจำรอบนี้ (ชิ้น)</label>
+        <input type="number" id="outputActual" placeholder="กรอกจำนวนชิ้นงาน" min="0" required class="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:outline-none">
       </div>
 
-      <!-- 6. Action Buttons -->
-      <div class="grid grid-cols-2 gap-3 pt-2">
-        <button type="button" onclick="liff.closeWindow()" class="w-full py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl transition-all active:scale-95 text-sm">CANCEL</button>
-        <button type="submit" id="btnSave" class="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/25 transition-all active:scale-95 text-sm">SAVE</button>
+      <!-- หมายเหตุ (ถ้ามี) -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">หมายเหตุ / ปัญหาที่พบ (ถ้ามี)</label>
+        <textarea id="note" rows="2" placeholder="เช่น เครื่องจักรขัดข้อง 10 นาที" class="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:outline-none"></textarea>
       </div>
+
+      <!-- Submit Button -->
+      <button type="submit" id="btnSubmit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3.5 rounded-lg shadow-md transition duration-200 mt-2">
+        ⏱️ บันทึกยอดรายชั่วโมง
+      </button>
 
     </form>
   </div>
 
   <script>
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz4H63RSf2ly6MjSZZErqHaB9-t_1kwBXRPLo5QAPxDh1OE76_rLGSVvya2cgvkvKJX/exec"; // 🔴 ใส่ URL ของ Apps Script
-    const LIFF_ID = "2011198724-JQ60DTBm";         // 🔴 ใส่ LIFF ID ตัวใหม่สำหรับ Hourly
+    const LIFF_ID = '2011198724-JQ60DTBm';
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzzfS1J1M2a-oN0O3O7OQh2hU6Sgt1-eRk43w9b0w6c0vX1m9l_/exec';
 
-    document.addEventListener("DOMContentLoaded", async () => {
-      // 1. ตั้งค่า วันที่ อัตโนมัติ
-      const now = new Date();
-      document.getElementById('reportDate').value = now.toISOString().split('T')[0];
+    let userDisplayName = 'Unknown';
 
-      // 2. คำนวณ รอบเวลา อัตโนมัติ (เช่น 10:00 - 11:00)
-      const currentHour = now.getHours();
-      const nextHour = currentHour + 1;
-      const startStr = String(currentHour).padStart(2, '0') + ":00";
-      const endStr = String(nextHour).padStart(2, '0') + ":00";
-      document.getElementById('timeSlot').value = `${startStr} - ${endStr}`;
+    window.onload = function () {
+      liff.init({ liffId: LIFF_ID })
+        .then(() => {
+          if (liff.isLoggedIn()) {
+            liff.getProfile().then(profile => {
+              userDisplayName = profile.displayName;
+            });
+          }
+        })
+        .catch(err => console.error('LIFF Init Error:', err));
+    };
 
-      try {
-        await liff.init({ liffId: LIFF_ID });
-      } catch (err) { console.error("LIFF Init Error", err); }
-    });
-
-    async function loadLineInfo() {
-      const line = document.getElementById('lineCode').value;
+    function loadLineInfo() {
+      const line = document.getElementById('lineSelect').value;
       if (!line) return;
 
-      const infoCard = document.getElementById('infoCard');
-      const banner = document.getElementById('statusBanner');
-      banner.classList.add('hidden');
-
-      try {
-        const res = await fetch(`${GAS_WEB_APP_URL}?action=getHourlyInfo&line=${line}`);
-        const data = await res.json();
-
-        if (data.error) {
-          infoCard.classList.add('hidden');
-          banner.className = "p-3 rounded-xl text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200 block";
-          banner.innerText = `⚠️ ${data.error}`;
-          document.getElementById('btnSave').disabled = true;
-          return;
-        }
-
-        document.getElementById('btnSave').disabled = false;
-        infoCard.classList.remove('hidden');
-        document.getElementById('infoLotModel').innerText = `${data.lotNumber} (${data.model})`;
-        document.getElementById('infoTargetHr').innerText = `${Number(data.targetPerHour).toLocaleString()} ชิ้น`;
-
-      } catch (err) {
-        console.error("Fetch info error", err);
-      }
+      Swal.showLoading();
+      fetch(`${WEB_APP_URL}?action=getHourlyInfo&line=${line}`)
+        .then(res => res.json())
+        .then(data => {
+          Swal.close();
+          if (data.error) {
+            Swal.fire({ icon: 'warning', title: 'แจ้งเตือน', text: data.error });
+            document.getElementById('infoBox').classList.add('hidden');
+          } else {
+            document.getElementById('dispLot').innerText = data.lotNumber;
+            document.getElementById('dispModel').innerText = data.model;
+            document.getElementById('dispTargetHr').innerText = `${data.targetPerHour} ชิ้น/ชั่วโมง`;
+            document.getElementById('infoBox').classList.remove('hidden');
+          }
+        })
+        .catch(err => {
+          Swal.close();
+          console.error(err);
+        });
     }
 
-    async function handleSubmit(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btnSave');
-      btn.disabled = true;
-      btn.innerText = "กำลังบันทึก...";
+    function submitForm() {
+      const line = document.getElementById('lineSelect').value;
+      const timeSlot = document.getElementById('timeSlot').value;
+      const outputActual = document.getElementById('outputActual').value;
+      const note = document.getElementById('note').value;
 
-      let profileName = "Unknown";
-      if (liff.isLoggedIn()) {
-        try {
-          const profile = await liff.getProfile();
-          profileName = profile.displayName;
-        } catch (err) { console.error(err); }
+      if (!line || !timeSlot || !outputActual) {
+        Swal.fire({ icon: 'warning', title: 'กรอกข้อมูลไม่ครบ', text: 'กรุณากรอกข้อมูลที่มีเครื่องหมาย * ให้ครบถ้วน' });
+        return;
       }
 
       const payload = {
         action: 'saveHourlyOutput',
-        line: document.getElementById('lineCode').value,
-        timeSlot: document.getElementById('timeSlot').value,
-        outputActual: Number(document.getElementById('outputActual').value),
-        note: document.getElementById('note').value.trim(),
-        updatedBy: profileName
+        line: line,
+        timeSlot: timeSlot,
+        outputActual: outputActual,
+        note: note,
+        updatedBy: userDisplayName
       };
 
-      try {
-        await fetch(GAS_WEB_APP_URL, {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        });
+      const btn = document.getElementById('btnSubmit');
+      btn.disabled = true;
+      btn.innerText = 'กำลังบันทึกข้อมูล...';
 
-        alert("บันทึกยอดรายชั่วโมงเรียบร้อย!");
-        liff.closeWindow();
-      } catch (err) {
-        alert("บันทึกไม่สำเร็จ: " + err.message);
+      fetch(WEB_APP_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => {
         btn.disabled = false;
-        btn.innerText = "SAVE";
-      }
+        btn.innerText = '⏱️ บันทึกยอดรายชั่วโมง';
+
+        if (data.status === 'duplicate') {
+          // 🛑 กรณีคีย์ซ้ำ
+          Swal.fire({
+            icon: 'warning',
+            title: 'ไม่สามารถบันทึกได้',
+            text: data.message,
+            confirmButtonColor: '#0284C7'
+          });
+        } else if (data.status === 'success') {
+          // ✅ บันทึกสำเร็จ
+          Swal.fire({
+            icon: 'success',
+            title: 'บันทึกสำเร็จ!',
+            text: 'บันทึกยอดรายชั่วโมงเรียบร้อยแล้ว',
+            timer: 2000
+          }).then(() => {
+            if (liff.isInClient()) {
+              liff.closeWindow();
+            }
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'เกิดข้อผิดพลาด',
+            text: data.error || 'ไม่สามารถบันทึกข้อมูลได้'
+          });
+        }
+      })
+      .catch(err => {
+        btn.disabled = false;
+        btn.innerText = '⏱️ บันทึกยอดรายชั่วโมง';
+        Swal.fire({ icon: 'error', title: 'Error', text: err.message });
+      });
     }
   </script>
 </body>
