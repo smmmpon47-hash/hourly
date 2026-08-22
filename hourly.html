@@ -4,11 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>บันทึกยอดรายชั่วโมง (Output/hr)</title>
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- LIFF SDK -->
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
@@ -17,7 +14,6 @@
 <body class="bg-slate-100 min-h-screen flex items-center justify-center p-4">
 
   <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-200">
-    <!-- Header -->
     <div class="text-center mb-6">
       <div class="inline-flex p-3 rounded-full bg-sky-100 text-sky-600 mb-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -28,10 +24,8 @@
       <p class="text-sm text-slate-500">Output / Hour Report</p>
     </div>
 
-    <!-- Form -->
     <form id="hourlyForm" class="space-y-4" onsubmit="event.preventDefault(); submitForm();">
       
-      <!-- เลือก LINE -->
       <div>
         <label class="block text-sm font-semibold text-slate-700 mb-1">เลือก Production Line</label>
         <select id="lineSelect" onchange="loadLineInfo()" class="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:outline-none" required>
@@ -45,7 +39,6 @@
         </select>
       </div>
 
-      <!-- ข้อมูลสรุปประจำวัน (Auto Fetch) -->
       <div id="infoBox" class="hidden bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
         <div class="flex justify-between text-sm">
           <span class="text-slate-500">LOT No.:</span>
@@ -61,7 +54,6 @@
         </div>
       </div>
 
-      <!-- เลือกช่วงเวลา -->
       <div>
         <label class="block text-sm font-semibold text-slate-700 mb-1">รอบเวลา (Time Slot)</label>
         <select id="timeSlot" class="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:outline-none" required>
@@ -80,19 +72,16 @@
         </select>
       </div>
 
-      <!-- ยอดผลิตจริงประจำชั่วโมง -->
       <div>
         <label class="block text-sm font-semibold text-slate-700 mb-1">ยอดผลิตจริงประจำรอบนี้ (ชิ้น)</label>
         <input type="number" id="outputActual" placeholder="กรอกจำนวนชิ้นงาน" min="0" required class="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:outline-none">
       </div>
 
-      <!-- หมายเหตุ (ถ้ามี) -->
       <div>
         <label class="block text-sm font-semibold text-slate-700 mb-1">หมายเหตุ / ปัญหาที่พบ (ถ้ามี)</label>
         <textarea id="note" rows="2" placeholder="เช่น เครื่องจักรขัดข้อง 10 นาที" class="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:outline-none"></textarea>
       </div>
 
-      <!-- Submit Button -->
       <button type="submit" id="btnSubmit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3.5 rounded-lg shadow-md transition duration-200 mt-2">
         ⏱️ บันทึกยอดรายชั่วโมง
       </button>
@@ -102,9 +91,6 @@
 
   <script>
     const LIFF_ID = '2011198724-JQ60DTBm';
-    // *** URL เดียวกับไฟล์ตั้งเป้า (ตั้งเป้า.txt) ตั้งใจให้เหมือนกันเป๊ะ ***
-    // ถ้าตอน redeploy คุณเลือกเก็บ deployment อีกอันไว้แทน (AKfycbz4H63RSf2ly6...)
-    // ให้เปลี่ยนค่านี้ให้ตรงกับอันนั้นแทน แค่ต้องเหมือนกันทั้ง 2 ไฟล์เท่านั้น
     const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz4H63RSf2ly6MjSZZErqHaB9-t_1kwBXRPLo5QAPxDh1OE76_rLGSVvya2cgvkvKJX/exec';
 
     let userDisplayName = 'Unknown';
@@ -153,7 +139,7 @@
       const note = document.getElementById('note').value;
 
       if (!line || !timeSlot || !outputActual) {
-        Swal.fire({ icon: 'warning', title: 'กรอกข้อมูลไม่ครบ', text: 'กรุณากรอกข้อมูลที่มีเครื่องหมาย * ให้ครบถ้วน' });
+        Swal.fire({ icon: 'warning', title: 'กรอกข้อมูลไม่ครบ', text: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
         return;
       }
 
@@ -161,7 +147,7 @@
         action: 'saveHourlyOutput',
         line: line,
         timeSlot: timeSlot,
-        outputActual: outputActual,
+        outputActual: Number(outputActual),
         note: note,
         updatedBy: userDisplayName
       };
@@ -180,31 +166,13 @@
         btn.innerText = '⏱️ บันทึกยอดรายชั่วโมง';
 
         if (data.status === 'duplicate') {
-          // 🛑 กรณีคีย์ซ้ำ
-          Swal.fire({
-            icon: 'warning',
-            title: 'ไม่สามารถบันทึกได้',
-            text: data.message,
-            confirmButtonColor: '#0284C7'
-          });
+          Swal.fire({ icon: 'warning', title: 'ไม่สามารถบันทึกได้', text: data.message, confirmButtonColor: '#0284C7' });
         } else if (data.status === 'success') {
-          // ✅ บันทึกสำเร็จ
-          Swal.fire({
-            icon: 'success',
-            title: 'บันทึกสำเร็จ!',
-            text: 'บันทึกยอดรายชั่วโมงเรียบร้อยแล้ว',
-            timer: 2000
-          }).then(() => {
-            if (liff.isInClient()) {
-              liff.closeWindow();
-            }
+          Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', text: 'บันทึกยอดรายชั่วโมงเรียบร้อยแล้ว', timer: 2000 }).then(() => {
+            if (liff.isInClient()) liff.closeWindow();
           });
         } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'เกิดข้อผิดพลาด',
-            text: data.error || 'ไม่สามารถบันทึกข้อมูลได้'
-          });
+          Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: data.error || 'ไม่สามารถบันทึกข้อมูลได้' });
         }
       })
       .catch(err => {
