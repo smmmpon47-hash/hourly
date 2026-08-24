@@ -3,198 +3,231 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>บันทึกยอดรายชั่วโมง</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <style> body { font-family: 'Kanit', sans-serif; background-color: #f1f5f9; } </style>
+  <title>บันทึกยอดการผลิตรายชั่วโมง</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; }
+    .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 100%; max-width: 450px; }
+    h2 { text-align: center; color: #2c3e50; margin-bottom: 5px; }
+    p.subtitle { text-align: center; color: #7f8c8d; font-size: 0.9em; margin-top: 0; margin-bottom: 20px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-weight: bold; margin-bottom: 5px; color: #34495e; font-size: 0.9em; }
+    select, input, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 1em; }
+    .slot-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; background: #fafafa; padding: 10px; border-radius: 6px; border-left: 4px solid #2ec4b6; }
+    .slot-time { flex: 2; font-weight: bold; color: #2c3e50; font-size: 0.85em; }
+    .slot-lot { flex: 2; }
+    .slot-input { flex: 2; }
+    .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+    .btn { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-align: center; }
+    .btn-submit { background-color: #2ec4b6; color: white; }
+    .btn-cancel { background-color: #e74c3c; color: white; }
+    .info-box { background-color: #e8f8f5; border: 1px solid #a3e4d7; color: #16a085; padding: 10px; border-radius: 6px; font-size: 0.85em; margin-bottom: 15px; }
+  </style>
 </head>
-<body class="flex justify-center min-h-screen p-4 pt-6 pb-12 items-start">
+<body>
 
-  <div class="w-full max-w-md bg-white rounded-3xl shadow-xl p-6 sm:p-7 border border-slate-100 mt-2">
-    
-    <div class="text-center mb-5">
-      <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2 shadow-inner">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      </div>
-      <h2 class="text-2xl font-bold text-slate-800">บันทึกยอดรายชั่วโมง</h2>
-      <p class="text-xs text-slate-400 font-medium">Hourly Production Output</p>
+<div class="card">
+  <h2>บันทึกยอดการผลิต</h2>
+  <p class="subtitle">Hourly Production Output</p>
+
+  <form id="hourlyForm">
+    <div class="form-group">
+      <label for="line">LINE</label>
+      <select id="line" required onchange="loadLineDetails()">
+        <option value="">-- เลือก LINE --</option>
+        <option value="Line B">Line B</option>
+        <option value="Line C">Line C</option>
+        <option value="Line D">Line D</option>
+        <option value="Line E">Line E</option>
+        <option value="Line F">Line F</option>
+        <option value="Line G">Line G</option>
+      </select>
     </div>
 
-    <form id="outputForm" onsubmit="submitData(event)" class="space-y-4">
-      
-      <div>
-        <label class="block text-sm font-semibold text-slate-700 mb-1">LINE</label>
-        <select id="lineSelect" required onchange="fetchLineData()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-base font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-          <option value="">-- เลือก LINE --</option>
-          <option value="B">Line B</option>
-          <option value="C">Line C</option>
-          <option value="D">Line D</option>
-          <option value="E">Line E</option>
-          <option value="F">Line F</option>
-          <option value="G">Line G</option>
-        </select>
+    <div id="lineSummaryInfo" class="info-box" style="display: none;">
+      เป้ารวมประจำวัน: <strong id="infoTarget">0</strong> ชิ้น | ชั่วโมงรวม: <strong id="infoHours">0</strong> ชม.
+    </div>
+
+    <!-- Container สำหรับเจนรายการชั่วโมงอัตโนมัติ -->
+    <div class="form-group">
+      <label>รายการยอดผลิตรายชั่วโมง</label>
+      <div id="slotsContainer">
+        <p style="color: #999; font-size: 0.85em; text-align: center;">กรุณาเลือก Line เพื่อโหลดรายการชั่วโมง</p>
       </div>
+    </div>
 
-      <div id="targetInfoCard" class="hidden bg-emerald-50/60 border border-emerald-100 rounded-2xl p-3.5 text-sm text-emerald-900">
-        <div class="flex justify-between items-center mb-1">
-          <span class="text-xs text-emerald-600 font-medium">เป้าหมายประจำวัน (TG)</span>
-          <span id="displayTgTarget" class="font-bold text-base text-emerald-700">0 ชิ้น</span>
-        </div>
-        <div class="text-xs text-slate-500 flex items-center gap-1">
-          <span>LOT ในระบบ:</span>
-          <span id="displayLotList" class="font-semibold text-slate-700 truncate">-</span>
-        </div>
-      </div>
+    <div class="form-group">
+      <label for="remark">หมายเหตุ / Note (ถ้ามี)</label>
+      <textarea id="remark" rows="2" placeholder="เช่น เครื่องจักรเสีย, วัตถุดิบขาด"></textarea>
+    </div>
 
-      <div>
-        <label class="block text-sm font-semibold text-slate-700 mb-1">เลือกรอบเวลา</label>
-        <select id="timeRangeSelect" required onchange="renderTimeSlots()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-base font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-          <option value="">-- เลือกรอบเวลา --</option>
-          <option value="1">08:30 - 10:30 (รอบ 1)</option>
-          <option value="2">10:30 - 12:30 (รอบ 2)</option>
-          <option value="3">12:30 - 14:30 (รอบ 3)</option>
-          <option value="4">14:30 - 16:30 (รอบ 4)</option>
-          <option value="5">16:30 - 17:30 (รอบ 5 - จบกะปกติ)</option>
-        </select>
-      </div>
+    <div class="btn-group">
+      <button type="button" class="btn btn-cancel" onclick="liff.closeWindow()">CANCEL</button>
+      <button type="submit" class="btn btn-submit">SAVE OUTPUT</button>
+    </div>
+  </form>
+</div>
 
-      <div id="hourlySlotsContainer" class="space-y-3 pt-1"></div>
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxUK2_MCCjW8TrCTjNHJj3AxvJQ2-w1tjHX5Cw6guNxallTCyvUKWqTB2dPtvzZtYbD/exec"; // เปลี่ยน URL ให้ตรงกับ Web App
+  let lineProfile = null;
+  let activeLots = [];
 
-      <div id="totalSummaryCard" class="hidden bg-slate-100 border border-slate-200 rounded-xl p-3.5 flex justify-between items-center">
-        <span class="text-sm font-bold text-slate-700">รวมยอดผลิตรอบนี้:</span>
-        <span class="text-xl font-extrabold text-emerald-600"><span id="sumOutput">0</span> <span class="text-xs font-normal text-slate-500">ชิ้น</span></span>
-      </div>
+  // ตารางเวลาสล็อตมาตรฐานประจำวัน
+  const DEFAULT_TIME_SLOTS = [
+    "08:30 - 09:30",
+    "09:30 - 10:30",
+    "10:30 - 11:30",
+    "11:30 - 12:30",
+    "12:30 - 13:30",
+    "13:30 - 14:30",
+    "14:30 - 15:30",
+    "15:30 - 16:30",
+    "16:30 - 17:30",
+    "17:30 - 18:30 (OT)",
+    "18:30 - 19:30 (OT)"
+  ];
 
-      <div>
-        <label class="block text-sm font-semibold text-slate-700 mb-1">หมายเหตุ / ปัญหาที่พบ (ถ้ามี)</label>
-        <textarea id="remark" rows="2" placeholder="เช่น เครื่องจักรขัดข้อง 15 นาที..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
-      </div>
+  async function initLiff() {
+    try {
+      await liff.init({ liffId: "2011198724-JQ60DTBm" });
+      if (liff.isLoggedIn()) {
+        lineProfile = await liff.getProfile();
+      } else {
+        liff.login();
+      }
+    } catch (err) {
+      console.error("LIFF Init Error:", err);
+    }
+  }
+  initLiff();
 
-      <div class="flex gap-3 pt-2">
-        <button type="button" onclick="window.close()" class="w-1/2 bg-slate-100 text-slate-700 font-bold py-3.5 rounded-xl text-base">CANCEL</button>
-        <button type="submit" id="submitBtn" class="w-1/2 bg-emerald-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-200 text-base">SAVE</button>
-      </div>
+  async function loadLineDetails() {
+    const line = document.getElementById('line').value;
+    const slotsContainer = document.getElementById('slotsContainer');
+    const infoBox = document.getElementById('lineSummaryInfo');
 
-    </form>
-  </div>
-
-  <script>
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxUK2_MCCjW8TrCTjNHJj3AxvJQ2-w1tjHX5Cw6guNxallTCyvUKWqTB2dPtvzZtYbD/exec";
-    let availableLots = [];
-
-    const timeSlotsMap = {
-      "1": [ { label: "08:30 - 09:30" }, { label: "09:30 - 10:30" } ],
-      "2": [ { label: "10:30 - 11:30" }, { label: "11:30 - 12:30" } ],
-      "3": [ { label: "12:30 - 13:30" }, { label: "13:30 - 14:30" } ],
-      "4": [ { label: "14:30 - 15:30" }, { label: "15:30 - 16:30" } ],
-      "5": [ { label: "16:30 - 17:30" } ],
-      "OT1": [ { label: "17:30 - 18:30" } ],
-      "OT2": [ { label: "18:30 - 19:30" } ]
-    };
-
-    function fetchLineData() {
-      const line = document.getElementById('lineSelect').value;
-      if (!line) return;
-
-      fetch(`${WEB_APP_URL}?line=${line}`)
-        .then(res => res.json())
-        .then(data => {
-          document.getElementById('targetInfoCard').classList.remove('hidden');
-          document.getElementById('displayTgTarget').innerText = Number(data.target).toLocaleString() + " ชิ้น";
-          availableLots = data.lots.length > 0 ? data.lots : ["ไม่มี LOT"];
-          document.getElementById('displayLotList').innerText = availableLots.join(', ');
-
-          // ปลดล็อก OT ถ้า Working Hours เกิน 8
-          if (data.workingHours > 8) {
-            const select = document.getElementById('timeRangeSelect');
-            if (!select.querySelector('option[value="OT1"]')) {
-              select.insertAdjacentHTML('beforeend', '<option value="OT1">17:30 - 18:30 (OT 1)</option>');
-            }
-          }
-          renderTimeSlots();
-        });
+    if (!line) {
+      slotsContainer.innerHTML = '<p style="color: #999; font-size: 0.85em; text-align: center;">กรุณาเลือก Line เพื่อโหลดรายการชั่วโมง</p>';
+      infoBox.style.display = 'none';
+      return;
     }
 
-    function renderTimeSlots() {
-      const selectedRound = document.getElementById('timeRangeSelect').value;
-      const container = document.getElementById('hourlySlotsContainer');
-      container.innerHTML = "";
+    slotsContainer.innerHTML = '<p style="color: #666; font-size: 0.85em; text-align: center;">กำลังโหลดข้อมูล...</p>';
 
-      if (!selectedRound || !timeSlotsMap[selectedRound]) {
-        document.getElementById('totalSummaryCard').classList.add('hidden');
-        return;
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(line)}`);
+      const data = await res.json();
+
+      activeLots = data.lots || [];
+      const totalHours = data.totalWorkingHours || 8;
+
+      document.getElementById('infoTarget').innerText = data.target || 0;
+      document.getElementById('infoHours').innerText = totalHours;
+      infoBox.style.display = 'block';
+
+      generateTimeSlots(totalHours);
+
+    } catch (err) {
+      console.error("Error loading line details:", err);
+      slotsContainer.innerHTML = '<p style="color: red; font-size: 0.85em; text-align: center;">โหลดข้อมูลไม่สำเร็จ</p>';
+    }
+  }
+
+  function generateTimeSlots(totalHours) {
+    const slotsContainer = document.getElementById('slotsContainer');
+    slotsContainer.innerHTML = '';
+
+    // สร้างสล็อตตามจำนวนชั่วโมงรวมที่คำนวณได้
+    const count = Math.min(Math.ceil(totalHours), DEFAULT_TIME_SLOTS.length);
+
+    if (count === 0) {
+      slotsContainer.innerHTML = '<p style="color: #e74c3c; font-size: 0.85em; text-align: center;">ยังไม่มีการบันทึกเป้าประจำวัน (TG)</p>';
+      return;
+    }
+
+    for (let i = 0; i < count; i++) {
+      const timeLabel = DEFAULT_TIME_SLOTS[i] || `ชั่วโมงที่ ${i + 1}`;
+      
+      let lotOptionsHTML = '';
+      if (activeLots.length > 0) {
+        lotOptionsHTML = activeLots.map(lot => `<option value="${lot}">${lot}</option>`).join('');
+      } else {
+        lotOptionsHTML = '<option value="">-</option>';
       }
 
-      document.getElementById('totalSummaryCard').classList.remove('hidden');
-      const slots = timeSlotsMap[selectedRound];
+      const row = document.createElement('div');
+      row.className = 'slot-row';
+      row.innerHTML = `
+        <div class="slot-time">${timeLabel}</div>
+        <div class="slot-lot">
+          <select class="input-slot-lot">
+            ${lotOptionsHTML}
+          </select>
+        </div>
+        <div class="slot-input">
+          <input type="number" class="input-slot-val" placeholder="ยอดผลิต" min="0">
+        </div>
+      `;
+      slotsContainer.appendChild(row);
+    }
+  }
 
-      slots.forEach((slot, index) => {
-        const lotOptions = availableLots.map(lot => `<option value="${lot}">${lot}</option>`).join('');
-        const html = `
-          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3">
-            <div class="text-xs font-bold text-emerald-600 mb-1.5 flex justify-between">
-              <span>⏱️ ช่วงเวลา ${slot.label}</span>
-              <span class="text-slate-400 font-normal">Output/hr</span>
-            </div>
-            <div class="flex gap-2">
-              <select id="slotLot_${index}" class="w-1/2 bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-sm font-semibold text-slate-700">
-                ${lotOptions}
-              </select>
-              <input type="number" id="slotVal_${index}" oninput="calculateTotal()" placeholder="ยอดผลิต (ชิ้น)" required min="0" class="w-1/2 bg-white border border-slate-200 rounded-xl px-3 py-2 text-base font-bold text-slate-800 text-right">
-            </div>
-          </div>
-        `;
-        container.insertAdjacentHTML('beforeend', html);
-      });
-      calculateTotal();
+  document.getElementById('hourlyForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const line = document.getElementById('line').value;
+    const remark = document.getElementById('remark').value;
+    const slotRows = document.querySelectorAll('.slot-row');
+    
+    const hourlyDetails = [];
+
+    slotRows.forEach(row => {
+      const timeLabel = row.querySelector('.slot-time').innerText;
+      const lot = row.querySelector('.input-slot-lot').value;
+      const outputVal = row.querySelector('.input-slot-val').value;
+
+      if (outputVal !== "" && outputVal !== null) {
+        hourlyDetails.push({
+          timeLabel: timeLabel,
+          lot: lot,
+          output: Number(outputVal)
+        });
+      }
+    });
+
+    if (hourlyDetails.length === 0) {
+      alert("กรุณากรอกยอดผลิตอย่างน้อย 1 ช่องเวลา");
+      return;
     }
 
-    function calculateTotal() {
-      let sum = 0;
-      document.querySelectorAll('[id^="slotVal_"]').forEach(i => sum += (parseInt(i.value) || 0));
-      document.getElementById('sumOutput').innerText = sum.toLocaleString();
-    }
+    const payload = {
+      formType: "OUTPUT_FORM",
+      line: line,
+      remark: remark,
+      hourlyDetails: hourlyDetails,
+      updatedBy: lineProfile ? lineProfile.displayName : "Unknown"
+    };
 
-    function submitData(e) {
-      e.preventDefault();
-      const btn = document.getElementById('submitBtn');
-      btn.disabled = true;
-      btn.innerText = "กำลังบันทึก...";
-
-      const selectedRound = document.getElementById('timeRangeSelect').value;
-      const slots = timeSlotsMap[selectedRound];
-
-      const hourlyData = slots.map((slot, index) => ({
-        timeLabel: slot.label,
-        lot: document.getElementById(`slotLot_${index}`).value,
-        output: parseInt(document.getElementById(`slotVal_${index}`).value) || 0
-      }));
-
-      const payload = {
-        formType: "OUTPUT_FORM",
-        line: document.getElementById('lineSelect').value,
-        hourlyDetails: hourlyData,
-        remark: document.getElementById('remark').value
-      };
-
-      fetch(WEB_APP_URL, {
+    try {
+      const response = await fetch(SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      })
-      .then(() => {
-        alert("บันทึกยอดรายชั่วโมงสำเร็จ!");
-        btn.disabled = false;
-        btn.innerText = "SAVE";
-        document.getElementById('outputForm').reset();
-        document.getElementById('hourlySlotsContainer').innerHTML = "";
-        document.getElementById('totalSummaryCard').classList.add('hidden');
-        document.getElementById('targetInfoCard').classList.add('hidden');
       });
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        alert("บันทึกยอดการผลิตสำเร็จ!");
+        liff.closeWindow();
+      } else {
+        alert("เกิดข้อผิดพลาด: " + (result.error || "ไม่สามารถบันทึกได้"));
+      }
+    } catch (err) {
+      alert("เกิดข้อผิดพลาดในการส่งข้อมูล");
+      console.error(err);
     }
-  </script>
+  });
+</script>
+
 </body>
 </html>
