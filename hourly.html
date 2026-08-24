@@ -6,15 +6,12 @@
   <title>บันทึกยอดรายชั่วโมง</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Kanit', sans-serif; background-color: #f1f5f9; }
-  </style>
+  <style> body { font-family: 'Kanit', sans-serif; background-color: #f1f5f9; } </style>
 </head>
 <body class="flex justify-center min-h-screen p-4 pt-6 pb-12 items-start">
 
   <div class="w-full max-w-md bg-white rounded-3xl shadow-xl p-6 sm:p-7 border border-slate-100 mt-2">
     
-    <!-- HEADER -->
     <div class="text-center mb-5">
       <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2 shadow-inner">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -27,10 +24,9 @@
 
     <form id="outputForm" onsubmit="submitData(event)" class="space-y-4">
       
-      <!-- LINE SELECT -->
       <div>
         <label class="block text-sm font-semibold text-slate-700 mb-1">LINE</label>
-        <select id="lineSelect" required onchange="onLineChange()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-base font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        <select id="lineSelect" required onchange="fetchLineData()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-base font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500">
           <option value="">-- เลือก LINE --</option>
           <option value="B">Line B</option>
           <option value="C">Line C</option>
@@ -41,7 +37,6 @@
         </select>
       </div>
 
-      <!-- SHOW TARGET & LOT INFO CARD -->
       <div id="targetInfoCard" class="hidden bg-emerald-50/60 border border-emerald-100 rounded-2xl p-3.5 text-sm text-emerald-900">
         <div class="flex justify-between items-center mb-1">
           <span class="text-xs text-emerald-600 font-medium">เป้าหมายประจำวัน (TG)</span>
@@ -53,7 +48,6 @@
         </div>
       </div>
 
-      <!-- รอบเวลา -->
       <div>
         <label class="block text-sm font-semibold text-slate-700 mb-1">เลือกรอบเวลา</label>
         <select id="timeRangeSelect" required onchange="renderTimeSlots()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-base font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500">
@@ -63,145 +57,103 @@
           <option value="3">12:30 - 14:30 (รอบ 3)</option>
           <option value="4">14:30 - 16:30 (รอบ 4)</option>
           <option value="5">16:30 - 17:30 (รอบ 5 - จบกะปกติ)</option>
-          <!-- รอบ OT จะถูกเพิ่มอัตโนมัติด้วย JavaScript ถ้า Working Hours > 8 -->
         </select>
       </div>
 
-      <!-- DYNAMIC INPUT SLOTS (กรอกยอดตามชั่วโมง) -->
-      <div id="hourlySlotsContainer" class="space-y-3 pt-1">
-        <!-- JS จะสร้างช่องกรอกตามรอบที่เลือกตรงนี้ -->
-      </div>
+      <div id="hourlySlotsContainer" class="space-y-3 pt-1"></div>
 
-      <!-- TOTAL SUMMARY (คำนวณรวมอัตโนมัติ) -->
       <div id="totalSummaryCard" class="hidden bg-slate-100 border border-slate-200 rounded-xl p-3.5 flex justify-between items-center">
         <span class="text-sm font-bold text-slate-700">รวมยอดผลิตรอบนี้:</span>
         <span class="text-xl font-extrabold text-emerald-600"><span id="sumOutput">0</span> <span class="text-xs font-normal text-slate-500">ชิ้น</span></span>
       </div>
 
-      <!-- REMARK -->
       <div>
         <label class="block text-sm font-semibold text-slate-700 mb-1">หมายเหตุ / ปัญหาที่พบ (ถ้ามี)</label>
         <textarea id="remark" rows="2" placeholder="เช่น เครื่องจักรขัดข้อง 15 นาที..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
       </div>
 
-      <!-- BUTTONS -->
       <div class="flex gap-3 pt-2">
-        <button type="button" onclick="window.close()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl transition text-base">
-          CANCEL
-        </button>
-        <button type="submit" id="submitBtn" class="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-emerald-200 text-base">
-          SAVE
-        </button>
+        <button type="button" onclick="window.close()" class="w-1/2 bg-slate-100 text-slate-700 font-bold py-3.5 rounded-xl text-base">CANCEL</button>
+        <button type="submit" id="submitBtn" class="w-1/2 bg-emerald-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-200 text-base">SAVE</button>
       </div>
 
     </form>
   </div>
 
   <script>
-    const WEB_APP_URL = "ใส่_URL_APPS_SCRIPT_ตรงนี้_ที่ลงท้ายด้วย_exec";
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxUK2_MCCjW8TrCTjNHJj3AxvJQ2-w1tjHX5Cw6guNxallTCyvUKWqTB2dPtvzZtYbD/exec";
+    let availableLots = [];
 
-    // ข้อมูล Mockup สำหรับทดสอบเลือก LOT (ระบบจริงส่งจาก Apps Script ได้)
-    let availableLots = ["LOT-A101", "LOT-B202"]; 
-    let workingHoursFromTG = 8; // ดึงจาก TG ของ Line นั้นๆ (ถ้า >8 จะปลดล็อก OT)
-
-    // กำหนดรายละเอียดช่วงเวลาแต่ละรอบ
     const timeSlotsMap = {
       "1": [ { label: "08:30 - 09:30" }, { label: "09:30 - 10:30" } ],
       "2": [ { label: "10:30 - 11:30" }, { label: "11:30 - 12:30" } ],
       "3": [ { label: "12:30 - 13:30" }, { label: "13:30 - 14:30" } ],
       "4": [ { label: "14:30 - 15:30" }, { label: "15:30 - 16:30" } ],
-      "5": [ { label: "16:30 - 17:30" } ], // รอบเดี่ยว 1 ชม.
+      "5": [ { label: "16:30 - 17:30" } ],
       "OT1": [ { label: "17:30 - 18:30" } ],
       "OT2": [ { label: "18:30 - 19:30" } ]
     };
 
-    function onLineChange() {
+    function fetchLineData() {
       const line = document.getElementById('lineSelect').value;
-      const card = document.getElementById('targetInfoCard');
-      
-      if (!line) {
-        card.classList.add('hidden');
-        return;
-      }
+      if (!line) return;
 
-      // แสดงการ์ดข้อมูลเป้าหมายประจำวัน
-      card.classList.remove('hidden');
-      document.getElementById('displayTgTarget').innerText = "2,400 ชิ้น"; // ตัวอย่างข้อมูล
-      document.getElementById('displayLotList').innerText = availableLots.join(', ');
+      fetch(`${WEB_APP_URL}?line=${line}`)
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById('targetInfoCard').classList.remove('hidden');
+          document.getElementById('displayTgTarget').innerText = Number(data.target).toLocaleString() + " ชิ้น";
+          availableLots = data.lots.length > 0 ? data.lots : ["ไม่มี LOT"];
+          document.getElementById('displayLotList').innerText = availableLots.join(', ');
 
-      // ตัวอย่างการเช็ก OT จาก TG (ถ้าเกิน 8 ชม. จะเพิ่ม Dropdown OT ให้เลือก)
-      checkAndUnlockOT(workingHoursFromTG);
-      renderTimeSlots();
-    }
-
-    function checkAndUnlockOT(hours) {
-      const select = document.getElementById('timeRangeSelect');
-      
-      // ลบตัวเลือก OT เก่าออกก่อน
-      const ot1 = select.querySelector('option[value="OT1"]');
-      const ot2 = select.querySelector('option[value="OT2"]');
-      if (ot1) ot1.remove();
-      if (ot2) ot2.remove();
-
-      if (hours > 8) {
-        const opt1 = document.createElement('option');
-        opt1.value = "OT1";
-        opt1.innerText = "17:30 - 18:30 (OT 1)";
-        select.appendChild(opt1);
-      }
-      if (hours > 9) {
-        const opt2 = document.createElement('option');
-        opt2.value = "OT2";
-        opt2.innerText = "18:30 - 19:30 (OT 2)";
-        select.appendChild(opt2);
-      }
+          // ปลดล็อก OT ถ้า Working Hours เกิน 8
+          if (data.workingHours > 8) {
+            const select = document.getElementById('timeRangeSelect');
+            if (!select.querySelector('option[value="OT1"]')) {
+              select.insertAdjacentHTML('beforeend', '<option value="OT1">17:30 - 18:30 (OT 1)</option>');
+            }
+          }
+          renderTimeSlots();
+        });
     }
 
     function renderTimeSlots() {
       const selectedRound = document.getElementById('timeRangeSelect').value;
       const container = document.getElementById('hourlySlotsContainer');
-      const summaryCard = document.getElementById('totalSummaryCard');
-
       container.innerHTML = "";
 
       if (!selectedRound || !timeSlotsMap[selectedRound]) {
-        summaryCard.classList.add('hidden');
+        document.getElementById('totalSummaryCard').classList.add('hidden');
         return;
       }
 
+      document.getElementById('totalSummaryCard').classList.remove('hidden');
       const slots = timeSlotsMap[selectedRound];
-      summaryCard.classList.remove('hidden');
 
       slots.forEach((slot, index) => {
         const lotOptions = availableLots.map(lot => `<option value="${lot}">${lot}</option>`).join('');
-        
-        const slotHtml = `
+        const html = `
           <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3">
-            <div class="text-xs font-bold text-emerald-600 mb-1.5 flex justify-between items-center">
+            <div class="text-xs font-bold text-emerald-600 mb-1.5 flex justify-between">
               <span>⏱️ ช่วงเวลา ${slot.label}</span>
               <span class="text-slate-400 font-normal">Output/hr</span>
             </div>
             <div class="flex gap-2">
-              <select id="slotLot_${index}" class="w-1/2 bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <select id="slotLot_${index}" class="w-1/2 bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-sm font-semibold text-slate-700">
                 ${lotOptions}
               </select>
-              <input type="number" id="slotVal_${index}" oninput="calculateTotal()" placeholder="ยอดผลิต (ชิ้น)" required min="0" class="w-1/2 bg-white border border-slate-200 rounded-xl px-3 py-2 text-base font-bold text-slate-800 text-right focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <input type="number" id="slotVal_${index}" oninput="calculateTotal()" placeholder="ยอดผลิต (ชิ้น)" required min="0" class="w-1/2 bg-white border border-slate-200 rounded-xl px-3 py-2 text-base font-bold text-slate-800 text-right">
             </div>
           </div>
         `;
-        container.insertAdjacentHTML('beforeend', slotHtml);
+        container.insertAdjacentHTML('beforeend', html);
       });
-
       calculateTotal();
     }
 
     function calculateTotal() {
       let sum = 0;
-      const inputs = document.querySelectorAll('[id^="slotVal_"]');
-      inputs.forEach(input => {
-        const val = parseInt(input.value) || 0;
-        sum += val;
-      });
+      document.querySelectorAll('[id^="slotVal_"]').forEach(i => sum += (parseInt(i.value) || 0));
       document.getElementById('sumOutput').innerText = sum.toLocaleString();
     }
 
@@ -213,7 +165,7 @@
 
       const selectedRound = document.getElementById('timeRangeSelect').value;
       const slots = timeSlotsMap[selectedRound];
-      
+
       const hourlyData = slots.map((slot, index) => ({
         timeLabel: slot.label,
         lot: document.getElementById(`slotLot_${index}`).value,
@@ -221,12 +173,10 @@
       }));
 
       const payload = {
+        formType: "OUTPUT_FORM",
         line: document.getElementById('lineSelect').value,
-        round: selectedRound,
-        totalOutput: document.getElementById('sumOutput').innerText.replace(/,/g, ''),
         hourlyDetails: hourlyData,
-        remark: document.getElementById('remark').value,
-        updatedBy: "Output Form System"
+        remark: document.getElementById('remark').value
       };
 
       fetch(WEB_APP_URL, {
@@ -236,18 +186,13 @@
         body: JSON.stringify(payload)
       })
       .then(() => {
-        alert("บันทึกยอดรายชั่วโมงสำเร็จเรียบร้อย!");
+        alert("บันทึกยอดรายชั่วโมงสำเร็จ!");
         btn.disabled = false;
         btn.innerText = "SAVE";
         document.getElementById('outputForm').reset();
         document.getElementById('hourlySlotsContainer').innerHTML = "";
         document.getElementById('totalSummaryCard').classList.add('hidden');
         document.getElementById('targetInfoCard').classList.add('hidden');
-      })
-      .catch(err => {
-        alert("เกิดข้อผิดพลาด: " + err.message);
-        btn.disabled = false;
-        btn.innerText = "SAVE";
       });
     }
   </script>
