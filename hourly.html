@@ -26,7 +26,6 @@
       box-shadow: 0 20px 40px rgba(0,0,0,0.25);
     }
 
-    /* จัดวาง Header และ Date ใหม่ไม่ให้ทับกัน */
     .header-top-row {
       display: flex;
       justify-content: space-between;
@@ -48,17 +47,10 @@
       border-radius: 12px;
       border: 1px solid #cbd5e1;
     }
-    .sub-header {
-      font-size: 0.88rem;
-      color: #64748b;
-      margin-top: -8px;
-      margin-bottom: 20px;
-    }
 
     .form-group { margin-bottom: 18px; }
     label { display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b; font-size: 1rem; }
     
-    /* ปรับช่อง Input และ Select ให้ใหญ่ขึ้น */
     select, input, textarea {
       width: 100%;
       padding: 12px 14px;
@@ -94,7 +86,6 @@
       margin-bottom: 12px;
     }
 
-    /* แถวรายการรอบเวลา - ขยายขนาดขึ้น */
     .slot-row {
       display: flex;
       gap: 10px;
@@ -113,14 +104,14 @@
       color: #334155;
     }
     .slot-lot-select {
-      flex: 2;
-      padding: 11px 8px;
-      font-size: 0.95rem;
+      flex: 2.2;
+      padding: 11px 6px;
+      font-size: 0.88rem;
       border-radius: 14px;
-      font-weight: 500;
+      font-weight: 600;
     }
     .slot-input {
-      flex: 1.4;
+      flex: 1.2;
       padding: 11px 8px;
       text-align: center;
       font-weight: 700;
@@ -128,21 +119,21 @@
       font-size: 1.1rem;
     }
 
-    /* แถบเตือน "กรอกไปแล้ว" ใต้แต่ละช่วงเวลาที่เคยมีคนกรอกไปแล้ว */
-    .slot-warning {
-      font-size: 0.78rem;
-      color: #b45309;
-      background: #fffbeb;
-      border: 1px solid #fde68a;
-      border-radius: 10px;
-      padding: 6px 10px;
-      margin: -6px 0 12px 0;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+    .btn-add-lot-midday {
+      background: #f0fdf4;
+      border: 1.5px dashed #0d9488;
+      color: #0d9488;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 11px;
+      border-radius: 14px;
+      width: 100%;
+      font-size: 0.9rem;
+      margin-top: 5px;
+      margin-bottom: 15px;
     }
+    .btn-add-lot-midday:active { background: #dcfce7; }
 
-    /* สรุปผลรวม */
     .sum-box {
       display: flex;
       align-items: center;
@@ -151,7 +142,7 @@
       padding: 14px 18px;
       border-radius: 16px;
       border: 2px dashed #0d9488;
-      margin-top: 15px;
+      margin-bottom: 18px;
       font-weight: 600;
       color: #1e293b;
       font-size: 1.05rem;
@@ -168,27 +159,6 @@
       font-size: 1.15rem;
     }
 
-    /* การ์ดแสดง Target Output / hr */
-    .target-rate-box {
-      background: #f0fdf4;
-      border: 1.5px solid #bbf7d0;
-      border-radius: 14px;
-      padding: 10px 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 10px;
-      margin-bottom: 20px;
-      font-size: 0.95rem;
-      color: #166534;
-      font-weight: 600;
-    }
-    .target-rate-val {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: #15803d;
-    }
-
     .btn-submit {
       width: 100%;
       padding: 15px;
@@ -200,9 +170,8 @@
       font-weight: 600;
       cursor: pointer;
       box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
-      margin-top: 5px;
+      margin-top: 10px;
     }
-    .btn-submit:active { background: #0f766e; }
   </style>
 </head>
 <body>
@@ -212,7 +181,6 @@
     <h2 class="header-title">บันทึกยอดการผลิต</h2>
     <div class="date-badge" id="currentDateDisplay">--/--/----</div>
   </div>
-  <div class="sub-header">Hourly Production Output Record</div>
 
   <form id="hourlyForm">
     <div class="form-group">
@@ -240,17 +208,14 @@
       </div>
     </div>
 
-    <!-- ช่องสรุปรวม -->
+    <button type="button" class="btn-add-lot-midday" id="btnAddMiddayLot" style="display:none;" onclick="promptNewLotNumber()">
+      ➕ สลับรุ่น / กรอกเลข LOT เพิ่มเติม
+    </button>
+
     <div class="sum-box">
       <span>ยอดรวมที่กรอก</span>
       <input type="text" id="totalSum" class="sum-input" value="0" readonly>
       <span>ชิ้น</span>
-    </div>
-
-    <!-- ส่วนเทียบ Target Rate ต่อชั่วโมง -->
-    <div class="target-rate-box" id="targetRateBox" style="display:none;">
-      <span>เป้าหมายเฉลี่ย (Output/hr):</span>
-      <span class="target-rate-val"><span id="targetPerHourVal">0</span> ชิ้น/ชม.</span>
     </div>
 
     <div class="form-group">
@@ -265,8 +230,8 @@
 <script>
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwziSYLaDcymEHVXQr_qOP6RmIQDjixVPqWwhAQSOMXs_4zAA-gscpeuR7fJp7DY6yp/exec"; 
   let lineProfile = null;
-  let activeLots = [];
-  let activeExistingHourly = {};
+  let activeModels = []; // เก็บรายชื่อ Model สำหรับ Dropdown
+  let masterLotMap = {}; // Map คู่มือ (LOT_Number -> Model)
 
   const TIME_SLOTS_DEF = [
     { label: "08.30-09.30", endMin: 570 },
@@ -284,30 +249,20 @@
 
   function displayCurrentDate() {
     const now = new Date();
-    const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
-    document.getElementById('currentDateDisplay').innerText = now.toLocaleDateString('th-TH', options);
+    document.getElementById('currentDateDisplay').innerText = now.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
   displayCurrentDate();
-
-  async function initLiff() {
-    try {
-      await liff.init({ liffId: "2011198724-JQ60DTBm" });
-      if (liff.isLoggedIn()) { lineProfile = await liff.getProfile(); }
-      else { liff.login(); }
-    } catch (err) { console.error("LIFF Init Error:", err); }
-  }
-  initLiff();
 
   async function loadLineDetails() {
     const line = document.getElementById('line').value;
     const slotsContainer = document.getElementById('slotsContainer');
     const infoBanner = document.getElementById('infoBanner');
-    const targetRateBox = document.getElementById('targetRateBox');
+    const btnAddMiddayLot = document.getElementById('btnAddMiddayLot');
 
     if (!line) {
       slotsContainer.innerHTML = '<p style="color: #94a3b8; font-size: 0.95rem; text-align: center; padding: 15px 0;">โปรดเลือก LINE การผลิต</p>';
       infoBanner.style.display = 'none';
-      targetRateBox.style.display = 'none';
+      btnAddMiddayLot.style.display = 'none';
       return;
     }
 
@@ -317,8 +272,8 @@
       const res = await fetch(`${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(line)}`);
       const data = await res.json();
 
-      activeLots = data.lots || [];
-      activeExistingHourly = data.existingHourly || {};
+      activeModels = data.models || [];
+      masterLotMap = data.masterMap || {}; // Map ข้อมูล Master_LOT ทั้งหมดจากหลังบ้าน
       const totalHours = Number(data.totalWorkingHours) || 8;
       const targetVal = Number(data.target) || 0;
 
@@ -326,23 +281,21 @@
         document.getElementById('targetVal').innerText = targetVal.toLocaleString();
         document.getElementById('hoursVal').innerText = totalHours;
         infoBanner.style.display = 'flex';
-
-        // คำนวณ Output / hr
-        const targetPerHour = totalHours > 0 ? Math.round(targetVal / totalHours) : 0;
-        document.getElementById('targetPerHourVal').innerText = targetPerHour.toLocaleString();
-        targetRateBox.style.display = 'flex';
       } else {
         infoBanner.style.display = 'none';
-        targetRateBox.style.display = 'none';
       }
 
+      btnAddMiddayLot.style.display = 'block';
       generateSmartTimeSlots(totalHours);
+
     } catch (err) {
       console.error("Error loading line details:", err);
-      slotsContainer.innerHTML = '<p style="color: #ef4444; font-size: 0.95rem; text-align: center;">โหลดข้อมูลไม่สำเร็จ</p>';
+      btnAddMiddayLot.style.display = 'block';
+      generateSmartTimeSlots(8);
     }
   }
 
+  // ดึงเฉพาะ 2 ชั่วโมงล่าสุดตามเวลาจริง
   function generateSmartTimeSlots(totalHours) {
     const slotsContainer = document.getElementById('slotsContainer');
     slotsContainer.innerHTML = '';
@@ -361,46 +314,49 @@
       targetSlots = [TIME_SLOTS_DEF[0]];
     }
 
-    if (targetSlots.length === 0) {
-      slotsContainer.innerHTML = '<p style="color: #ef4444; font-size: 0.95rem; text-align: center; padding: 15px 0;">ยังไม่ได้ตั้งเป้าผลิตประจำวัน (TG)</p>';
-      return;
-    }
-
-    let lotOptionsHTML = activeLots.length > 0 
-      ? activeLots.map(lot => `<option value="${lot}">${lot}</option>`).join('') 
-      : '<option value="">-</option>';
+    let modelOptionsHTML = activeModels.length > 0 
+      ? activeModels.map(m => `<option value="${m}">${m}</option>`).join('') 
+      : '<option value="">-- ไม่พบ Model --</option>';
 
     targetSlots.forEach(slot => {
-      const existing = activeExistingHourly[slot.label]; // {output, lot, reportedBy, time} ถ้าเคยกรอกไปแล้ว
-
       const row = document.createElement('div');
       row.className = 'slot-row';
       row.innerHTML = `
         <div class="slot-time">${slot.label}</div>
         <select class="slot-lot-select input-lot-val">
-          ${lotOptionsHTML}
+          ${modelOptionsHTML}
         </select>
         <input type="number" class="slot-input input-val" min="0" placeholder="0" oninput="calculateTotal()">
       `;
       slotsContainer.appendChild(row);
-
-      if (existing) {
-        // pre-fill ค่าที่เคยกรอกไว้ + เลือก LOT เดิมให้อัตโนมัติ (ถ้ามีใน dropdown)
-        const inputEl = row.querySelector('.input-val');
-        const lotSelectEl = row.querySelector('.input-lot-val');
-        inputEl.value = existing.output;
-        if (existing.lot && [...lotSelectEl.options].some(o => o.value === existing.lot)) {
-          lotSelectEl.value = existing.lot;
-        }
-
-        const warning = document.createElement('div');
-        warning.className = 'slot-warning';
-        warning.innerHTML = `⚠️ ช่วงนี้กรอกไปแล้ว <b>${existing.output}</b> ชิ้น โดย <b>${existing.reportedBy || 'ไม่ทราบชื่อ'}</b> เมื่อ ${existing.time} — แก้ไขได้ถ้าต้องการอัปเดต`;
-        slotsContainer.appendChild(warning);
-      }
     });
 
     calculateTotal();
+  }
+
+  // คนกรอกเลข LOT -> แปลงเป็น Model (Option A)
+  function promptNewLotNumber() {
+    const inputLot = prompt("กรุณากรอก 'เลข LOT Number' ที่ต้องการสลับผลิต:");
+    if (inputLot && inputLot.trim() !== "") {
+      const formattedLot = inputLot.trim().toUpperCase();
+      
+      // ค้นหาใน Master_LOT Map ว่าตรงกับ Model อะไร (Option A: ถ้าไม่เจอ ใช้เลข LOT ลอยไปก่อน)
+      const targetModel = masterLotMap[formattedLot] || formattedLot;
+
+      if (!activeModels.includes(targetModel)) {
+        activeModels.push(targetModel);
+        
+        // เพิ่ม Model ใหม่เข้าไปในทุก Dropdown บนหน้าจอทันที
+        const selects = document.querySelectorAll('.input-lot-val');
+        selects.forEach(select => {
+          const opt = document.createElement('option');
+          opt.value = targetModel;
+          opt.innerText = targetModel;
+          opt.selected = true; // สลับมาเลือกตัวใหม่นี้ให้ทันที
+          select.appendChild(opt);
+        });
+      }
+    }
   }
 
   function calculateTotal() {
@@ -411,60 +367,6 @@
     });
     document.getElementById('totalSum').value = total.toLocaleString();
   }
-
-  document.getElementById('hourlyForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const line = document.getElementById('line').value;
-    const remark = document.getElementById('remark').value;
-    const slotRows = document.querySelectorAll('.slot-row');
-    const hourlyDetails = [];
-
-    slotRows.forEach(row => {
-      const timeLabel = row.querySelector('.slot-time').innerText;
-      const lotVal = row.querySelector('.input-lot-val').value;
-      const outputVal = row.querySelector('.input-val').value;
-
-      if (outputVal !== "" && outputVal !== null) {
-        hourlyDetails.push({
-          timeLabel: timeLabel,
-          lot: lotVal,
-          output: Number(outputVal)
-        });
-      }
-    });
-
-    if (hourlyDetails.length === 0) {
-      alert("กรุณากรอกยอดผลิตอย่างน้อย 1 ช่องเวลา");
-      return;
-    }
-
-    const payload = {
-      action: "saveHourlyOutput",
-      line: line,
-      remark: remark,
-      hourlyDetails: hourlyDetails,
-      updatedBy: lineProfile ? lineProfile.displayName : "Unknown"
-    };
-
-    try {
-      const res = await fetch(SCRIPT_URL, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload) 
-      });
-      const result = await res.json();
-      if (result.status === 'success') {
-        alert("บันทึกยอดการผลิตเรียบร้อยแล้ว!");
-        liff.closeWindow();
-      } else {
-        alert("เกิดข้อผิดพลาด: " + result.error);
-      }
-    } catch (err) {
-      alert("เกิดข้อผิดพลาดในการส่งข้อมูล");
-      console.error(err);
-    }
-  });
 </script>
 
 </body>
