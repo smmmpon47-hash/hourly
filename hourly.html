@@ -223,15 +223,18 @@
       <textarea id="remark" rows="2" placeholder="ระบุปัญหาที่พบ (ถ้ามี)"></textarea>
     </div>
 
-    <button type="submit" class="btn-submit">บันทึกยอด</button>
+    <button type="submit" class="btn-submit" id="btnSubmit">บันทึกยอด</button>
   </form>
 </div>
 
 <script>
+  // URL จากย่อหน้าโค้ดที่คุณส่งมา
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwziSYLaDcymEHVXQr_qOP6RmIQDjixVPqWwhAQSOMXs_4zAA-gscpeuR7fJp7DY6yp/exec"; 
-  let lineProfile = null;
-  let activeModels = []; // เก็บรายชื่อ Model สำหรับ Dropdown
-  let masterLotMap = {}; // Map คู่มือ (LOT_Number -> Model)
+  const LIFF_ID = "2011198724-JQ60DTBm";
+
+  let activeModels = []; 
+  let masterLotMap = {}; 
+  let userDisplayName = "Unknown";
 
   const TIME_SLOTS_DEF = [
     { label: "08.30-09.30", endMin: 570 },
@@ -247,11 +250,27 @@
     { label: "18.30-19.30", endMin: 1170 }
   ];
 
+  async function initLiff() {
+    try {
+      if (typeof liff !== "undefined" && LIFF_ID) {
+        await liff.init({ liffId: LIFF_ID });
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          userDisplayName = profile.displayName;
+        }
+      }
+    } catch (err) {
+      console.error("LIFF Init Error:", err);
+    }
+  }
+
   function displayCurrentDate() {
     const now = new Date();
     document.getElementById('currentDateDisplay').innerText = now.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
+
   displayCurrentDate();
+  initLiff();
 
   async function loadLineDetails() {
     const line = document.getElementById('line').value;
@@ -273,30 +292,26 @@
       const data = await res.json();
 
       activeModels = data.models || [];
-      masterLotMap = data.masterMap || {}; // Map ข้อมูล Master_LOT ทั้งหมดจากหลังบ้าน
+      masterLotMap = data.masterMap || {}; 
       const totalHours = Number(data.totalWorkingHours) || 8;
       const targetVal = Number(data.target) || 0;
 
-      if (data.reported) {
-        document.getElementById('targetVal').innerText = targetVal.toLocaleString();
-        document.getElementById('hoursVal').innerText = totalHours;
-        infoBanner.style.display = 'flex';
-      } else {
-        infoBanner.style.display = 'none';
-      }
+      document.getElementById('targetVal').innerText = targetVal.toLocaleString();
+      document.getElementById('hoursVal').innerText = totalHours;
+      infoBanner.style.display = 'flex';
 
       btnAddMiddayLot.style.display = 'block';
-      generateSmartTimeSlots(totalHours);
+      generateSmartTimeSlots(totalHours, data.existingHourly || {});
 
     } catch (err) {
       console.error("Error loading line details:", err);
       btnAddMiddayLot.style.display = 'block';
-      generateSmartTimeSlots(8);
+      // ถ้า Error หรือโหลดไม่ได้ ให้ใช้ค่าตั้งต้นสร้างช่องทันที ป้องกันหน้าค้าง
+      generateSmartTimeSlots(8, {});
     }
   }
 
-  // ดึงเฉพาะ 2 ชั่วโมงล่าสุดตามเวลาจริง
-  function generateSmartTimeSlots(totalHours) {
+  function generateSmartTimeSlots(totalHours, existingData) {
     const slotsContainer = document.getElementById('slotsContainer');
     slotsContainer.innerHTML = '';
 
@@ -308,51 +323,56 @@
     passedSlots = passedSlots.slice(0, maxCount);
 
     let targetSlots = [];
-    if (passedSlots.length > 0) {
+    // บังคับให้ต้องแสดงอย่างน้อย 2 ช่องเสมอ แม้ว่าจะเป็นเวลากลางคืนก็ตาม
+    if (passedSlots.length >= 2) {
       targetSlots = passedSlots.slice(-2);
-    } else if (maxCount > 0) {
-      targetSlots = [TIME_SLOTS_DEF[0]];
+    } else {
+      targetSlots = [TIME_SLOTS_DEF[0], TIME_SLOTS_DEF[1]];
     }
 
     let modelOptionsHTML = activeModels.length > 0 
       ? activeModels.map(m => `<option value="${m}">${m}</option>`).join('') 
-      : '<option value="">-- ไม่พบ Model --</option>';
+      : '<option value="Standard Lot">Standard Lot</option>';
 
     targetSlots.forEach(slot => {
+      const existing = existingData[slot.label] || {};
+      const currentOutput = existing.output !== undefined ? existing.output : '';
+
       const row = document.createElement('div');
       row.className = 'slot-row';
       row.innerHTML = `
-        <div class="slot-time">${slot.label}</div>
+        <div class="slot-time" data-slot-label="${slot.label}">${slot.label}</div>
         <select class="slot-lot-select input-lot-val">
           ${modelOptionsHTML}
         </select>
-        <input type="number" class="slot-input input-val" min="0" placeholder="0" oninput="calculateTotal()">
+        <input type="number" class="slot-input input-val" min="0" placeholder="0" value="${currentOutput}" oninput="calculateTotal()">
       `;
       slotsContainer.appendChild(row);
+
+      if (existing.lot) {
+        const selectElem = row.querySelector('.input-lot-val');
+        selectElem.value = existing.lot;
+      }
     });
 
     calculateTotal();
   }
 
-  // คนกรอกเลข LOT -> แปลงเป็น Model (Option A)
   function promptNewLotNumber() {
     const inputLot = prompt("กรุณากรอก 'เลข LOT Number' ที่ต้องการสลับผลิต:");
     if (inputLot && inputLot.trim() !== "") {
       const formattedLot = inputLot.trim().toUpperCase();
-      
-      // ค้นหาใน Master_LOT Map ว่าตรงกับ Model อะไร (Option A: ถ้าไม่เจอ ใช้เลข LOT ลอยไปก่อน)
       const targetModel = masterLotMap[formattedLot] || formattedLot;
 
       if (!activeModels.includes(targetModel)) {
         activeModels.push(targetModel);
         
-        // เพิ่ม Model ใหม่เข้าไปในทุก Dropdown บนหน้าจอทันที
         const selects = document.querySelectorAll('.input-lot-val');
         selects.forEach(select => {
           const opt = document.createElement('option');
           opt.value = targetModel;
           opt.innerText = targetModel;
-          opt.selected = true; // สลับมาเลือกตัวใหม่นี้ให้ทันที
+          opt.selected = true; 
           select.appendChild(opt);
         });
       }
@@ -367,6 +387,75 @@
     });
     document.getElementById('totalSum').value = total.toLocaleString();
   }
+
+  document.getElementById('hourlyForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const lineVal = document.getElementById('line').value;
+    const remarkVal = document.getElementById('remark').value;
+    const btnSubmit = document.getElementById('btnSubmit');
+
+    if (!lineVal) {
+      alert("กรุณาเลือก LINE การผลิต");
+      return;
+    }
+
+    btnSubmit.disabled = true;
+    btnSubmit.innerText = "กำลังบันทึก...";
+
+    const hourlyDetails = [];
+    const newAddedLots = [];
+
+    const slotRows = document.querySelectorAll('.slot-row');
+    slotRows.forEach(row => {
+      const timeLabel = row.querySelector('.slot-time').getAttribute('data-slot-label');
+      const lotVal = row.querySelector('.input-lot-val').value;
+      const outputVal = row.querySelector('.input-val').value;
+
+      if (outputVal !== "") {
+        hourlyDetails.push({
+          timeLabel: timeLabel,
+          lot: lotVal,
+          output: Number(outputVal)
+        });
+
+        if (lotVal && !newAddedLots.includes(lotVal)) {
+          newAddedLots.push(lotVal);
+        }
+      }
+    });
+
+    const payload = {
+      action: "saveHourlyOutput",
+      line: lineVal,
+      remark: remarkVal,
+      updatedBy: userDisplayName,
+      hourlyDetails: hourlyDetails,
+      newAddedLots: newAddedLots
+    };
+
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      const result = await res.json();
+
+      if (result.status === "success") {
+        alert("บันทึกข้อมูลเรียบร้อยแล้ว!");
+        if (typeof liff !== "undefined" && liff.isInClient()) {
+          liff.closeWindow();
+        }
+      } else {
+        alert("เกิดข้อผิดพลาด: " + (result.error || "ไม่สามารถบันทึกได้"));
+      }
+    } catch (err) {
+      alert("บันทึกไม่สำเร็จ: " + err.message);
+    } finally {
+      btnSubmit.disabled = false;
+      btnSubmit.innerText = "บันทึกยอด";
+    }
+  });
 </script>
 
 </body>
