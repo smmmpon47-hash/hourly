@@ -89,7 +89,7 @@
     .slot-row {
       display: flex;
       gap: 10px;
-      align-items: center;
+      align-items: flex-start;
       margin-bottom: 12px;
     }
     .slot-time {
@@ -103,12 +103,25 @@
       font-weight: 700;
       color: #334155;
     }
-    .slot-lot-select {
+    .slot-lot-container {
       flex: 2.2;
+      display: flex;
+      flex-direction: column;
+    }
+    .slot-lot-select {
+      width: 100%;
       padding: 11px 6px;
       font-size: 0.88rem;
       border-radius: 14px;
       font-weight: 600;
+    }
+    .model-subtext {
+      font-size: 0.75rem;
+      color: #0d9488;
+      font-weight: 600;
+      margin-top: 4px;
+      padding-left: 4px;
+      min-height: 16px;
     }
     .slot-input {
       flex: 1.2;
@@ -228,12 +241,11 @@
 </div>
 
 <script>
-  // URL จากย่อหน้าโค้ดที่คุณส่งมา
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwziSYLaDcymEHVXQr_qOP6RmIQDjixVPqWwhAQSOMXs_4zAA-gscpeuR7fJp7DY6yp/exec"; 
   const LIFF_ID = "2011198724-JQ60DTBm";
 
-  let activeModels = []; 
-  let masterLotMap = {}; 
+  let activeLots = []; // รายการเลข LOT
+  let masterLotMap = {}; // Map คู่มือ (LOT_Number -> Model)
   let userDisplayName = "Unknown";
 
   const TIME_SLOTS_DEF = [
@@ -291,7 +303,7 @@
       const res = await fetch(`${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(line)}`);
       const data = await res.json();
 
-      activeModels = data.models || [];
+      activeLots = data.lots || data.models || [];
       masterLotMap = data.masterMap || {}; 
       const totalHours = Number(data.totalWorkingHours) || 8;
       const targetVal = Number(data.target) || 0;
@@ -306,7 +318,6 @@
     } catch (err) {
       console.error("Error loading line details:", err);
       btnAddMiddayLot.style.display = 'block';
-      // ถ้า Error หรือโหลดไม่ได้ ให้ใช้ค่าตั้งต้นสร้างช่องทันที ป้องกันหน้าค้าง
       generateSmartTimeSlots(8, {});
     }
   }
@@ -323,16 +334,15 @@
     passedSlots = passedSlots.slice(0, maxCount);
 
     let targetSlots = [];
-    // บังคับให้ต้องแสดงอย่างน้อย 2 ช่องเสมอ แม้ว่าจะเป็นเวลากลางคืนก็ตาม
     if (passedSlots.length >= 2) {
       targetSlots = passedSlots.slice(-2);
     } else {
       targetSlots = [TIME_SLOTS_DEF[0], TIME_SLOTS_DEF[1]];
     }
 
-    let modelOptionsHTML = activeModels.length > 0 
-      ? activeModels.map(m => `<option value="${m}">${m}</option>`).join('') 
-      : '<option value="Standard Lot">Standard Lot</option>';
+    let lotOptionsHTML = activeLots.length > 0 
+      ? activeLots.map(l => `<option value="${l}">${l}</option>`).join('') 
+      : '<option value="">-- ไม่พบ LOT --</option>';
 
     targetSlots.forEach(slot => {
       const existing = existingData[slot.label] || {};
@@ -342,38 +352,53 @@
       row.className = 'slot-row';
       row.innerHTML = `
         <div class="slot-time" data-slot-label="${slot.label}">${slot.label}</div>
-        <select class="slot-lot-select input-lot-val">
-          ${modelOptionsHTML}
-        </select>
+        <div class="slot-lot-container">
+          <select class="slot-lot-select input-lot-val" onchange="updateModelSubtext(this)">
+            ${lotOptionsHTML}
+          </select>
+          <div class="model-subtext"></div>
+        </div>
         <input type="number" class="slot-input input-val" min="0" placeholder="0" value="${currentOutput}" oninput="calculateTotal()">
       `;
       slotsContainer.appendChild(row);
 
+      const selectElem = row.querySelector('.input-lot-val');
       if (existing.lot) {
-        const selectElem = row.querySelector('.input-lot-val');
         selectElem.value = existing.lot;
       }
+      updateModelSubtext(selectElem);
     });
 
     calculateTotal();
+  }
+
+  // ฟังก์ชันแสดงชื่อรุ่นใต้ช่อง LOT
+  function updateModelSubtext(selectElem) {
+    const selectedLot = selectElem.value;
+    const subtextElem = selectElem.nextElementSibling;
+    if (selectedLot && masterLotMap[selectedLot]) {
+      subtextElem.innerText = `(รุ่น: ${masterLotMap[selectedLot]})`;
+    } else {
+      subtextElem.innerText = '';
+    }
   }
 
   function promptNewLotNumber() {
     const inputLot = prompt("กรุณากรอก 'เลข LOT Number' ที่ต้องการสลับผลิต:");
     if (inputLot && inputLot.trim() !== "") {
       const formattedLot = inputLot.trim().toUpperCase();
-      const targetModel = masterLotMap[formattedLot] || formattedLot;
 
-      if (!activeModels.includes(targetModel)) {
-        activeModels.push(targetModel);
+      if (!activeLots.includes(formattedLot)) {
+        activeLots.push(formattedLot);
         
         const selects = document.querySelectorAll('.input-lot-val');
         selects.forEach(select => {
           const opt = document.createElement('option');
-          opt.value = targetModel;
-          opt.innerText = targetModel;
+          opt.value = formattedLot;
+          opt.innerText = formattedLot;
           opt.selected = true; 
           select.appendChild(opt);
+          updateModelSubtext(select);
         });
       }
     }
