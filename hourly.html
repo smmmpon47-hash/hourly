@@ -1,237 +1,9 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>บันทึกยอดการผลิต</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    * { box-sizing: border-box; font-family: 'Prompt', sans-serif; }
-    body {
-      background-color: #1e3a3f;
-      min-height: 100vh;
-      margin: 0;
-      padding: 20px 15px;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-    }
-    .card {
-      background: #ffffff;
-      padding: 24px 22px;
-      border-radius: 24px;
-      width: 100%;
-      max-width: 450px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
-    }
-
-    .header-top-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    .header-title {
-      font-size: 1.55rem;
-      font-weight: 700;
-      color: #0d9488;
-      margin: 0;
-    }
-    .date-badge {
-      font-size: 0.85rem;
-      color: #475569;
-      font-weight: 600;
-      background: #f1f5f9;
-      padding: 5px 12px;
-      border-radius: 12px;
-      border: 1px solid #cbd5e1;
-    }
-
-    .form-group { margin-bottom: 18px; }
-    label { display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b; font-size: 1rem; }
-    
-    select, input, textarea {
-      width: 100%;
-      padding: 12px 14px;
-      border: 1.8px solid #cbd5e1;
-      border-radius: 14px;
-      font-size: 1.05rem;
-      outline: none;
-      background: #fff;
-      color: #0f172a;
-    }
-    select:focus, input:focus, textarea:focus {
-      border-color: #0d9488;
-      box-shadow: 0 0 0 3.5px rgba(13, 148, 136, 0.2);
-    }
-
-    .info-banner {
-      background: #e0f2fe;
-      border-radius: 14px;
-      padding: 12px 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      font-size: 0.95rem;
-      color: #0369a1;
-      font-weight: 600;
-    }
-
-    .section-title {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #334155;
-      margin-bottom: 12px;
-    }
-
-    .slot-row {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    .slot-time {
-      flex: 2.2;
-      background: #f8fafc;
-      border: 1.5px solid #e2e8f0;
-      border-radius: 14px;
-      padding: 11px 8px;
-      text-align: center;
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: #334155;
-    }
-    .slot-lot-select {
-      flex: 2.2;
-      padding: 11px 6px;
-      font-size: 0.88rem;
-      border-radius: 14px;
-      font-weight: 600;
-    }
-    .slot-input {
-      flex: 1.2;
-      padding: 11px 8px;
-      text-align: center;
-      font-weight: 700;
-      border-radius: 14px;
-      font-size: 1.1rem;
-    }
-
-    .btn-add-lot-midday {
-      background: #f0fdf4;
-      border: 1.5px dashed #0d9488;
-      color: #0d9488;
-      font-weight: 600;
-      cursor: pointer;
-      padding: 11px;
-      border-radius: 14px;
-      width: 100%;
-      font-size: 0.9rem;
-      margin-top: 5px;
-      margin-bottom: 15px;
-    }
-    .btn-add-lot-midday:active { background: #dcfce7; }
-
-    .sum-box {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #f8fafc;
-      padding: 14px 18px;
-      border-radius: 16px;
-      border: 2px dashed #0d9488;
-      margin-bottom: 18px;
-      font-weight: 600;
-      color: #1e293b;
-      font-size: 1.05rem;
-    }
-    .sum-input {
-      width: 95px;
-      text-align: center;
-      background: #fff;
-      font-weight: 700;
-      color: #0d9488;
-      border: 2px solid #0d9488;
-      padding: 6px;
-      border-radius: 10px;
-      font-size: 1.15rem;
-    }
-
-    .btn-submit {
-      width: 100%;
-      padding: 15px;
-      background: #0d9488;
-      color: white;
-      border: none;
-      border-radius: 16px;
-      font-size: 1.15rem;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
-      margin-top: 10px;
-    }
-  </style>
-</head>
-<body>
-
-<div class="card">
-  <div class="header-top-row">
-    <h2 class="header-title">บันทึกยอดการผลิต</h2>
-    <div class="date-badge" id="currentDateDisplay">--/--/----</div>
-  </div>
-
-  <form id="hourlyForm">
-    <div class="form-group">
-      <label for="line">LINE การผลิต</label>
-      <select id="line" required onchange="loadLineDetails()">
-        <option value="">-- เลือก LINE --</option>
-        <option value="Line B">Line B</option>
-        <option value="Line C">Line C</option>
-        <option value="Line D">Line D</option>
-        <option value="Line E">Line E</option>
-        <option value="Line F">Line F</option>
-        <option value="Line G">Line G</option>
-      </select>
-    </div>
-
-    <div id="infoBanner" class="info-banner" style="display:none;">
-      <span>🎯 เป้าวัน: <strong id="targetVal">0</strong> ชิ้น</span>
-      <span>⏱️ เวลาทำงาน: <strong id="hoursVal">0</strong> ชม.</span>
-    </div>
-
-    <div class="form-group">
-      <div class="section-title">กรอกยอดผลิตรายชั่วโมง</div>
-      <div id="slotsContainer">
-        <p style="color: #94a3b8; font-size: 0.95rem; text-align: center; padding: 15px 0;">โปรดเลือก LINE การผลิต</p>
-      </div>
-    </div>
-
-    <button type="button" class="btn-add-lot-midday" id="btnAddMiddayLot" style="display:none;" onclick="promptNewLotNumber()">
-      ➕ สลับรุ่น / กรอกเลข LOT เพิ่มเติม
-    </button>
-
-    <div class="sum-box">
-      <span>ยอดรวมที่กรอก</span>
-      <input type="text" id="totalSum" class="sum-input" value="0" readonly>
-      <span>ชิ้น</span>
-    </div>
-
-    <div class="form-group">
-      <label for="remark">หมายเหตุ / ปัญหาที่พบ</label>
-      <textarea id="remark" rows="2" placeholder="ระบุปัญหาที่พบ (ถ้ามี)"></textarea>
-    </div>
-
-    <button type="submit" class="btn-submit">บันทึกยอด</button>
-  </form>
-</div>
-
 <script>
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwziSYLaDcymEHVXQr_qOP6RmIQDjixVPqWwhAQSOMXs_4zAA-gscpeuR7fJp7DY6yp/exec"; 
   let lineProfile = null;
   let activeModels = []; // เก็บรายชื่อ Model สำหรับ Dropdown
   let masterLotMap = {}; // Map คู่มือ (LOT_Number -> Model)
+  let addedMiddayLots = []; // [เพิ่มใหม่] ตัวแปรจำ LOT ใหม่ที่สลับเพิ่มระหว่างวัน
 
   const TIME_SLOTS_DEF = [
     { label: "08.30-09.30", endMin: 570 },
@@ -246,6 +18,21 @@
     { label: "17.30-18.30", endMin: 1110 },
     { label: "18.30-19.30", endMin: 1170 }
   ];
+
+  // 1. เชื่อมต่อ LIFF ดึงโปรไฟล์ LINE
+  async function initLiff() {
+    try {
+      await liff.init({ liffId: "2011196323-6e8Sc2U8" });
+      if (liff.isLoggedIn()) { 
+        lineProfile = await liff.getProfile(); 
+      } else { 
+        liff.login(); 
+      }
+    } catch (err) { 
+      console.error("LIFF Init Error:", err); 
+    }
+  }
+  initLiff();
 
   function displayCurrentDate() {
     const now = new Date();
@@ -273,7 +60,7 @@
       const data = await res.json();
 
       activeModels = data.models || [];
-      masterLotMap = data.masterMap || {}; // Map ข้อมูล Master_LOT ทั้งหมดจากหลังบ้าน
+      masterLotMap = data.masterMap || {}; 
       const totalHours = Number(data.totalWorkingHours) || 8;
       const targetVal = Number(data.target) || 0;
 
@@ -295,7 +82,6 @@
     }
   }
 
-  // ดึงเฉพาะ 2 ชั่วโมงล่าสุดตามเวลาจริง
   function generateSmartTimeSlots(totalHours) {
     const slotsContainer = document.getElementById('slotsContainer');
     slotsContainer.innerHTML = '';
@@ -322,7 +108,7 @@
       const row = document.createElement('div');
       row.className = 'slot-row';
       row.innerHTML = `
-        <div class="slot-time">${slot.label}</div>
+        <div class="slot-time" data-time="${slot.label}">${slot.label}</div>
         <select class="slot-lot-select input-lot-val">
           ${modelOptionsHTML}
         </select>
@@ -334,25 +120,27 @@
     calculateTotal();
   }
 
-  // คนกรอกเลข LOT -> แปลงเป็น Model (Option A)
+  // 2. ฟังก์ชันปุ่มกรอก LOT เพิ่มเติม (จำเลข LOT ไว้ส่งหลังบ้านด้วย)
   function promptNewLotNumber() {
     const inputLot = prompt("กรุณากรอก 'เลข LOT Number' ที่ต้องการสลับผลิต:");
     if (inputLot && inputLot.trim() !== "") {
       const formattedLot = inputLot.trim().toUpperCase();
-      
-      // ค้นหาใน Master_LOT Map ว่าตรงกับ Model อะไร (Option A: ถ้าไม่เจอ ใช้เลข LOT ลอยไปก่อน)
       const targetModel = masterLotMap[formattedLot] || formattedLot;
+
+      // [เพิ่มใหม่] เก็บเลข LOT ลง Array ไว้ส่งให้ Apps Script
+      if (!addedMiddayLots.includes(formattedLot)) {
+        addedMiddayLots.push(formattedLot);
+      }
 
       if (!activeModels.includes(targetModel)) {
         activeModels.push(targetModel);
         
-        // เพิ่ม Model ใหม่เข้าไปในทุก Dropdown บนหน้าจอทันที
         const selects = document.querySelectorAll('.input-lot-val');
         selects.forEach(select => {
           const opt = document.createElement('option');
           opt.value = targetModel;
           opt.innerText = targetModel;
-          opt.selected = true; // สลับมาเลือกตัวใหม่นี้ให้ทันที
+          opt.selected = true; 
           select.appendChild(opt);
         });
       }
@@ -367,7 +155,52 @@
     });
     document.getElementById('totalSum').value = total.toLocaleString();
   }
-</script>
 
-</body>
-</html>
+  // 3. [เพิ่มใหม่] ฟังก์ชันกดปุ่ม "บันทึกยอด" ยิงข้อมูลออก
+  document.getElementById('hourlyForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const rows = document.querySelectorAll('.slot-row');
+    const hourlyData = [];
+
+    rows.forEach(row => {
+      const timeSlot = row.querySelector('.slot-time').getAttribute('data-time');
+      const selectedModel = row.querySelector('.input-lot-val').value;
+      const qty = Number(row.querySelector('.input-val').value) || 0;
+
+      if (timeSlot && selectedModel) {
+        hourlyData.push({ timeSlot, model: selectedModel, qty });
+      }
+    });
+
+    const payload = {
+      formType: "HOURLY_OUTPUT",
+      line: document.getElementById('line').value,
+      remark: document.getElementById('remark').value || "",
+      updatedBy: lineProfile ? lineProfile.displayName : "Unknown",
+      hourlyData: hourlyData,
+      newAddedLots: addedMiddayLots // แนบรายการ LOT ใหม่ยิงกลับไปบันทึกที่ Summary
+    };
+
+    try {
+      const response = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        alert("บันทึกยอดการผลิตเรียบร้อยแล้ว!");
+        if (typeof liff !== 'undefined' && liff.isInClient()) {
+          liff.closeWindow();
+        }
+      } else {
+        alert("เกิดข้อผิดพลาด: " + (result.error || "ไม่สามารถบันทึกได้"));
+      }
+    } catch (err) {
+      alert("เกิดข้อผิดพลาดในการส่งข้อมูล");
+      console.error(err);
+    }
+  });
+</script>
