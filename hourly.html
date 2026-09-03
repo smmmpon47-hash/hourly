@@ -331,7 +331,10 @@
 
     let passedSlots = TIME_SLOTS_DEF.filter(slot => currentMinutes >= slot.endMin);
     const maxCount = Math.min(Math.ceil(totalHours), TIME_SLOTS_DEF.length);
-    passedSlots = passedSlots.slice(0, maxCount);
+    // ตัดเอา maxCount ช่วงเวลา "ล่าสุด" (จากท้ายอาร์เรย์) ไม่ใช่ช่วงแรกสุด
+    // เดิมใช้ slice(0, maxCount) ทำให้พอมี OT (totalHours มากกว่าปกติ) และเวลาปัจจุบันเลย
+    // ช่วงสุดท้ายไปแล้ว ช่วง OT ล่าสุดจะถูกตัดทิ้งแทนที่จะเป็นช่วงเก่าสุด
+    passedSlots = passedSlots.slice(-maxCount);
 
     let targetSlots = [];
     if (passedSlots.length >= 2) {
