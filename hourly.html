@@ -191,7 +191,6 @@
       cursor: not-allowed;
     }
 
-    /* Modal Styling */
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -387,7 +386,7 @@
 
       masterLotMap = data.masterMap || {}; 
       currentHours1 = Number(data.totalWorkingHours) || 9;
-      currentTarget1 = Number(data.target1 || data.target) || 1000; // เป้าเต็ม LOT 1 (default 1000)
+      currentTarget1 = Number(data.target1 || data.target) || 1000;
 
       document.getElementById('targetVal').innerText = currentTarget1.toLocaleString();
       document.getElementById('hoursVal').innerText = currentHours1;
@@ -407,18 +406,43 @@
     const slotsContainer = document.getElementById('slotsContainer');
     slotsContainer.innerHTML = '';
 
+    const selectedLine = document.getElementById('line').value.toUpperCase();
+    const cleanLine = selectedLine.replace('LINE', '').trim();
+
+    let breakSlot = "";
+    if (['B', 'C'].includes(cleanLine)) {
+      breakSlot = "12.30-13.30";
+    } else if (['D', 'E', 'F', 'G'].includes(cleanLine)) {
+      breakSlot = "11.30-12.30";
+    }
+
     const now = new Date();
     const currentMinutes = (now.getHours() * 60) + now.getMinutes();
 
-    let passedSlots = TIME_SLOTS_DEF.filter(slot => currentMinutes >= slot.endMin);
-    const maxCount = Math.min(Math.ceil(totalHours), TIME_SLOTS_DEF.length);
-    passedSlots = passedSlots.slice(-maxCount);
-
     let targetSlots = [];
-    if (passedSlots.length >= 2) {
-      targetSlots = passedSlots.slice(-2);
+
+    // กำหนดดึงสล็อตเฉพาะตามรอบเวลา
+    if (currentMinutes >= 1020 && currentMinutes < 1080) { 
+      // ช่วงเวลา 17.00 - 17.59 น. -> ดึงเฉพาะรอบ 16.30-17.30
+      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "16.30-17.30");
+    } else if (currentMinutes >= 1080 && currentMinutes < 1140) { 
+      // ช่วงเวลา 18.00 - 18.59 น. -> ดึงเฉพาะ OT 17.30-18.30 (หรือรวม 18.30-19.30 ถ้าชั่วโมงรวมถึง)
+      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "17.30-18.30");
+      if (totalHours >= 10) {
+        const slot19 = TIME_SLOTS_DEF.find(s => s.label === "18.30-19.30");
+        if (slot19) targetSlots.push(slot19);
+      }
     } else {
-      targetSlots = [TIME_SLOTS_DEF[0], TIME_SLOTS_DEF[1]];
+      // รอบอื่นๆ ดึง 2 สล็อตล่าสุดตามปกติ
+      let passedSlots = TIME_SLOTS_DEF.filter(slot => currentMinutes >= slot.endMin);
+      const maxCount = Math.min(Math.ceil(totalHours), TIME_SLOTS_DEF.length);
+      passedSlots = passedSlots.slice(-maxCount);
+
+      if (passedSlots.length >= 2) {
+        targetSlots = passedSlots.slice(-2);
+      } else {
+        targetSlots = [TIME_SLOTS_DEF[0], TIME_SLOTS_DEF[1]];
+      }
     }
 
     let lotOptionsHTML = activeLots.length > 0 
@@ -427,19 +451,28 @@
 
     targetSlots.forEach(slot => {
       const existing = existingData[slot.label] || {};
-      const currentOutput = existing.output !== undefined ? existing.output : '';
+      const isBreakTime = (slot.label === breakSlot);
+      const currentOutput = isBreakTime ? 0 : (existing.output !== undefined ? existing.output : '');
 
       const row = document.createElement('div');
       row.className = 'slot-row';
       row.innerHTML = `
-        <div class="slot-time" data-slot-label="${slot.label}">${slot.label}</div>
+        <div class="slot-time" data-slot-label="${slot.label}">
+          ${slot.label} ${isBreakTime ? '<br><span style="color:#ef4444; font-size:0.75rem;">(พัก)</span>' : ''}
+        </div>
         <div class="slot-lot-container">
-          <select class="slot-lot-select input-lot-val" onchange="updateModelSubtext(this)">
+          <select class="slot-lot-select input-lot-val" onchange="updateModelSubtext(this)" ${isBreakTime ? 'disabled' : ''}>
             ${lotOptionsHTML}
           </select>
           <div class="model-subtext"></div>
         </div>
-        <input type="number" class="slot-input input-val" min="0" placeholder="0" value="${currentOutput}" oninput="calculateTotal()">
+        <input type="number" 
+               class="slot-input input-val" 
+               min="0" 
+               placeholder="0" 
+               value="${currentOutput}" 
+               oninput="calculateTotal()"
+               ${isBreakTime ? 'readonly style="background-color: #f1f5f9; color: #94a3b8; cursor: not-allowed;"' : ''}>
       `;
       slotsContainer.appendChild(row);
 
@@ -479,7 +512,6 @@
     document.getElementById('modalLotTarget').value = '';
   }
 
-  // คำนวณ Dynamic Target แบบเป๊ะตามชั่วโมงจริง
   async function confirmNewLot() {
     const newLot = document.getElementById('modalLotNo').value.trim().toUpperCase();
     const newTargetMax = Number(document.getElementById('modalLotTarget').value) || 0;
@@ -490,32 +522,26 @@
       return;
     }
 
-    // 1. หาว่า LOT 1 ทำไปกี่ชั่วโมง โดยนับจากช่อง Input ที่มีข้อมูล/สลับจริง
     const slotRows = document.querySelectorAll('.slot-row');
     let hoursUsedLot1 = 0;
 
     slotRows.forEach(row => {
       const outputVal = row.querySelector('.input-val').value;
       if (outputVal !== "") {
-        hoursUsedLot1++; // นับว่าทำ LOT 1 ไปแล้วกี่ชั่วโมง
+        hoursUsedLot1++;
       }
     });
 
-    if (hoursUsedLot1 === 0) hoursUsedLot1 = 1; // ถ้ายังไม่ได้กรอก ถือว่าขึ้น LOT 1 ไปแล้ว 1 ชม.
+    if (hoursUsedLot1 === 0) hoursUsedLot1 = 1;
 
-    // 2. คำนวณชั่วโมงคงเหลือสำหรับ LOT 2
     const remainingHoursLot2 = Math.max(0, currentHours1 - hoursUsedLot1);
 
-    // 3. ตรรกะคำนวณเป้า Dynamic Ratio:
-    // (เป้าตั้งต้น LOT1 / รวมเวลา) * ชม.ทำจริง + (เป้าตั้งต้น LOT2 / รวมเวลา) * ชม.ที่เหลือ
     const target1Chunk = Math.round((currentTarget1 / currentHours1) * hoursUsedLot1); 
     const target2Chunk = Math.round((newTargetMax / currentHours1) * remainingHoursLot2); 
-    const displayTotalTarget = target1Chunk + target2Chunk; // เช่น 111 + 444 = 555 ชิ้น
+    const displayTotalTarget = target1Chunk + target2Chunk;
 
-    // อัปเดตเป้ารวมประจำวันขึ้น UI หน้าจอทันที
     document.getElementById('targetVal').innerText = displayTotalTarget.toLocaleString();
 
-    // 4. เพิ่ม LOT ใหม่เข้า Dropdown
     if (!activeLots.includes(newLot)) {
       activeLots.push(newLot);
       const selects = document.querySelectorAll('.input-lot-val');
@@ -524,7 +550,7 @@
         opt.value = newLot;
         opt.innerText = newLot;
         if (index >= hoursUsedLot1) {
-          opt.selected = true; // เลือก LOT ใหม่ให้ช่องชั่วโมงถัดไป
+          opt.selected = true;
         }
         select.appendChild(opt);
         updateModelSubtext(select);
@@ -533,7 +559,6 @@
 
     closeNewLotModal();
 
-    // 5. ยิงข้อมูลพร้อม hoursUsedLot1 ไปให้ Apps Script บันทึกลง Google Sheet
     try {
       const payload = {
         action: "HOURLY_OUTPUT",
@@ -541,8 +566,8 @@
         isSwitchLot: true,
         newLotNumber: newLot,
         newLotTarget: newTargetMax,
-        hoursUsedLot1: hoursUsedLot1, // ส่งจำนวนชั่วโมงจริง (เช่น 1)
-        hoursUsedLot2: remainingHoursLot2, // ส่งจำนวนชั่วโมงที่เหลือ (เช่น 8)
+        hoursUsedLot1: hoursUsedLot1,
+        hoursUsedLot2: remainingHoursLot2,
         calculatedTarget1: target1Chunk,
         calculatedTarget2: target2Chunk,
         totalTarget: displayTotalTarget,
