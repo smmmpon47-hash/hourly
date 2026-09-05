@@ -3,649 +3,233 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>บันทึกยอดการผลิต</title>
+  <title>บันทึกยอดการผลิตรายชั่วโมง</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; font-family: 'Prompt', sans-serif; }
-    body {
-      background-color: #1e3a3f;
-      min-height: 100vh;
-      margin: 0;
-      padding: 20px 15px;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-    }
-    .card {
-      background: #ffffff;
-      padding: 24px 22px;
-      border-radius: 24px;
-      width: 100%;
-      max-width: 450px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
-    }
-    .header-top-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    .header-title {
-      font-size: 1.55rem;
-      font-weight: 700;
-      color: #0d9488;
-      margin: 0;
-    }
-    .date-badge {
-      font-size: 0.85rem;
-      color: #475569;
-      font-weight: 600;
-      background: #f1f5f9;
-      padding: 5px 12px;
-      border-radius: 12px;
-      border: 1px solid #cbd5e1;
-    }
-    .form-group { margin-bottom: 18px; }
-    label { display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b; font-size: 1rem; }
-    
-    select, input, textarea {
-      width: 100%;
-      padding: 12px 14px;
-      border: 1.8px solid #cbd5e1;
-      border-radius: 14px;
-      font-size: 1.05rem;
-      outline: none;
-      background: #fff;
-      color: #0f172a;
-    }
-    select:focus, input:focus, textarea:focus {
-      border-color: #0d9488;
-      box-shadow: 0 0 0 3.5px rgba(13, 148, 136, 0.2);
-    }
-    .info-banner {
-      background: #e0f2fe;
-      border-radius: 14px;
-      padding: 12px 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      font-size: 0.95rem;
-      color: #0369a1;
-      font-weight: 600;
-    }
-    .section-title {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #334155;
-      margin-bottom: 12px;
-    }
-    .slot-row {
-      display: flex;
-      gap: 10px;
-      align-items: flex-start;
-      margin-bottom: 12px;
-    }
-    .slot-time {
-      flex: 2.2;
-      background: #f8fafc;
-      border: 1.5px solid #e2e8f0;
-      border-radius: 14px;
-      padding: 11px 8px;
-      text-align: center;
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: #334155;
-    }
-    .slot-lot-container {
-      flex: 2.2;
-      display: flex;
-      flex-direction: column;
-    }
-    .slot-lot-select {
-      width: 100%;
-      padding: 11px 6px;
-      font-size: 0.88rem;
-      border-radius: 14px;
-      font-weight: 600;
-    }
-    .model-subtext {
-      font-size: 0.75rem;
-      color: #0d9488;
-      font-weight: 600;
-      margin-top: 4px;
-      padding-left: 4px;
-      min-height: 16px;
-    }
-    .slot-input {
-      flex: 1.2;
-      padding: 11px 8px;
-      text-align: center;
-      font-weight: 700;
-      border-radius: 14px;
-      font-size: 1.1rem;
-    }
-    .btn-add-lot-midday {
-      background: #f0fdf4;
-      border: 1.5px dashed #0d9488;
-      color: #0d9488;
-      font-weight: 600;
-      cursor: pointer;
-      padding: 11px;
-      border-radius: 14px;
-      width: 100%;
-      font-size: 0.9rem;
-      margin-top: 5px;
-      margin-bottom: 15px;
-    }
-    .sum-box {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #f8fafc;
-      padding: 14px 18px;
-      border-radius: 16px;
-      border: 2px dashed #0d9488;
-      margin-bottom: 18px;
-      font-weight: 600;
-      color: #1e293b;
-      font-size: 1.05rem;
-    }
-    .sum-input {
-      width: 95px;
-      text-align: center;
-      background: #fff;
-      font-weight: 700;
-      color: #0d9488;
-      border: 2px solid #0d9488;
-      padding: 6px;
-      border-radius: 10px;
-      font-size: 1.15rem;
-    }
-    .btn-submit {
-      width: 100%;
-      padding: 15px;
-      background: #0d9488;
-      color: white;
-      border: none;
-      border-radius: 16px;
-      font-size: 1.15rem;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
-      margin-top: 10px;
-    }
-    .btn-submit:disabled {
-      background: #94a3b8;
-      box-shadow: none;
-      cursor: not-allowed;
-    }
-    .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(15, 23, 42, 0.6);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      padding: 20px;
-    }
-    .modal-card {
-      background: #fff;
-      padding: 22px 20px;
-      border-radius: 20px;
-      width: 100%;
-      max-width: 380px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-    }
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    .modal-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: #0d9488;
-      margin: 0;
-    }
-    .btn-close-modal {
-      background: #f1f5f9;
-      border: none;
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #64748b;
-      cursor: pointer;
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-    }
+    body { background-color: #f8f9fa; font-family: 'Sarabun', sans-serif; padding-bottom: 30px; }
+    .card { border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 15px; }
+    .table-break { background-color: #e9ecef; color: #6c757d; font-weight: bold; }
+    .btn-submit { background-color: #27ae60; color: white; width: 100%; font-size: 1.1rem; font-weight: bold; padding: 10px; }
+    .btn-submit:hover { background-color: #219150; color: white; }
   </style>
 </head>
 <body>
 
-<div class="card">
-  <div class="header-top-row">
-    <h2 class="header-title">บันทึกยอดการผลิต</h2>
-    <div class="date-badge" id="currentDateDisplay">--/--/----</div>
-  </div>
-
-  <form id="hourlyForm">
-    <div class="form-group">
-      <label for="line">LINE การผลิต</label>
-      <select id="line" required onchange="loadLineDetails()">
-        <option value="">-- เลือก LINE --</option>
-        <option value="Line B">Line B</option>
-        <option value="Line C">Line C</option>
-        <option value="Line D">Line D</option>
-        <option value="Line E">Line E</option>
-        <option value="Line F">Line F</option>
-        <option value="Line G">Line G</option>
+<div class="container mt-3">
+  <div class="card p-3">
+    <h4 class="text-center text-primary mb-3">📦 บันทึกยอดการผลิตรายชั่วโมง</h4>
+    
+    <!-- ส่วนเลือก Line -->
+    <div class="mb-3">
+      <label for="lineSelect" class="form-label font-weight-bold">เลือกลายการผลิต (Line):</label>
+      <select id="lineSelect" class="form-select form-select-lg" onchange="onLineChange()">
+        <option value="" disabled selected>-- เลือก Line --</option>
+        <option value="LINE B">LINE B</option>
+        <option value="LINE C">LINE C</option>
+        <option value="LINE D">LINE D</option>
+        <option value="LINE E">LINE E</option>
+        <option value="LINE F">LINE F</option>
+        <option value="LINE G">LINE G</option>
       </select>
     </div>
 
-    <div id="infoBanner" class="info-banner" style="display:none;">
-      <span>🎯 เป้าวัน: <strong id="targetVal">0</strong> ชิ้น</span>
-      <span>⏱️ เวลาทำงาน: <strong id="hoursVal">0</strong> ชม.</span>
+    <!-- ส่วนแสดงโปรไฟล์ผู้กรอก -->
+    <div id="userInfo" class="alert alert-info py-2 text-center" style="display:none;">
+      ผู้รายงาน: <strong id="userDisplayName">กำลังโหลด...</strong>
     </div>
 
-    <div class="form-group">
-      <div class="section-title">กรอกยอดผลิตรายชั่วโมง</div>
-      <div id="slotsContainer">
-        <p style="color: #94a3b8; font-size: 0.95rem; text-align: center; padding: 15px 0;">โปรดเลือก LINE การผลิต</p>
+    <!-- ตารางกรอกยอดรายชั่วโมง -->
+    <div id="hourlyFormSection" style="display:none;">
+      <table class="table table-bordered table-striped text-center align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th style="width: 45%;">ช่วงเวลา</th>
+            <th style="width: 55%;">ยอดผลิต (ชิ้น)</th>
+          </tr>
+        </thead>
+        <tbody id="hourlyTableBody">
+          <!-- สร้างรายการโดย JavaScript -->
+        </tbody>
+      </table>
+
+      <!-- หมายเหตุเพิ่มเติม -->
+      <div class="mb-3">
+        <label for="remarkInput" class="form-label">หมายเหตุ / ปัญหาที่พบ:</label>
+        <textarea id="remarkInput" class="form-control" rows="2" placeholder="ระบุเหตุผลกรณีไม่ได้ตามเป้า..."></textarea>
       </div>
+
+      <button class="btn btn-submit" onclick="submitData()">💾 บันทึกยอดผลิต</button>
     </div>
 
-    <button type="button" class="btn-add-lot-midday" id="btnAddMiddayLot" style="display:none;" onclick="openNewLotModal()">
-      ➕ สลับรุ่น / กรอกเลข LOT เพิ่มเติม
-    </button>
-
-    <div class="sum-box">
-      <span>ยอดรวมที่กรอก</span>
-      <input type="text" id="totalSum" class="sum-input" value="0" readonly>
-      <span>ชิ้น</span>
-    </div>
-
-    <div class="form-group">
-      <label for="remark">หมายเหตุ / ปัญหาที่พบ</label>
-      <textarea id="remark" rows="2" placeholder="ระบุปัญหาที่พบ (ถ้ามี)"></textarea>
-    </div>
-
-    <button type="submit" class="btn-submit" id="btnSubmit">บันทึกยอด</button>
-  </form>
-</div>
-
-<div class="modal-overlay" id="newLotModal">
-  <div class="modal-card">
-    <div class="modal-header">
-      <div class="modal-title">🔀 สลับขึ้น LOT ใหม่</div>
-      <button type="button" class="btn-close-modal" onclick="closeNewLotModal()">&times;</button>
-    </div>
-    <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 12px; margin-top: 0;">
-      กรุณากรอกเลข LOT ใหม่และเป้าเต็ม เพื่อให้ระบบตัดสัดส่วนคำนวณเป้ารวมใหม่
-    </p>
-    <div class="form-group">
-      <label for="modalLotNo">เลข LOT ใหม่</label>
-      <input type="text" id="modalLotNo" placeholder="เช่น 26101020">
-    </div>
-    <div class="form-group">
-      <label for="modalLotTarget">เป้าหมายตั้งต้น LOT ใหม่ (ชิ้น)</label>
-      <input type="number" id="modalLotTarget" min="0" placeholder="เช่น 500">
-    </div>
-    <button type="button" class="btn-submit" onclick="confirmNewLot()">ยืนยันสลับ LOT & คำนวณเป้าใหม่</button>
   </div>
 </div>
 
 <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLm1LVkTiwK3PCvPSt3PFA1ifb76KCRsWxC1SkaLdDC-ginxy0RHWstWpHgDytaBmm/exec"; 
-  const LIFF_ID = "2011198724-JQ60DTBm";
+  // *** ใส่ URL ของ Web App จาก Apps Script ของคุณที่นี่ ***
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx.../exec"; 
 
-  let activeLots = []; 
-  let masterLotMap = {}; 
-  let currentTarget1 = 0;
-  let currentHours1 = 9;
-  let userDisplayName = "Unknown";
-
-  const TIME_SLOTS_DEF = [
-    { label: "08.30-09.30", endMin: 570 },
-    { label: "09.30-10.30", endMin: 630 },
-    { label: "10.30-11.30", endMin: 690 },
-    { label: "11.30-12.30", endMin: 750 },
-    { label: "12.30-13.30", endMin: 810 },
-    { label: "13.30-14.30", endMin: 870 },
-    { label: "14.30-15.30", endMin: 930 },
-    { label: "15.30-16.30", endMin: 990 },
-    { label: "16.30-17.30", endMin: 1050 },
-    { label: "17.30-18.30", endMin: 1110 },
-    { label: "18.30-19.30", endMin: 1170 }
+  const TIME_SLOTS = [
+    "08.30-09.30", "09.30-10.30", "10.30-11.30", "11.30-12.30", 
+    "12.30-13.30", "13.30-14.30", "14.30-15.30", "15.30-16.30", 
+    "16.30-17.30", "17.30-18.30", "18.30-19.30"
   ];
 
-  async function initLiff() {
-    try {
-      if (typeof liff !== "undefined" && LIFF_ID) {
-        await liff.init({ liffId: LIFF_ID });
+  let currentProfile = null;
+
+  // 1. ตรวจสอบเวลาพักตามเงื่อนไข Line
+  function isBreakTimeSlot(lineCode, timeSlot) {
+    if (!lineCode || !timeSlot) return false;
+    const cleanLine = String(lineCode).replace(/LINE/i, '').replace(/\s+/g, '').toUpperCase();
+    const slot = String(timeSlot).trim();
+
+    // LINE B และ LINE C -> พัก 12.30-13.30
+    if ((cleanLine === 'B' || cleanLine === 'C') && slot === '12.30-13.30') {
+      return true;
+    }
+    // LINE D, E, F, G -> พัก 11.30-12.30
+    if (['D', 'E', 'F', 'G'].includes(cleanLine) && slot === '11.30-12.30') {
+      return true;
+    }
+    return false;
+  }
+
+  // Initial LIFF SDK
+  window.onload = function() {
+    liff.init({ liffId: "YOUR_LIFF_ID" }) // ใส่ LIFF ID ของคุณ
+      .then(() => {
         if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
-          userDisplayName = profile.displayName;
+          liff.getProfile().then(profile => {
+            currentProfile = profile;
+            document.getElementById('userDisplayName').innerText = profile.displayName;
+            document.getElementById('userInfo').style.display = 'block';
+          });
+        } else {
+          liff.login();
         }
-      }
-    } catch (err) {
-      console.error("LIFF Init Error:", err);
-    }
+      })
+      .catch(err => {
+        console.error("LIFF Init Error: ", err);
+        document.getElementById('userDisplayName').innerText = 'ทั่วไป (ไม่ผ่าน LINE)';
+        document.getElementById('userInfo').style.display = 'block';
+      });
+  };
+
+  // 2. เมื่อมีการเลือก Line ให้สร้างตารางกรอกยอด
+  function onLineChange() {
+    const selectedLine = document.getElementById('lineSelect').value;
+    if (!selectedLine) return;
+
+    fetchExistingData(selectedLine);
   }
 
-  function displayCurrentDate() {
-    const now = new Date();
-    document.getElementById('currentDateDisplay').innerText = now.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  // ดึงข้อมูลเดิมของวันนี้มาแสดง (ถ้ามี)
+  function fetchExistingData(line) {
+    const tbody = document.getElementById('hourlyTableBody');
+    tbody.innerHTML = '<tr><td colspan="2">กำลังโหลดข้อมูล...</td></tr>';
+    document.getElementById('hourlyFormSection').style.display = 'block';
+
+    fetch(`${WEB_APP_URL}?action=getTodayLine&line=${encodeURIComponent(line)}`)
+      .then(res => res.json())
+      .then(data => {
+        renderTable(line, data.existingHourly || {});
+      })
+      .catch(err => {
+        console.error(err);
+        renderTable(line, {});
+      });
   }
 
-  displayCurrentDate();
-  initLiff();
+  // 3. แสดงผลตารางและล็อกช่องพัก
+  function renderTable(selectedLine, existingData) {
+    const tbody = document.getElementById('hourlyTableBody');
+    tbody.innerHTML = '';
 
-  async function loadLineDetails() {
-    const line = document.getElementById('line').value;
-    const slotsContainer = document.getElementById('slotsContainer');
-    const infoBanner = document.getElementById('infoBanner');
-    const btnAddMiddayLot = document.getElementById('btnAddMiddayLot');
+    TIME_SLOTS.forEach(slot => {
+      const isBreak = isBreakTimeSlot(selectedLine, slot);
+      const existingVal = existingData[slot] ? existingData[slot].output : '';
 
-    if (!line) {
-      slotsContainer.innerHTML = '<p style="color: #94a3b8; font-size: 0.95rem; text-align: center; padding: 15px 0;">โปรดเลือก LINE การผลิต</p>';
-      infoBanner.style.display = 'none';
-      btnAddMiddayLot.style.display = 'none';
-      return;
-    }
-
-    slotsContainer.innerHTML = '<p style="color: #64748b; font-size: 0.95rem; text-align: center; padding: 15px 0;">กำลังโหลดข้อมูล...</p>';
-
-    try {
-      const res = await fetch(`${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(line)}`);
-      const data = await res.json();
-
-      activeLots = data.lots || data.models || [];
-      if (data.lotNumber && !activeLots.includes(data.lotNumber)) activeLots.push(data.lotNumber);
-      if ((data.lotNumber2 || data.lot2Number) && !activeLots.includes(data.lotNumber2 || data.lot2Number)) {
-        activeLots.push(data.lotNumber2 || data.lot2Number);
-      }
-
-      masterLotMap = data.masterMap || {}; 
-      currentHours1 = Number(data.totalWorkingHours) || 9;
-      currentTarget1 = Number(data.target1 || data.target) || 1000;
-
-      document.getElementById('targetVal').innerText = currentTarget1.toLocaleString();
-      document.getElementById('hoursVal').innerText = currentHours1;
-      infoBanner.style.display = 'flex';
-
-      btnAddMiddayLot.style.display = 'block';
-      generateSmartTimeSlots(currentHours1, data.existingHourly || {});
-
-    } catch (err) {
-      console.error("Error loading line details:", err);
-      btnAddMiddayLot.style.display = 'block';
-      generateSmartTimeSlots(9, {});
-    }
-  }
-
-  function generateSmartTimeSlots(totalHours, existingData) {
-    const slotsContainer = document.getElementById('slotsContainer');
-    slotsContainer.innerHTML = '';
-
-    const selectedLine = document.getElementById('line').value.toUpperCase();
-    const cleanLine = selectedLine.replace('LINE', '').trim();
-
-    // กำหนดรอบเวลาพักตาม LINE
-    let breakSlot = "";
-    if (['B', 'C'].includes(cleanLine)) {
-      breakSlot = "12.30-13.30";
-    } else if (['D', 'E', 'F', 'G'].includes(cleanLine)) {
-      breakSlot = "11.30-12.30";
-    }
-
-    const now = new Date();
-    const currentMinutes = (now.getHours() * 60) + now.getMinutes();
-
-    let targetSlots = [];
-
-    // แก้ไขการจัดดึงรอบเวลาให้ครอบคลุมรอบ 16.30-17.30 และรอบ OT
-    if (currentMinutes >= 1000 && currentMinutes < 1080) { 
-      // ช่วงเวลา 16.40 - 17.59 น. -> ดึงสล็อต 16.30-17.30
-      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "16.30-17.30");
-    } else if (currentMinutes >= 1080) { 
-      // หลัง 18.00 น. ดึงสล็อต OT (17.30-18.30 และ 18.30-19.30)
-      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "17.30-18.30" || s.label === "18.30-19.30");
-    } else {
-      let passedSlots = TIME_SLOTS_DEF.filter(slot => currentMinutes >= slot.endMin);
-      const maxCount = Math.min(Math.ceil(totalHours), TIME_SLOTS_DEF.length);
-      passedSlots = passedSlots.slice(-maxCount);
-
-      if (passedSlots.length >= 2) {
-        targetSlots = passedSlots.slice(-2);
+      const tr = document.createElement('tr');
+      if (isBreak) {
+        tr.className = 'table-break';
+        tr.innerHTML = `
+          <td>${slot} (เวลาพัก)</td>
+          <td><input type="number" class="form-control text-center" value="0" disabled style="background-color: #e9ecef; cursor: not-allowed;" /></td>
+        `;
       } else {
-        targetSlots = [TIME_SLOTS_DEF[0], TIME_SLOTS_DEF[1]];
+        tr.innerHTML = `
+          <td>${slot}</td>
+          <td>
+            <input type="number" 
+                   class="form-control text-center hourly-input" 
+                   data-slot="${slot}" 
+                   value="${existingVal}" 
+                   placeholder="0" 
+                   min="0" />
+          </td>
+        `;
       }
-    }
-
-    let lotOptionsHTML = activeLots.length > 0 
-      ? activeLots.map(l => `<option value="${l}">${l}</option>`).join('') 
-      : '<option value="">-- ไม่พบ LOT --</option>';
-
-    targetSlots.forEach(slot => {
-      const existing = existingData[slot.label] || {};
-      const isBreakTime = (slot.label === breakSlot);
-      // หากเป็นช่วงพักให้ล็อกค่าเป็น 0 เสมอ
-      const currentOutput = isBreakTime ? 0 : (existing.output !== undefined ? existing.output : '');
-
-      const row = document.createElement('div');
-      row.className = 'slot-row';
-      row.innerHTML = `
-        <div class="slot-time" data-slot-label="${slot.label}">
-          ${slot.label} ${isBreakTime ? '<br><span style="color:#ef4444; font-size:0.75rem;">(พัก)</span>' : ''}
-        </div>
-        <div class="slot-lot-container">
-          <select class="slot-lot-select input-lot-val" onchange="updateModelSubtext(this)" ${isBreakTime ? 'disabled' : ''}>
-            ${lotOptionsHTML}
-          </select>
-          <div class="model-subtext"></div>
-        </div>
-        <input type="number" 
-               class="slot-input input-val" 
-               min="0" 
-               placeholder="0" 
-               value="${currentOutput}" 
-               oninput="calculateTotal()"
-               ${isBreakTime ? 'value="0" readonly style="background-color: #f1f5f9; color: #94a3b8; cursor: not-allowed;"' : ''}>
-      `;
-      slotsContainer.appendChild(row);
-
-      const selectElem = row.querySelector('.input-lot-val');
-      if (existing.lot) {
-        selectElem.value = existing.lot;
-      } else if (activeLots.length > 0) {
-        selectElem.value = activeLots[activeLots.length - 1];
-      }
-      updateModelSubtext(selectElem);
+      tbody.appendChild(tr);
     });
-
-    calculateTotal();
   }
 
-  function updateModelSubtext(selectElem) {
-    const selectedLot = selectElem.value;
-    const subtextElem = selectElem.nextElementSibling;
-    if (selectedLot && masterLotMap[selectedLot]) {
-      subtextElem.innerText = `(รุ่น: ${masterLotMap[selectedLot]})`;
-    } else {
-      subtextElem.innerText = '';
-    }
-  }
-
-  function openNewLotModal() {
-    if (!document.getElementById('line').value) {
-      alert("กรุณาเลือก LINE การผลิตก่อนครับ");
-      return;
-    }
-    document.getElementById('newLotModal').style.display = 'flex';
-  }
-
-  function closeNewLotModal() {
-    document.getElementById('newLotModal').style.display = 'none';
-    document.getElementById('modalLotNo').value = '';
-    document.getElementById('modalLotTarget').value = '';
-  }
-
-  async function confirmNewLot() {
-    const newLot = document.getElementById('modalLotNo').value.trim().toUpperCase();
-    const newTargetMax = Number(document.getElementById('modalLotTarget').value) || 0;
-    const lineVal = document.getElementById('line').value;
-
-    if (!newLot || newTargetMax <= 0) {
-      alert("กรุณากรอกเลข LOT และเป้าหมายให้ครบถ้วน");
+  // 4. ส่งข้อมูลไปยัง Apps Script
+  function submitData() {
+    const selectedLine = document.getElementById('lineSelect').value;
+    if (!selectedLine) {
+      alert('กรุณาเลือกลายการผลิต');
       return;
     }
 
-    const slotRows = document.querySelectorAll('.slot-row');
-    let hoursUsedLot1 = 0;
-
-    slotRows.forEach(row => {
-      const outputVal = row.querySelector('.input-val').value;
-      if (outputVal !== "") {
-        hoursUsedLot1++;
-      }
-    });
-
-    if (hoursUsedLot1 === 0) hoursUsedLot1 = 1;
-
-    const remainingHoursLot2 = Math.max(0, currentHours1 - hoursUsedLot1);
-
-    const target1Chunk = Math.round((currentTarget1 / currentHours1) * hoursUsedLot1); 
-    const target2Chunk = Math.round((newTargetMax / currentHours1) * remainingHoursLot2); 
-    const displayTotalTarget = target1Chunk + target2Chunk;
-
-    document.getElementById('targetVal').innerText = displayTotalTarget.toLocaleString();
-
-    if (!activeLots.includes(newLot)) {
-      activeLots.push(newLot);
-      const selects = document.querySelectorAll('.input-lot-val');
-      selects.forEach((select, index) => {
-        const opt = document.createElement('option');
-        opt.value = newLot;
-        opt.innerText = newLot;
-        if (index >= hoursUsedLot1) {
-          opt.selected = true;
-        }
-        select.appendChild(opt);
-        updateModelSubtext(select);
-      });
-    }
-
-    closeNewLotModal();
-
-    try {
-      const payload = {
-        action: "HOURLY_OUTPUT",
-        line: lineVal,
-        isSwitchLot: true,
-        newLotNumber: newLot,
-        newLotTarget: newTargetMax,
-        hoursUsedLot1: hoursUsedLot1,
-        hoursUsedLot2: remainingHoursLot2,
-        calculatedTarget1: target1Chunk,
-        calculatedTarget2: target2Chunk,
-        totalTarget: displayTotalTarget,
-        updatedBy: userDisplayName || 'Supervisor'
-      };
-
-      const res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-      const result = await res.json();
-
-      if (result.status === 'success') {
-        alert(`สลับขึ้น LOT ${newLot} สำเร็จ!\nเป้ารวมใหม่ปรับเป็น: ${displayTotalTarget.toLocaleString()} ชิ้น`);
-      }
-    } catch (err) {
-      console.error("Sync Error:", err);
-    }
-  }
-
-  function calculateTotal() {
-    const inputs = document.querySelectorAll('.input-val');
-    let total = 0;
-    inputs.forEach(input => {
-      total += (Number(input.value) || 0);
-    });
-    document.getElementById('totalSum').value = total.toLocaleString();
-  }
-
-  document.getElementById('hourlyForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const lineVal = document.getElementById('line').value;
-    const remarkVal = document.getElementById('remark').value;
-    const btnSubmit = document.getElementById('btnSubmit');
-
-    if (!lineVal) {
-      alert("กรุณาเลือก LINE การผลิต");
-      return;
-    }
-
-    btnSubmit.disabled = true;
-    btnSubmit.innerText = "กำลังบันทึก...";
-
+    const inputs = document.querySelectorAll('.hourly-input');
     const hourlyDetails = [];
-    const slotRows = document.querySelectorAll('.slot-row');
-    
-    slotRows.forEach(row => {
-      const timeLabel = row.querySelector('.slot-time').getAttribute('data-slot-label');
-      const lotVal = row.querySelector('.input-lot-val').value;
-      const outputVal = row.querySelector('.input-val').value;
 
-      if (outputVal !== "") {
+    inputs.forEach(input => {
+      const slot = input.getAttribute('data-slot');
+      const val = input.value;
+      if (val !== '' && !input.disabled) {
         hourlyDetails.push({
-          timeSlot: timeLabel,
-          lot: lotVal,
-          qty: Number(outputVal)
+          timeSlot: slot,
+          qty: Number(val) || 0
         });
       }
     });
 
+    const displayName = currentProfile ? currentProfile.displayName : 'Unknown User';
+    const remark = document.getElementById('remarkInput').value || '';
+
     const payload = {
-      action: "HOURLY_OUTPUT",
-      line: lineVal,
-      remark: remarkVal,
-      updatedBy: userDisplayName,
-      hourlyData: hourlyDetails
+      action: 'saveHourlyOutput',
+      line: selectedLine,
+      updatedBy: displayName,
+      hourlyDetails: hourlyDetails,
+      remark: remark
     };
 
-    try {
-      const res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify(payload),
-        headers: { "Content-Type": "text/plain;charset=utf-8" }
-      });
-      const result = await res.json();
-
-      if (result.status === "success") {
-        alert("บันทึกข้อมูลเรียบร้อยแล้ว!");
-        if (typeof liff !== "undefined" && liff.isInClient()) {
+    // ส่งข้อมูลไปเซฟ
+    fetch(WEB_APP_URL, {
+      method: 'POST',
+      contentType: 'application/json',
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.status === 'success') {
+        alert('บันทึกยอดการผลิตสำเร็จเรียบร้อยแล้ว!');
+        if (liff.isInClient()) {
           liff.closeWindow();
+        } else {
+          location.reload();
         }
       } else {
-        alert("เกิดข้อผิดพลาด: " + (result.error || "ไม่สามารถบันทึกได้"));
+        alert('เกิดข้อผิดพลาด: ' + (res.error || 'ไม่สามารถบันทึกได้'));
       }
-    } catch (err) {
-      alert("บันทึกไม่สำเร็จ: " + err.message);
-    } finally {
-      btnSubmit.disabled = false;
-      btnSubmit.innerText = "บันทึกยอด";
-    }
-  });
+    })
+    .catch(err => {
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อระบบ');
+      console.error(err);
+    });
+  }
 </script>
 
 </body>
