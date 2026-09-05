@@ -25,7 +25,6 @@
       max-width: 450px;
       box-shadow: 0 20px 40px rgba(0,0,0,0.25);
     }
-
     .header-top-row {
       display: flex;
       justify-content: space-between;
@@ -47,7 +46,6 @@
       border-radius: 12px;
       border: 1px solid #cbd5e1;
     }
-
     .form-group { margin-bottom: 18px; }
     label { display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b; font-size: 1rem; }
     
@@ -65,7 +63,6 @@
       border-color: #0d9488;
       box-shadow: 0 0 0 3.5px rgba(13, 148, 136, 0.2);
     }
-
     .info-banner {
       background: #e0f2fe;
       border-radius: 14px;
@@ -78,14 +75,12 @@
       color: #0369a1;
       font-weight: 600;
     }
-
     .section-title {
       font-size: 1rem;
       font-weight: 600;
       color: #334155;
       margin-bottom: 12px;
     }
-
     .slot-row {
       display: flex;
       gap: 10px;
@@ -131,7 +126,6 @@
       border-radius: 14px;
       font-size: 1.1rem;
     }
-
     .btn-add-lot-midday {
       background: #f0fdf4;
       border: 1.5px dashed #0d9488;
@@ -145,8 +139,6 @@
       margin-top: 5px;
       margin-bottom: 15px;
     }
-    .btn-add-lot-midday:active { background: #dcfce7; }
-
     .sum-box {
       display: flex;
       align-items: center;
@@ -171,7 +163,6 @@
       border-radius: 10px;
       font-size: 1.15rem;
     }
-
     .btn-submit {
       width: 100%;
       padding: 15px;
@@ -190,7 +181,6 @@
       box-shadow: none;
       cursor: not-allowed;
     }
-
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -291,7 +281,6 @@
   </form>
 </div>
 
-<!-- Modal สำหรับกรอกสลับ LOT -->
 <div class="modal-overlay" id="newLotModal">
   <div class="modal-card">
     <div class="modal-header">
@@ -409,6 +398,7 @@
     const selectedLine = document.getElementById('line').value.toUpperCase();
     const cleanLine = selectedLine.replace('LINE', '').trim();
 
+    // กำหนดรอบเวลาพักตาม LINE
     let breakSlot = "";
     if (['B', 'C'].includes(cleanLine)) {
       breakSlot = "12.30-13.30";
@@ -421,19 +411,14 @@
 
     let targetSlots = [];
 
-    // กำหนดดึงสล็อตเฉพาะตามรอบเวลา
-    if (currentMinutes >= 1020 && currentMinutes < 1080) { 
-      // ช่วงเวลา 17.00 - 17.59 น. -> ดึงเฉพาะรอบ 16.30-17.30
+    // แก้ไขการจัดดึงรอบเวลาให้ครอบคลุมรอบ 16.30-17.30 และรอบ OT
+    if (currentMinutes >= 1000 && currentMinutes < 1080) { 
+      // ช่วงเวลา 16.40 - 17.59 น. -> ดึงสล็อต 16.30-17.30
       targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "16.30-17.30");
-    } else if (currentMinutes >= 1080 && currentMinutes < 1140) { 
-      // ช่วงเวลา 18.00 - 18.59 น. -> ดึงเฉพาะ OT 17.30-18.30 (หรือรวม 18.30-19.30 ถ้าชั่วโมงรวมถึง)
-      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "17.30-18.30");
-      if (totalHours >= 10) {
-        const slot19 = TIME_SLOTS_DEF.find(s => s.label === "18.30-19.30");
-        if (slot19) targetSlots.push(slot19);
-      }
+    } else if (currentMinutes >= 1080) { 
+      // หลัง 18.00 น. ดึงสล็อต OT (17.30-18.30 และ 18.30-19.30)
+      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "17.30-18.30" || s.label === "18.30-19.30");
     } else {
-      // รอบอื่นๆ ดึง 2 สล็อตล่าสุดตามปกติ
       let passedSlots = TIME_SLOTS_DEF.filter(slot => currentMinutes >= slot.endMin);
       const maxCount = Math.min(Math.ceil(totalHours), TIME_SLOTS_DEF.length);
       passedSlots = passedSlots.slice(-maxCount);
@@ -452,6 +437,7 @@
     targetSlots.forEach(slot => {
       const existing = existingData[slot.label] || {};
       const isBreakTime = (slot.label === breakSlot);
+      // หากเป็นช่วงพักให้ล็อกค่าเป็น 0 เสมอ
       const currentOutput = isBreakTime ? 0 : (existing.output !== undefined ? existing.output : '');
 
       const row = document.createElement('div');
@@ -472,7 +458,7 @@
                placeholder="0" 
                value="${currentOutput}" 
                oninput="calculateTotal()"
-               ${isBreakTime ? 'readonly style="background-color: #f1f5f9; color: #94a3b8; cursor: not-allowed;"' : ''}>
+               ${isBreakTime ? 'value="0" readonly style="background-color: #f1f5f9; color: #94a3b8; cursor: not-allowed;"' : ''}>
       `;
       slotsContainer.appendChild(row);
 
@@ -581,7 +567,7 @@
       const result = await res.json();
 
       if (result.status === 'success') {
-        alert(`สลับขึ้น LOT ${newLot} สำเร็จ!\nเป้ารวมใหม่ปรับเป็น: ${displayTotalTarget.toLocaleString()} ชิ้น\n(LOT 1: ${hoursUsedLot1} ชม. = ${target1Chunk} ชิ้น | LOT 2: ${remainingHoursLot2} ชม. = ${target2Chunk} ชิ้น)`);
+        alert(`สลับขึ้น LOT ${newLot} สำเร็จ!\nเป้ารวมใหม่ปรับเป็น: ${displayTotalTarget.toLocaleString()} ชิ้น`);
       }
     } catch (err) {
       console.error("Sync Error:", err);
@@ -640,7 +626,8 @@
     try {
       const res = await fetch(SCRIPT_URL, {
         method: "POST",
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "text/plain;charset=utf-8" }
       });
       const result = await res.json();
 
