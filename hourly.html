@@ -353,6 +353,19 @@
     { label: "18.30-19.30", endMin: 1170 }
   ];
 
+  // โหลด LINE ล่าสุดจาก LocalStorage ทันทีที่เปิดหน้าเว็บ
+  document.addEventListener("DOMContentLoaded", () => {
+    displayCurrentDate();
+    initLiff();
+
+    const savedLine = localStorage.getItem("selectedLine");
+    if (savedLine) {
+      const lineSelect = document.getElementById('line');
+      lineSelect.value = savedLine;
+      loadLineDetails();
+    }
+  });
+
   async function initLiff() {
     try {
       if (typeof liff !== "undefined" && LIFF_ID) {
@@ -376,9 +389,6 @@
     document.getElementById('currentDateDisplay').innerText = now.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
-  displayCurrentDate();
-  initLiff();
-
   async function loadLineDetails() {
     const line = document.getElementById('line').value;
     const slotsContainer = document.getElementById('slotsContainer');
@@ -391,6 +401,9 @@
       btnAddMiddayLot.style.display = 'none';
       return;
     }
+
+    // บันทึก LINE ที่เลือกล่าสุดลง LocalStorage
+    localStorage.setItem("selectedLine", line);
 
     slotsContainer.innerHTML = '<p style="color: #64748b; font-size: 0.95rem; text-align: center; padding: 15px 0;">กำลังโหลดข้อมูล...</p>';
 
