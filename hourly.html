@@ -259,7 +259,7 @@
   </div>
 
   <div class="user-banner">
-    👤 ผู้รายงาน: <span id="userDisplayNameDisplay">กำลังดึงข้อมูล LINE...</span>
+    👤 ผู้รายงาน: <span id="userDisplayNameDisplay">กำลังโหลดชื่อ...</span>
   </div>
 
   <form id="hourlyForm">
@@ -337,7 +337,7 @@
   let masterLotMap = {}; 
   let currentTarget1 = 0;
   let currentHours1 = 9;
-  let userDisplayName = "Unknown";
+  let userDisplayName = "Unknown"; // กำหนดเหมือนหน้ากรอกเป้า
 
   const TIME_SLOTS_DEF = [
     { label: "08.30-09.30", endMin: 570 },
@@ -353,19 +353,7 @@
     { label: "18.30-19.30", endMin: 1170 }
   ];
 
-  // โหลด LINE ล่าสุดจาก LocalStorage ทันทีที่เปิดหน้าเว็บ
-  document.addEventListener("DOMContentLoaded", () => {
-    displayCurrentDate();
-    initLiff();
-
-    const savedLine = localStorage.getItem("selectedLine");
-    if (savedLine) {
-      const lineSelect = document.getElementById('line');
-      lineSelect.value = savedLine;
-      loadLineDetails();
-    }
-  });
-
+  // ทำงานเหมือนตัวกรอกเป้า
   async function initLiff() {
     try {
       if (typeof liff !== "undefined" && LIFF_ID) {
@@ -383,6 +371,20 @@
       document.getElementById('userDisplayNameDisplay').innerText = "ทั่วไป (ไม่ผ่าน LINE)";
     }
   }
+
+  // เรียกใช้วิธีเดียวกับหน้าเป้า
+  initLiff();
+
+  document.addEventListener("DOMContentLoaded", () => {
+    displayCurrentDate();
+
+    const savedLine = localStorage.getItem("selectedLine");
+    if (savedLine) {
+      const lineSelect = document.getElementById('line');
+      lineSelect.value = savedLine;
+      loadLineDetails();
+    }
+  });
 
   function displayCurrentDate() {
     const now = new Date();
@@ -402,9 +404,7 @@
       return;
     }
 
-    // บันทึก LINE ที่เลือกล่าสุดลง LocalStorage
     localStorage.setItem("selectedLine", line);
-
     slotsContainer.innerHTML = '<p style="color: #64748b; font-size: 0.95rem; text-align: center; padding: 15px 0;">กำลังโหลดข้อมูล...</p>';
 
     try {
@@ -658,11 +658,20 @@
       }
     });
 
+    // ตรวจสอบชื่อก่อนส่ง (ถ้ายังเป็น Unknown ให้ลองดึงจาก LIFF ซ้ำอีกรอบ)
+    let finalUser = userDisplayName;
+    if (finalUser === "Unknown" && typeof liff !== "undefined" && liff.isLoggedIn()) {
+      try {
+        const profile = await liff.getProfile();
+        finalUser = profile.displayName;
+      } catch (err) {}
+    }
+
     const payload = {
       action: "HOURLY_OUTPUT",
       line: lineVal,
       remark: remarkVal,
-      updatedBy: userDisplayName,
+      updatedBy: finalUser,
       hourlyData: hourlyDetails
     };
 
