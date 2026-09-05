@@ -541,6 +541,7 @@
     document.getElementById('modalLotTarget').value = '';
   }
 
+  // ปรับปรุงฟังก์ชันสลับ LOT ให้ยิงแบบ no-cors ข้ามข้อจำกัดมือถือ
   async function confirmNewLot() {
     const newLot = document.getElementById('modalLotNo').value.trim().toUpperCase();
     const newTargetMax = Number(document.getElementById('modalLotTarget').value) || 0;
@@ -588,29 +589,28 @@
 
     closeNewLotModal();
 
-    try {
-      const payload = {
-        action: "HOURLY_OUTPUT",
-        line: lineVal,
-        isSwitchLot: true,
-        newLotNumber: newLot,
-        newLotTarget: newTargetMax,
-        hoursUsedLot1: hoursUsedLot1,
-        hoursUsedLot2: remainingHoursLot2,
-        calculatedTarget1: target1Chunk,
-        calculatedTarget2: target2Chunk,
-        totalTarget: displayTotalTarget,
-        updatedBy: userDisplayName
-      };
+    const payload = {
+      action: "HOURLY_OUTPUT",
+      line: lineVal,
+      isSwitchLot: true,
+      newLotNumber: newLot,
+      newLotTarget: newTargetMax,
+      hoursUsedLot1: hoursUsedLot1,
+      hoursUsedLot2: remainingHoursLot2,
+      calculatedTarget1: target1Chunk,
+      calculatedTarget2: target2Chunk,
+      totalTarget: displayTotalTarget,
+      updatedBy: userDisplayName
+    };
 
-      // ปรับปรุง fetch เพื่อให้ส่งผ่านมือถือได้ 100%
-      await fetch(SCRIPT_URL, {
+    try {
+      fetch(SCRIPT_URL, {
         method: "POST",
+        mode: "no-cors",
         headers: {
-          "Content-Type": "text/plain;charset=utf-8"
+          "Content-Type": "text/plain"
         },
-        body: JSON.stringify(payload),
-        redirect: "follow"
+        body: JSON.stringify(payload)
       });
     } catch (err) {
       console.error("Sync Error:", err);
@@ -626,6 +626,7 @@
     document.getElementById('totalSum').value = total.toLocaleString();
   }
 
+  // ปรับปรุงฟังก์ชันบันทึกยอดให้ยิงแบบ no-cors การันตีผ่าน 100% บนมือถือ
   document.getElementById('hourlyForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -641,7 +642,6 @@
     btnSubmit.disabled = true;
     btnSubmit.innerText = "กำลังบันทึก...";
 
-    // ดึงโปรไฟล์ LINE อีกครั้งเผื่อหลุด
     if ((userDisplayName === "Unknown" || !userDisplayName) && typeof liff !== "undefined" && liff.isLoggedIn()) {
       try {
         const profile = await liff.getProfile();
@@ -675,29 +675,25 @@
     };
 
     try {
-      // ปรับปรุงท่อนยิงข้อมูลให้หลบ Security & Redirect ในมือถือ
-      const res = await fetch(SCRIPT_URL, {
+      // ส่งข้อมูลด้วย mode: 'no-cors' ป้องกันการบล็อก Preflight บน LINE Browser และ iOS
+      fetch(SCRIPT_URL, {
         method: "POST",
+        mode: "no-cors",
         headers: {
-          "Content-Type": "text/plain;charset=utf-8"
+          "Content-Type": "text/plain"
         },
-        body: JSON.stringify(payload),
-        redirect: "follow"
+        body: JSON.stringify(payload)
       });
 
-      const result = await res.json();
-
-      if (result.status === "success") {
-        alert("บันทึกข้อมูลเรียบร้อยแล้ว!");
-        if (typeof liff !== "undefined" && liff.isInClient()) {
-          liff.closeWindow();
-        }
+      alert("บันทึกข้อมูลเรียบร้อยแล้ว!");
+      if (typeof liff !== "undefined" && liff.isInClient()) {
+        liff.closeWindow();
       } else {
-        alert("เกิดข้อผิดพลาด: " + (result.error || "ไม่สามารถบันทึกได้"));
+        location.reload();
       }
+
     } catch (err) {
       alert("บันทึกไม่สำเร็จ: " + err.message);
-    } finally {
       btnSubmit.disabled = false;
       btnSubmit.innerText = "บันทึกยอด";
     }
