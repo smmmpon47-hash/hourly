@@ -337,9 +337,8 @@
   let masterLotMap = {}; 
   let currentTarget1 = 0;
   let currentHours1 = 9;
-  let userDisplayName = "Unknown"; // ประกาศตัวแปรแบบเดียวกับหน้ากรอกเป้า
+  let userDisplayName = "Unknown";
 
-  // เรียก initLiff() ทันทีที่สคริปต์ทำงาน
   initLiff();
 
   async function initLiff() {
@@ -348,7 +347,7 @@
         await liff.init({ liffId: LIFF_ID });
         if (liff.isLoggedIn()) {
           const profile = await liff.getProfile();
-          userDisplayName = profile.displayName; // อัปเดตชื่อผู้ใช้งานจริง
+          userDisplayName = profile.displayName || "Unknown";
           
           const userElem = document.getElementById('userDisplayNameDisplay');
           if (userElem) userElem.innerText = userDisplayName;
@@ -604,11 +603,15 @@
         updatedBy: userDisplayName
       };
 
-      const res = await fetch(SCRIPT_URL, {
+      // ปรับปรุง fetch เพื่อให้ส่งผ่านมือถือได้ 100%
+      await fetch(SCRIPT_URL, {
         method: "POST",
-        body: JSON.stringify(payload)
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify(payload),
+        redirect: "follow"
       });
-      await res.json();
     } catch (err) {
       console.error("Sync Error:", err);
     }
@@ -638,11 +641,11 @@
     btnSubmit.disabled = true;
     btnSubmit.innerText = "กำลังบันทึก...";
 
-    // ตรวจสอบชื่อ LINE อีกครั้งก่อนส่ง
-    if (userDisplayName === "Unknown" && typeof liff !== "undefined" && liff.isLoggedIn()) {
+    // ดึงโปรไฟล์ LINE อีกครั้งเผื่อหลุด
+    if ((userDisplayName === "Unknown" || !userDisplayName) && typeof liff !== "undefined" && liff.isLoggedIn()) {
       try {
         const profile = await liff.getProfile();
-        userDisplayName = profile.displayName;
+        userDisplayName = profile.displayName || "Unknown";
       } catch (e) {}
     }
 
@@ -672,10 +675,16 @@
     };
 
     try {
+      // ปรับปรุงท่อนยิงข้อมูลให้หลบ Security & Redirect ในมือถือ
       const res = await fetch(SCRIPT_URL, {
         method: "POST",
-        body: JSON.stringify(payload)
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify(payload),
+        redirect: "follow"
       });
+
       const result = await res.json();
 
       if (result.status === "success") {
