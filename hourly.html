@@ -259,7 +259,7 @@
   </div>
 
   <div class="user-banner">
-    👤 ผู้รายงาน: <span id="userDisplayNameDisplay">กำลังโหลดชื่อ...</span>
+    👤 ผู้รายงาน: <span id="userDisplayNameDisplay">กำลังดึงโปรไฟล์ LINE...</span>
   </div>
 
   <form id="hourlyForm">
@@ -337,7 +337,30 @@
   let masterLotMap = {}; 
   let currentTarget1 = 0;
   let currentHours1 = 9;
-  let userDisplayName = "Unknown"; // กำหนดเหมือนหน้ากรอกเป้า
+  let userDisplayName = "Unknown"; // ประกาศตัวแปรแบบเดียวกับหน้ากรอกเป้า
+
+  // เรียก initLiff() ทันทีที่สคริปต์ทำงาน
+  initLiff();
+
+  async function initLiff() {
+    try {
+      if (typeof liff !== "undefined" && LIFF_ID) {
+        await liff.init({ liffId: LIFF_ID });
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          userDisplayName = profile.displayName; // อัปเดตชื่อผู้ใช้งานจริง
+          
+          const userElem = document.getElementById('userDisplayNameDisplay');
+          if (userElem) userElem.innerText = userDisplayName;
+        } else {
+          document.getElementById('userDisplayNameDisplay').innerText = "ทั่วไป (ไม่ผ่าน LINE)";
+        }
+      }
+    } catch (err) {
+      console.error("LIFF Init Error:", err);
+      document.getElementById('userDisplayNameDisplay').innerText = "ทั่วไป (ไม่ผ่าน LINE)";
+    }
+  }
 
   const TIME_SLOTS_DEF = [
     { label: "08.30-09.30", endMin: 570 },
@@ -352,28 +375,6 @@
     { label: "17.30-18.30", endMin: 1110 },
     { label: "18.30-19.30", endMin: 1170 }
   ];
-
-  // ทำงานเหมือนตัวกรอกเป้า
-  async function initLiff() {
-    try {
-      if (typeof liff !== "undefined" && LIFF_ID) {
-        await liff.init({ liffId: LIFF_ID });
-        if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
-          userDisplayName = profile.displayName;
-          document.getElementById('userDisplayNameDisplay').innerText = userDisplayName;
-        } else {
-          document.getElementById('userDisplayNameDisplay').innerText = "ทั่วไป (ไม่ผ่าน LINE)";
-        }
-      }
-    } catch (err) {
-      console.error("LIFF Init Error:", err);
-      document.getElementById('userDisplayNameDisplay').innerText = "ทั่วไป (ไม่ผ่าน LINE)";
-    }
-  }
-
-  // เรียกใช้วิธีเดียวกับหน้าเป้า
-  initLiff();
 
   document.addEventListener("DOMContentLoaded", () => {
     displayCurrentDate();
@@ -600,18 +601,14 @@
         calculatedTarget1: target1Chunk,
         calculatedTarget2: target2Chunk,
         totalTarget: displayTotalTarget,
-        updatedBy: userDisplayName || 'Supervisor'
+        updatedBy: userDisplayName
       };
 
       const res = await fetch(SCRIPT_URL, {
         method: "POST",
         body: JSON.stringify(payload)
       });
-      const result = await res.json();
-
-      if (result.status === 'success') {
-        alert(`สลับขึ้น LOT ${newLot} สำเร็จ!\nเป้ารวมใหม่ปรับเป็น: ${displayTotalTarget.toLocaleString()} ชิ้น\n(LOT 1: ${hoursUsedLot1} ชม. = ${target1Chunk} ชิ้น | LOT 2: ${remainingHoursLot2} ชม. = ${target2Chunk} ชิ้น)`);
-      }
+      await res.json();
     } catch (err) {
       console.error("Sync Error:", err);
     }
@@ -641,6 +638,14 @@
     btnSubmit.disabled = true;
     btnSubmit.innerText = "กำลังบันทึก...";
 
+    // ตรวจสอบชื่อ LINE อีกครั้งก่อนส่ง
+    if (userDisplayName === "Unknown" && typeof liff !== "undefined" && liff.isLoggedIn()) {
+      try {
+        const profile = await liff.getProfile();
+        userDisplayName = profile.displayName;
+      } catch (e) {}
+    }
+
     const hourlyDetails = [];
     const slotRows = document.querySelectorAll('.slot-row');
     
@@ -658,20 +663,11 @@
       }
     });
 
-    // ตรวจสอบชื่อก่อนส่ง (ถ้ายังเป็น Unknown ให้ลองดึงจาก LIFF ซ้ำอีกรอบ)
-    let finalUser = userDisplayName;
-    if (finalUser === "Unknown" && typeof liff !== "undefined" && liff.isLoggedIn()) {
-      try {
-        const profile = await liff.getProfile();
-        finalUser = profile.displayName;
-      } catch (err) {}
-    }
-
     const payload = {
       action: "HOURLY_OUTPUT",
       line: lineVal,
       remark: remarkVal,
-      updatedBy: finalUser,
+      updatedBy: userDisplayName,
       hourlyData: hourlyDetails
     };
 
