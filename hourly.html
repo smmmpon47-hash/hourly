@@ -6,8 +6,13 @@
   <title>บันทึกยอดการผลิต</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <style>
-    * { box-sizing: border-box; font-family: 'Prompt', sans-serif; }
+    * {
+      box-sizing: border-box;
+      font-family: 'Prompt', sans-serif;
+    }
+
     body {
       background-color: #1e3a3f;
       min-height: 100vh;
@@ -17,6 +22,7 @@
       justify-content: center;
       align-items: flex-start;
     }
+
     .card {
       background: #ffffff;
       padding: 24px 22px;
@@ -32,12 +38,14 @@
       align-items: center;
       margin-bottom: 12px;
     }
+
     .header-title {
       font-size: 1.55rem;
       font-weight: 700;
       color: #0d9488;
       margin: 0;
     }
+
     .date-badge {
       font-size: 0.85rem;
       color: #475569;
@@ -48,10 +56,21 @@
       border: 1px solid #cbd5e1;
     }
 
-    .form-group { margin-bottom: 18px; }
-    label { display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b; font-size: 1rem; }
-    
-    select, input, textarea {
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #1e293b;
+      font-size: 1rem;
+    }
+
+    select,
+    input,
+    textarea {
       width: 100%;
       padding: 12px 14px;
       border: 1.8px solid #cbd5e1;
@@ -61,7 +80,10 @@
       background: #fff;
       color: #0f172a;
     }
-    select:focus, input:focus, textarea:focus {
+
+    select:focus,
+    input:focus,
+    textarea:focus {
       border-color: #0d9488;
       box-shadow: 0 0 0 3.5px rgba(13, 148, 136, 0.2);
     }
@@ -104,6 +126,7 @@
       align-items: flex-start;
       margin-bottom: 12px;
     }
+
     .slot-time {
       flex: 2.2;
       background: #f8fafc;
@@ -115,11 +138,13 @@
       font-weight: 700;
       color: #334155;
     }
+
     .slot-lot-container {
       flex: 2.2;
       display: flex;
       flex-direction: column;
     }
+
     .slot-lot-select {
       width: 100%;
       padding: 11px 6px;
@@ -127,6 +152,7 @@
       border-radius: 14px;
       font-weight: 600;
     }
+
     .model-subtext {
       font-size: 0.75rem;
       color: #0d9488;
@@ -135,6 +161,7 @@
       padding-left: 4px;
       min-height: 16px;
     }
+
     .slot-input {
       flex: 1.2;
       padding: 11px 8px;
@@ -157,7 +184,10 @@
       margin-top: 5px;
       margin-bottom: 15px;
     }
-    .btn-add-lot-midday:active { background: #dcfce7; }
+
+    .btn-add-lot-midday:active {
+      background: #dcfce7;
+    }
 
     .sum-box {
       display: flex;
@@ -172,6 +202,7 @@
       color: #1e293b;
       font-size: 1.05rem;
     }
+
     .sum-input {
       width: 95px;
       text-align: center;
@@ -197,6 +228,7 @@
       box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
       margin-top: 10px;
     }
+
     .btn-submit:disabled {
       background: #94a3b8;
       box-shadow: none;
@@ -205,7 +237,10 @@
 
     .modal-overlay {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       background: rgba(15, 23, 42, 0.6);
       display: none;
       justify-content: center;
@@ -213,6 +248,7 @@
       z-index: 1000;
       padding: 20px;
     }
+
     .modal-card {
       background: #fff;
       padding: 22px 20px;
@@ -221,18 +257,21 @@
       max-width: 380px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.3);
     }
+
     .modal-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
     }
+
     .modal-title {
       font-size: 1.05rem;
       font-weight: 700;
       color: #0d9488;
       margin: 0;
     }
+
     .btn-close-modal {
       background: #f1f5f9;
       border: none;
@@ -250,21 +289,26 @@
     }
   </style>
 </head>
+
 <body>
 
 <div class="card">
+
   <div class="header-top-row">
     <h2 class="header-title">บันทึกยอดการผลิต</h2>
     <div class="date-badge" id="currentDateDisplay">--/--/----</div>
   </div>
 
   <div class="user-banner">
-    👤 ผู้รายงาน: <span id="userDisplayNameDisplay">กำลังดึงโปรไฟล์ LINE...</span>
+    👤 ผู้รายงาน:
+    <span id="userDisplayNameDisplay">กำลังดึงโปรไฟล์ LINE...</span>
   </div>
 
   <form id="hourlyForm">
+
     <div class="form-group">
       <label for="line">LINE การผลิต</label>
+
       <select id="line" required onchange="loadLineDetails()">
         <option value="">-- เลือก LINE --</option>
         <option value="Line B">Line B</option>
@@ -276,64 +320,151 @@
     </div>
 
     <div id="infoBanner" class="info-banner" style="display:none;">
-      <span>🎯 เป้าวัน: <strong id="targetVal">0</strong> ชิ้น</span>
-      <span>⏱️ เวลาทำงาน: <strong id="hoursVal">0</strong> ชม.</span>
+      <span>
+        🎯 เป้าวัน:
+        <strong id="targetVal">0</strong> ชิ้น
+      </span>
+
+      <span>
+        ⏱️ เวลาทำงาน:
+        <strong id="hoursVal">0</strong> ชม.
+      </span>
     </div>
 
     <div class="form-group">
-      <div class="section-title">กรอกยอดผลิตรายชั่วโมง</div>
-      <div id="slotsContainer">
-        <p style="color: #94a3b8; font-size: 0.95rem; text-align: center; padding: 15px 0;">โปรดเลือก LINE การผลิต</p>
+
+      <div class="section-title">
+        กรอกยอดผลิตรายชั่วโมง
       </div>
+
+      <div id="slotsContainer">
+        <p style="color: #94a3b8; font-size: 0.95rem; text-align: center; padding: 15px 0;">
+          โปรดเลือก LINE การผลิต
+        </p>
+      </div>
+
     </div>
 
-    <button type="button" class="btn-add-lot-midday" id="btnAddMiddayLot" style="display:none;" onclick="openNewLotModal()">
+    <button
+      type="button"
+      class="btn-add-lot-midday"
+      id="btnAddMiddayLot"
+      style="display:none;"
+      onclick="openNewLotModal()"
+    >
       ➕ สลับรุ่น / กรอกเลข LOT เพิ่มเติม
     </button>
 
     <div class="sum-box">
       <span>ยอดรวมที่กรอก</span>
-      <input type="text" id="totalSum" class="sum-input" value="0" readonly>
+
+      <input
+        type="text"
+        id="totalSum"
+        class="sum-input"
+        value="0"
+        readonly
+      >
+
       <span>ชิ้น</span>
     </div>
 
     <div class="form-group">
       <label for="remark">หมายเหตุ / ปัญหาที่พบ</label>
-      <textarea id="remark" rows="2" placeholder="ระบุปัญหาที่พบ (ถ้ามี)"></textarea>
+
+      <textarea
+        id="remark"
+        rows="2"
+        placeholder="ระบุปัญหาที่พบ (ถ้ามี)"
+      ></textarea>
     </div>
 
-    <button type="submit" class="btn-submit" id="btnSubmit">บันทึกยอด</button>
+    <button
+      type="submit"
+      class="btn-submit"
+      id="btnSubmit"
+    >
+      บันทึกยอด
+    </button>
+
   </form>
 </div>
 
 <!-- Modal สำหรับกรอกสลับ LOT -->
+
 <div class="modal-overlay" id="newLotModal">
+
   <div class="modal-card">
+
     <div class="modal-header">
-      <div class="modal-title">🔀 สลับขึ้น LOT ใหม่</div>
-      <button type="button" class="btn-close-modal" onclick="closeNewLotModal()">&times;</button>
+
+      <div class="modal-title">
+        🔀 สลับขึ้น LOT ใหม่
+      </div>
+
+      <button
+        type="button"
+        class="btn-close-modal"
+        onclick="closeNewLotModal()"
+      >
+        &times;
+      </button>
+
     </div>
+
     <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 12px; margin-top: 0;">
       กรุณากรอกเลข LOT ใหม่และเป้าเต็ม เพื่อให้ระบบตัดสัดส่วนคำนวณเป้ารวมใหม่
     </p>
+
     <div class="form-group">
-      <label for="modalLotNo">เลข LOT ใหม่</label>
-      <input type="text" id="modalLotNo" placeholder="เช่น 26101020">
+
+      <label for="modalLotNo">
+        เลข LOT ใหม่
+      </label>
+
+      <input
+        type="text"
+        id="modalLotNo"
+        placeholder="เช่น 26101020"
+      >
+
     </div>
+
     <div class="form-group">
-      <label for="modalLotTarget">เป้าหมายตั้งต้น LOT ใหม่ (ชิ้น)</label>
-      <input type="number" id="modalLotTarget" min="0" placeholder="เช่น 500">
+
+      <label for="modalLotTarget">
+        เป้าหมายตั้งต้น LOT ใหม่ (ชิ้น)
+      </label>
+
+      <input
+        type="number"
+        id="modalLotTarget"
+        min="0"
+        placeholder="เช่น 500"
+      >
+
     </div>
-    <button type="button" class="btn-submit" onclick="confirmNewLot()">ยืนยันสลับ LOT & คำนวณเป้าใหม่</button>
+
+    <button
+      type="button"
+      class="btn-submit"
+      onclick="confirmNewLot()"
+    >
+      ยืนยันสลับ LOT & คำนวณเป้าใหม่
+    </button>
+
   </div>
 </div>
 
 <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwziSYLaDcymEHVXQr_qOP6RmIQDjixVPqWwhAQSOMXs_4zAA-gscpeuR7fJp7DY6yp/exec"; 
+
+  const SCRIPT_URL =
+    "https://script.google.com/macros/s/AKfycbwziSYLaDcymEHVXQr_qOP6RmIQDjixVPqWwhAQSOMXs_4zAA-gscpeuR7fJp7DY6yp/exec";
+
   const LIFF_ID = "2011198724-JQ60DTBm";
 
-  let activeLots = []; 
-  let masterLotMap = {}; 
+  let activeLots = [];
+  let masterLotMap = {};
   let currentTarget1 = 0;
   let currentHours1 = 9;
   let userDisplayName = "Unknown";
@@ -341,100 +472,296 @@
   initLiff();
 
   async function initLiff() {
+
     try {
+
       if (typeof liff !== "undefined" && LIFF_ID) {
-        await liff.init({ liffId: LIFF_ID });
+
+        await liff.init({
+          liffId: LIFF_ID
+        });
+
         if (liff.isLoggedIn()) {
+
           const profile = await liff.getProfile();
-          userDisplayName = profile.displayName || "Unknown";
-          
-          const userElem = document.getElementById('userDisplayNameDisplay');
-          if (userElem) userElem.innerText = userDisplayName;
+
+          userDisplayName =
+            profile.displayName || "Unknown";
+
+          const userElem =
+            document.getElementById(
+              'userDisplayNameDisplay'
+            );
+
+          if (userElem) {
+            userElem.innerText =
+              userDisplayName;
+          }
+
         } else {
-          document.getElementById('userDisplayNameDisplay').innerText = "ทั่วไป (ไม่ผ่าน LINE)";
+
+          document.getElementById(
+            'userDisplayNameDisplay'
+          ).innerText =
+            "ทั่วไป (ไม่ผ่าน LINE)";
         }
       }
+
     } catch (err) {
-      console.error("LIFF Init Error:", err);
-      document.getElementById('userDisplayNameDisplay').innerText = "ทั่วไป (ไม่ผ่าน LINE)";
+
+      console.error(
+        "LIFF Init Error:",
+        err
+      );
+
+      document.getElementById(
+        'userDisplayNameDisplay'
+      ).innerText =
+        "ทั่วไป (ไม่ผ่าน LINE)";
     }
   }
 
   const TIME_SLOTS_DEF = [
-    { label: "08.30-09.30", endMin: 570 },
-    { label: "09.30-10.30", endMin: 630 },
-    { label: "10.30-11.30", endMin: 690 },
-    { label: "11.30-12.30", endMin: 750 },
-    { label: "12.30-13.30", endMin: 810 },
-    { label: "13.30-14.30", endMin: 870 },
-    { label: "14.30-15.30", endMin: 930 },
-    { label: "15.30-16.30", endMin: 990 },
-    { label: "16.30-17.30", endMin: 1050 },
-    { label: "17.30-18.30", endMin: 1110 },
-    { label: "18.30-19.30", endMin: 1170 }
+
+    {
+      label: "08.30-09.30",
+      endMin: 570
+    },
+
+    {
+      label: "09.30-10.30",
+      endMin: 630
+    },
+
+    {
+      label: "10.30-11.30",
+      endMin: 690
+    },
+
+    {
+      label: "11.30-12.30",
+      endMin: 750
+    },
+
+    {
+      label: "12.30-13.30",
+      endMin: 810
+    },
+
+    {
+      label: "13.30-14.30",
+      endMin: 870
+    },
+
+    {
+      label: "14.30-15.30",
+      endMin: 930
+    },
+
+    {
+      label: "15.30-16.30",
+      endMin: 990
+    },
+
+    {
+      label: "16.30-17.30",
+      endMin: 1050
+    },
+
+    {
+      label: "17.30-18.30",
+      endMin: 1110
+    },
+
+    {
+      label: "18.30-19.30",
+      endMin: 1170
+    }
+
   ];
 
-  document.addEventListener("DOMContentLoaded", () => {
-    displayCurrentDate();
+  document.addEventListener(
+    "DOMContentLoaded",
+    () => {
 
-    const savedLine = localStorage.getItem("selectedLine");
-    if (savedLine) {
-      const lineSelect = document.getElementById('line');
-      lineSelect.value = savedLine;
-      loadLineDetails();
+      displayCurrentDate();
+
+      const savedLine =
+        localStorage.getItem(
+          "selectedLine"
+        );
+
+      if (savedLine) {
+
+        const lineSelect =
+          document.getElementById(
+            'line'
+          );
+
+        lineSelect.value =
+          savedLine;
+
+        loadLineDetails();
+      }
+
     }
-  });
+  );
 
   function displayCurrentDate() {
+
     const now = new Date();
-    document.getElementById('currentDateDisplay').innerText = now.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    document.getElementById(
+      'currentDateDisplay'
+    ).innerText =
+      now.toLocaleDateString(
+        'th-TH',
+        {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        }
+      );
   }
 
   async function loadLineDetails() {
-    const line = document.getElementById('line').value;
-    const slotsContainer = document.getElementById('slotsContainer');
-    const infoBanner = document.getElementById('infoBanner');
-    const btnAddMiddayLot = document.getElementById('btnAddMiddayLot');
+
+    const line =
+      document.getElementById(
+        'line'
+      ).value;
+
+    const slotsContainer =
+      document.getElementById(
+        'slotsContainer'
+      );
+
+    const infoBanner =
+      document.getElementById(
+        'infoBanner'
+      );
+
+    const btnAddMiddayLot =
+      document.getElementById(
+        'btnAddMiddayLot'
+      );
 
     if (!line) {
-      slotsContainer.innerHTML = '<p style="color: #94a3b8; font-size: 0.95rem; text-align: center; padding: 15px 0;">โปรดเลือก LINE การผลิต</p>';
-      infoBanner.style.display = 'none';
-      btnAddMiddayLot.style.display = 'none';
+
+      slotsContainer.innerHTML =
+        '<p style="color: #94a3b8; font-size: 0.95rem; text-align: center; padding: 15px 0;">โปรดเลือก LINE การผลิต</p>';
+
+      infoBanner.style.display =
+        'none';
+
+      btnAddMiddayLot.style.display =
+        'none';
+
       return;
     }
 
-    localStorage.setItem("selectedLine", line);
-    slotsContainer.innerHTML = '<p style="color: #64748b; font-size: 0.95rem; text-align: center; padding: 15px 0;">กำลังโหลดข้อมูล...</p>';
+    localStorage.setItem(
+      "selectedLine",
+      line
+    );
+
+    slotsContainer.innerHTML =
+      '<p style="color: #64748b; font-size: 0.95rem; text-align: center; padding: 15px 0;">กำลังโหลดข้อมูล...</p>';
 
     try {
-      const res = await fetch(`${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(line)}`);
-      const data = await res.json();
 
-      activeLots = data.lots || data.models || [];
-      if (data.lotNumber && !activeLots.includes(data.lotNumber)) activeLots.push(data.lotNumber);
-      if ((data.lotNumber2 || data.lot2Number) && !activeLots.includes(data.lotNumber2 || data.lot2Number)) {
-        activeLots.push(data.lotNumber2 || data.lot2Number);
+      const res = await fetch(
+        `${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(line)}`
+      );
+
+      const data =
+        await res.json();
+
+      activeLots =
+        data.lots ||
+        data.models ||
+        [];
+
+      if (
+        data.lotNumber &&
+        !activeLots.includes(
+          data.lotNumber
+        )
+      ) {
+
+        activeLots.push(
+          data.lotNumber
+        );
       }
 
-      masterLotMap = data.masterMap || {}; 
-      currentHours1 = Number(data.totalWorkingHours) || 9;
-      currentTarget1 = Number(data.target1 || data.target) || 1000;
+      if (
+        (data.lotNumber2 ||
+          data.lot2Number) &&
+        !activeLots.includes(
+          data.lotNumber2 ||
+          data.lot2Number
+        )
+      ) {
 
-      document.getElementById('targetVal').innerText = currentTarget1.toLocaleString();
-      document.getElementById('hoursVal').innerText = currentHours1;
-      infoBanner.style.display = 'flex';
+        activeLots.push(
+          data.lotNumber2 ||
+          data.lot2Number
+        );
+      }
 
-      btnAddMiddayLot.style.display = 'block';
-      generateSmartTimeSlots(currentHours1, data.existingHourly || {});
+      masterLotMap =
+        data.masterMap || {};
+
+      currentHours1 =
+        Number(
+          data.totalWorkingHours
+        ) || 9;
+
+      currentTarget1 =
+        Number(
+          data.target1 ||
+          data.target
+        ) || 1000;
+
+      document.getElementById(
+        'targetVal'
+      ).innerText =
+        currentTarget1.toLocaleString();
+
+      document.getElementById(
+        'hoursVal'
+      ).innerText =
+        currentHours1;
+
+      infoBanner.style.display =
+        'flex';
+
+      btnAddMiddayLot.style.display =
+        'block';
+
+      generateSmartTimeSlots(
+        currentHours1,
+        data.existingHourly || {}
+      );
 
     } catch (err) {
-      console.error("Error loading line details:", err);
-      btnAddMiddayLot.style.display = 'block';
-      generateSmartTimeSlots(9, {});
+
+      console.error(
+        "Error loading line details:",
+        err
+      );
+
+      btnAddMiddayLot.style.display =
+        'block';
+
+      generateSmartTimeSlots(
+        9,
+        {}
+      );
     }
   }
 
-  function generateSmartTimeSlots(totalHours, existingData) {
+    function generateSmartTimeSlots(totalHours, existingData) {
     const slotsContainer = document.getElementById('slotsContainer');
     slotsContainer.innerHTML = '';
 
@@ -442,6 +769,7 @@
     const cleanLine = selectedLine.replace('LINE', '').trim();
 
     let breakSlot = "";
+
     if (['B', 'C'].includes(cleanLine)) {
       breakSlot = "12.30-13.30";
     } else if (['D', 'E', 'F', 'G'].includes(cleanLine)) {
@@ -453,250 +781,581 @@
 
     let targetSlots = [];
 
-    if (currentMinutes >= 1020 && currentMinutes < 1080) { 
-      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "16.30-17.30");
-    } else if (currentMinutes >= 1080 && currentMinutes < 1140) { 
-      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "17.30-18.30");
+    /*
+     * ช่วง 17:00-17:59
+     * ให้พนักงานกรอกยอดของช่วง 16.30-17.30
+     */
+    if (currentMinutes >= 1020 && currentMinutes < 1080) {
+
+      targetSlots = TIME_SLOTS_DEF.filter(
+        s => s.label === "16.30-17.30"
+      );
+
+    /*
+     * ช่วง 18:00-18:59
+     * ให้กรอก 17.30-18.30
+     * และถ้าเป็น OT ให้เพิ่ม 18.30-19.30
+     *
+     * ไม่เอา 16.30-17.30 กลับมาแสดงซ้ำ
+     */
+    } else if (currentMinutes >= 1080 && currentMinutes < 1140) {
+
+      targetSlots = TIME_SLOTS_DEF.filter(
+        s => s.label === "17.30-18.30"
+      );
+
       if (totalHours >= 10) {
-        const slot19 = TIME_SLOTS_DEF.find(s => s.label === "18.30-19.30");
-        if (slot19) targetSlots.push(slot19);
+
+        const slot19 = TIME_SLOTS_DEF.find(
+          s => s.label === "18.30-19.30"
+        );
+
+        if (slot19) {
+          targetSlots.push(slot19);
+        }
       }
+
     } else {
-      let passedSlots = TIME_SLOTS_DEF.filter(slot => currentMinutes >= slot.endMin);
-      const maxCount = Math.min(Math.ceil(totalHours), TIME_SLOTS_DEF.length);
+
+      let passedSlots = TIME_SLOTS_DEF.filter(
+        slot => currentMinutes >= slot.endMin
+      );
+
+      const maxCount = Math.min(
+        Math.ceil(totalHours),
+        TIME_SLOTS_DEF.length
+      );
+
       passedSlots = passedSlots.slice(-maxCount);
 
       if (passedSlots.length >= 2) {
+
         targetSlots = passedSlots.slice(-2);
+
       } else {
-        targetSlots = [TIME_SLOTS_DEF[0], TIME_SLOTS_DEF[1]];
+
+        targetSlots = [
+          TIME_SLOTS_DEF[0],
+          TIME_SLOTS_DEF[1]
+        ];
       }
     }
 
-    let lotOptionsHTML = activeLots.length > 0 
-      ? activeLots.map(l => `<option value="${l}">${l}</option>`).join('') 
+    // ป้องกัน slot ซ้ำ
+    const seenSlots = new Set();
+
+    targetSlots = targetSlots.filter(slot => {
+
+      if (seenSlots.has(slot.label)) {
+        return false;
+      }
+
+      seenSlots.add(slot.label);
+      return true;
+    });
+
+    let lotOptionsHTML = activeLots.length > 0
+      ? activeLots.map(
+          l => `<option value="${l}">${l}</option>`
+        ).join('')
       : '<option value="">-- ไม่พบ LOT --</option>';
 
     targetSlots.forEach(slot => {
-      const existing = existingData[slot.label] || {};
-      const isBreakTime = (slot.label === breakSlot);
-      const currentOutput = isBreakTime ? 0 : (existing.output !== undefined ? existing.output : '');
 
-      const row = document.createElement('div');
+      const existing =
+        existingData[slot.label] || {};
+
+      const isBreakTime =
+        (slot.label === breakSlot);
+
+      const currentOutput =
+        isBreakTime
+          ? 0
+          : (
+              existing.output !== undefined
+                ? existing.output
+                : ''
+            );
+
+      const row =
+        document.createElement('div');
+
       row.className = 'slot-row';
+
       row.innerHTML = `
-        <div class="slot-time" data-slot-label="${slot.label}">
-          ${slot.label} ${isBreakTime ? '<br><span style="color:#ef4444; font-size:0.75rem;">(พัก)</span>' : ''}
+        <div
+          class="slot-time"
+          data-slot-label="${slot.label}"
+        >
+          ${slot.label}
+          ${
+            isBreakTime
+              ? '<br><span style="color:#ef4444; font-size:0.75rem;">(พัก)</span>'
+              : ''
+          }
         </div>
+
         <div class="slot-lot-container">
-          <select class="slot-lot-select input-lot-val" onchange="updateModelSubtext(this)" ${isBreakTime ? 'disabled' : ''}>
+
+          <select
+            class="slot-lot-select input-lot-val"
+            onchange="updateModelSubtext(this)"
+            ${isBreakTime ? 'disabled' : ''}
+          >
             ${lotOptionsHTML}
           </select>
+
           <div class="model-subtext"></div>
+
         </div>
-        <input type="number" 
-               class="slot-input input-val" 
-               min="0" 
-               placeholder="0" 
-               value="${currentOutput}" 
-               oninput="calculateTotal()"
-               ${isBreakTime ? 'readonly style="background-color: #f1f5f9; color: #94a3b8; cursor: not-allowed;"' : ''}>
+
+        <input
+          type="number"
+          class="slot-input input-val"
+          min="0"
+          placeholder="0"
+          value="${currentOutput}"
+          oninput="calculateTotal()"
+          ${
+            isBreakTime
+              ? 'readonly style="background-color: #f1f5f9; color: #94a3b8; cursor: not-allowed;"'
+              : ''
+          }
+        >
       `;
+
       slotsContainer.appendChild(row);
 
-      const selectElem = row.querySelector('.input-lot-val');
+      const selectElem =
+        row.querySelector('.input-lot-val');
+
       if (existing.lot) {
-        selectElem.value = existing.lot;
+
+        selectElem.value =
+          existing.lot;
+
       } else if (activeLots.length > 0) {
-        selectElem.value = activeLots[activeLots.length - 1];
+
+        selectElem.value =
+          activeLots[activeLots.length - 1];
       }
+
       updateModelSubtext(selectElem);
     });
 
     calculateTotal();
   }
 
+
   function updateModelSubtext(selectElem) {
-    const selectedLot = selectElem.value;
-    const subtextElem = selectElem.nextElementSibling;
-    if (selectedLot && masterLotMap[selectedLot]) {
-      subtextElem.innerText = `(รุ่น: ${masterLotMap[selectedLot]})`;
+
+    const selectedLot =
+      selectElem.value;
+
+    const subtextElem =
+      selectElem.nextElementSibling;
+
+    if (
+      selectedLot &&
+      masterLotMap[selectedLot]
+    ) {
+
+      subtextElem.innerText =
+        `(รุ่น: ${masterLotMap[selectedLot]})`;
+
     } else {
+
       subtextElem.innerText = '';
     }
   }
 
+
   function openNewLotModal() {
-    if (!document.getElementById('line').value) {
-      alert("กรุณาเลือก LINE การผลิตก่อนครับ");
+
+    if (
+      !document.getElementById('line').value
+    ) {
+
+      alert(
+        "กรุณาเลือก LINE การผลิตก่อนครับ"
+      );
+
       return;
     }
-    document.getElementById('newLotModal').style.display = 'flex';
+
+    document.getElementById(
+      'newLotModal'
+    ).style.display = 'flex';
   }
+
 
   function closeNewLotModal() {
-    document.getElementById('newLotModal').style.display = 'none';
-    document.getElementById('modalLotNo').value = '';
-    document.getElementById('modalLotTarget').value = '';
+
+    document.getElementById(
+      'newLotModal'
+    ).style.display = 'none';
+
+    document.getElementById(
+      'modalLotNo'
+    ).value = '';
+
+    document.getElementById(
+      'modalLotTarget'
+    ).value = '';
   }
 
-  // ปรับปรุงฟังก์ชันสลับ LOT ให้ยิงแบบ no-cors ข้ามข้อจำกัดมือถือ
-  async function confirmNewLot() {
-    const newLot = document.getElementById('modalLotNo').value.trim().toUpperCase();
-    const newTargetMax = Number(document.getElementById('modalLotTarget').value) || 0;
-    const lineVal = document.getElementById('line').value;
 
-    if (!newLot || newTargetMax <= 0) {
-      alert("กรุณากรอกเลข LOT และเป้าหมายให้ครบถ้วน");
+  // ปรับปรุงฟังก์ชันสลับ LOT
+  // ให้ยิงแบบ no-cors ข้ามข้อจำกัดมือถือ
+  async function confirmNewLot() {
+
+    const newLot =
+      document.getElementById(
+        'modalLotNo'
+      ).value.trim().toUpperCase();
+
+    const newTargetMax =
+      Number(
+        document.getElementById(
+          'modalLotTarget'
+        ).value
+      ) || 0;
+
+    const lineVal =
+      document.getElementById(
+        'line'
+      ).value;
+
+    if (
+      !newLot ||
+      newTargetMax <= 0
+    ) {
+
+      alert(
+        "กรุณากรอกเลข LOT และเป้าหมายให้ครบถ้วน"
+      );
+
       return;
     }
 
-    const slotRows = document.querySelectorAll('.slot-row');
+    const slotRows =
+      document.querySelectorAll(
+        '.slot-row'
+      );
+
     let hoursUsedLot1 = 0;
 
     slotRows.forEach(row => {
-      const outputVal = row.querySelector('.input-val').value;
+
+      const outputVal =
+        row.querySelector(
+          '.input-val'
+        ).value;
+
       if (outputVal !== "") {
         hoursUsedLot1++;
       }
     });
 
-    if (hoursUsedLot1 === 0) hoursUsedLot1 = 1;
+    if (hoursUsedLot1 === 0) {
+      hoursUsedLot1 = 1;
+    }
 
-    const remainingHoursLot2 = Math.max(0, currentHours1 - hoursUsedLot1);
+    const remainingHoursLot2 =
+      Math.max(
+        0,
+        currentHours1 - hoursUsedLot1
+      );
 
-    const target1Chunk = Math.round((currentTarget1 / currentHours1) * hoursUsedLot1); 
-    const target2Chunk = Math.round((newTargetMax / currentHours1) * remainingHoursLot2); 
-    const displayTotalTarget = target1Chunk + target2Chunk;
+    const target1Chunk =
+      Math.round(
+        (currentTarget1 / currentHours1) *
+        hoursUsedLot1
+      );
 
-    document.getElementById('targetVal').innerText = displayTotalTarget.toLocaleString();
+    const target2Chunk =
+      Math.round(
+        (newTargetMax / currentHours1) *
+        remainingHoursLot2
+      );
+
+    const displayTotalTarget =
+      target1Chunk +
+      target2Chunk;
+
+    document.getElementById(
+      'targetVal'
+    ).innerText =
+      displayTotalTarget.toLocaleString();
 
     if (!activeLots.includes(newLot)) {
+
       activeLots.push(newLot);
-      const selects = document.querySelectorAll('.input-lot-val');
-      selects.forEach((select, index) => {
-        const opt = document.createElement('option');
-        opt.value = newLot;
-        opt.innerText = newLot;
-        if (index >= hoursUsedLot1) {
-          opt.selected = true;
+
+      const selects =
+        document.querySelectorAll(
+          '.input-lot-val'
+        );
+
+      selects.forEach(
+        (select, index) => {
+
+          const opt =
+            document.createElement(
+              'option'
+            );
+
+          opt.value = newLot;
+          opt.innerText = newLot;
+
+          if (
+            index >= hoursUsedLot1
+          ) {
+            opt.selected = true;
+          }
+
+          select.appendChild(opt);
+
+          updateModelSubtext(select);
         }
-        select.appendChild(opt);
-        updateModelSubtext(select);
-      });
+      );
     }
 
     closeNewLotModal();
 
     const payload = {
+
       action: "HOURLY_OUTPUT",
+
       line: lineVal,
+
       isSwitchLot: true,
+
       newLotNumber: newLot,
+
       newLotTarget: newTargetMax,
+
       hoursUsedLot1: hoursUsedLot1,
+
       hoursUsedLot2: remainingHoursLot2,
+
       calculatedTarget1: target1Chunk,
+
       calculatedTarget2: target2Chunk,
+
       totalTarget: displayTotalTarget,
+
       updatedBy: userDisplayName
     };
 
     try {
-      fetch(SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: {
-          "Content-Type": "text/plain"
-        },
-        body: JSON.stringify(payload)
-      });
+
+      fetch(
+        SCRIPT_URL,
+        {
+          method: "POST",
+          mode: "no-cors",
+
+          headers: {
+            "Content-Type": "text/plain"
+          },
+
+          body: JSON.stringify(payload)
+        }
+      );
+
     } catch (err) {
-      console.error("Sync Error:", err);
+
+      console.error(
+        "Sync Error:",
+        err
+      );
     }
   }
+
 
   function calculateTotal() {
-    const inputs = document.querySelectorAll('.input-val');
+
+    const inputs =
+      document.querySelectorAll(
+        '.input-val'
+      );
+
     let total = 0;
+
     inputs.forEach(input => {
-      total += (Number(input.value) || 0);
+
+      total +=
+        (Number(input.value) || 0);
+
     });
-    document.getElementById('totalSum').value = total.toLocaleString();
+
+    document.getElementById(
+      'totalSum'
+    ).value =
+      total.toLocaleString();
   }
 
-  // ปรับปรุงฟังก์ชันบันทึกยอดให้ยิงแบบ no-cors การันตีผ่าน 100% บนมือถือ
-  document.getElementById('hourlyForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
 
-    const lineVal = document.getElementById('line').value;
-    const remarkVal = document.getElementById('remark').value;
-    const btnSubmit = document.getElementById('btnSubmit');
+  // บันทึกยอด
+  document.getElementById(
+    'hourlyForm'
+  ).addEventListener(
+    'submit',
+    async (e) => {
 
-    if (!lineVal) {
-      alert("กรุณาเลือก LINE การผลิต");
-      return;
-    }
+      e.preventDefault();
 
-    btnSubmit.disabled = true;
-    btnSubmit.innerText = "กำลังบันทึก...";
+      const lineVal =
+        document.getElementById(
+          'line'
+        ).value;
 
-    if ((userDisplayName === "Unknown" || !userDisplayName) && typeof liff !== "undefined" && liff.isLoggedIn()) {
-      try {
-        const profile = await liff.getProfile();
-        userDisplayName = profile.displayName || "Unknown";
-      } catch (e) {}
-    }
+      const remarkVal =
+        document.getElementById(
+          'remark'
+        ).value;
 
-    const hourlyDetails = [];
-    const slotRows = document.querySelectorAll('.slot-row');
-    
-    slotRows.forEach(row => {
-      const timeLabel = row.querySelector('.slot-time').getAttribute('data-slot-label');
-      const lotVal = row.querySelector('.input-lot-val').value;
-      const outputVal = row.querySelector('.input-val').value;
+      const btnSubmit =
+        document.getElementById(
+          'btnSubmit'
+        );
 
-      if (outputVal !== "") {
-        hourlyDetails.push({
-          timeSlot: timeLabel,
-          lot: lotVal,
-          qty: Number(outputVal)
-        });
+      if (!lineVal) {
+
+        alert(
+          "กรุณาเลือก LINE การผลิต"
+        );
+
+        return;
       }
-    });
 
-    const payload = {
-      action: "HOURLY_OUTPUT",
-      line: lineVal,
-      remark: remarkVal,
-      updatedBy: userDisplayName,
-      hourlyData: hourlyDetails
-    };
+      btnSubmit.disabled = true;
+      btnSubmit.innerText =
+        "กำลังบันทึก...";
 
-    try {
-      // ส่งข้อมูลด้วย mode: 'no-cors' ป้องกันการบล็อก Preflight บน LINE Browser และ iOS
-      fetch(SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: {
-          "Content-Type": "text/plain"
-        },
-        body: JSON.stringify(payload)
+      if (
+        (userDisplayName === "Unknown" ||
+         !userDisplayName) &&
+        typeof liff !== "undefined" &&
+        liff.isLoggedIn()
+      ) {
+
+        try {
+
+          const profile =
+            await liff.getProfile();
+
+          userDisplayName =
+            profile.displayName ||
+            "Unknown";
+
+        } catch (e) {}
+      }
+
+      const hourlyDetails = [];
+
+      const slotRows =
+        document.querySelectorAll(
+          '.slot-row'
+        );
+
+      slotRows.forEach(row => {
+
+        const timeLabel =
+          row.querySelector(
+            '.slot-time'
+          ).getAttribute(
+            'data-slot-label'
+          );
+
+        const lotVal =
+          row.querySelector(
+            '.input-lot-val'
+          ).value;
+
+        const outputVal =
+          row.querySelector(
+            '.input-val'
+          ).value;
+
+        if (outputVal !== "") {
+
+          hourlyDetails.push({
+
+            timeSlot: timeLabel,
+
+            lot: lotVal,
+
+            qty: Number(outputVal)
+
+          });
+        }
       });
 
-      alert("บันทึกข้อมูลเรียบร้อยแล้ว!");
-      if (typeof liff !== "undefined" && liff.isInClient()) {
-        liff.closeWindow();
-      } else {
-        location.reload();
-      }
+      const payload = {
 
-    } catch (err) {
-      alert("บันทึกไม่สำเร็จ: " + err.message);
-      btnSubmit.disabled = false;
-      btnSubmit.innerText = "บันทึกยอด";
+        action: "HOURLY_OUTPUT",
+
+        line: lineVal,
+
+        remark: remarkVal,
+
+        updatedBy: userDisplayName,
+
+        hourlyData: hourlyDetails
+      };
+
+      try {
+
+        // ส่งข้อมูลด้วย mode: no-cors
+        // ป้องกัน Preflight บน LINE Browser / iOS
+        await fetch(
+          SCRIPT_URL,
+          {
+            method: "POST",
+            mode: "no-cors",
+
+            headers: {
+              "Content-Type":
+                "text/plain;charset=utf-8"
+            },
+
+            body: JSON.stringify(payload)
+          }
+        );
+
+        alert(
+          "บันทึกข้อมูลเรียบร้อยแล้ว!"
+        );
+
+        if (
+          typeof liff !== "undefined" &&
+          liff.isInClient()
+        ) {
+
+          liff.closeWindow();
+
+        } else {
+
+          location.reload();
+        }
+
+      } catch (err) {
+
+        alert(
+          "บันทึกไม่สำเร็จ: " +
+          err.message
+        );
+
+        btnSubmit.disabled = false;
+
+        btnSubmit.innerText =
+          "บันทึกยอด";
+      }
     }
-  });
+  );
+
 </script>
 
 </body>
