@@ -278,7 +278,25 @@
     <div id="infoBanner" class="info-banner" style="display:none;">
       <span>🎯 เป้าวัน: <strong id="targetVal">0</strong> ชิ้น</span>
       <span>⏱️ เวลาทำงาน: <strong id="hoursVal">0</strong> ชม.</span>
-    </div>
+    
+        <div id="hourlyPacePanel" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;width:100%;">
+          <div style="flex:1;min-width:130px;background:#eff6ff;border-radius:10px;padding:8px 10px;">
+            <div style="font-size:.72rem;color:#64748b;">🎯 เฉลี่ยที่ต้องทำ/ชม.</div>
+            <div id="requiredPerHour" style="font-weight:800;font-size:1.05rem;color:#1d4ed8;">-</div>
+          </div>
+          <div style="flex:1;min-width:130px;background:#f0fdf4;border-radius:10px;padding:8px 10px;">
+            <div style="font-size:.72rem;color:#64748b;">📈 เฉลี่ยที่ทำได้/ชม.</div>
+            <div id="actualPerHour" style="font-weight:800;font-size:1.05rem;color:#15803d;">-</div>
+          </div>
+          <div style="flex:1;min-width:130px;background:#fff7ed;border-radius:10px;padding:8px 10px;">
+            <div style="font-size:.72rem;color:#64748b;">⚡ สถานะ</div>
+            <div id="paceStatus" style="font-weight:800;font-size:1.05rem;color:#c2410c;">-</div>
+          </div>
+          <div style="flex:1;min-width:130px;background:#f8fafc;border-radius:10px;padding:8px 10px;">
+            <div style="font-size:.72rem;color:#64748b;">🕐 รอบล่าสุด</div>
+            <div id="latestHourOutput" style="font-weight:800;font-size:1.05rem;color:#334155;">-</div>
+          </div>
+        </div></div>
 
     <div class="form-group">
       <div class="section-title">กรอกยอดผลิตรายชั่วโมง</div>
@@ -337,6 +355,7 @@
   let currentTarget1 = 0;
   let currentHours1 = 9;
   let userDisplayName = "Unknown";
+  let currentExistingHourly = {};
 
   initLiff();
 
@@ -425,12 +444,16 @@
       infoBanner.style.display = 'flex';
 
       btnAddMiddayLot.style.display = 'block';
-      generateSmartTimeSlots(currentHours1, data.existingHourly || {});
+      currentExistingHourly = data.existingHourly || {};
+      generateSmartTimeSlots(currentHours1, currentExistingHourly);
+      updateHourlyPace(currentExistingHourly);
 
     } catch (err) {
       console.error("Error loading line details:", err);
       btnAddMiddayLot.style.display = 'block';
-      generateSmartTimeSlots(9, {});
+      currentExistingHourly = {};
+      generateSmartTimeSlots(9, currentExistingHourly);
+      updateHourlyPace(currentExistingHourly);
     }
   }
 
@@ -518,7 +541,7 @@
                min="0" 
                placeholder="0" 
                value="${currentOutput}" 
-               oninput="calculateTotal()"
+               oninput="calculateTotal(); updateHourlyPace(currentExistingHourly)"
                ${isBreakTime ? 'readonly style="background-color: #f1f5f9; color: #94a3b8; cursor: not-allowed;"' : ''}>
       `;
       slotsContainer.appendChild(row);
@@ -545,6 +568,138 @@
     }
   }
 
+
+  function getCompletedNormalHours_(existingData) {
+    const normalOrder = TIME_SLOTS_DEF.filter(s => s.endMin <= 1050);
+    let count = 0;
+
+    normalOrder.forEach(slot => {
+      const existing = existingData && existingData[slot.label];
+      if (existing && existing.output !== undefined && existing.output !== "") {
+        count++;
+      }
+    });
+
+    document.querySelectorAll('.slot-row').forEach(row => {
+      const label = row.querySelector('.slot-time')?.getAttribute('data-slot-label');
+      const input = row.querySelector('.input-val');
+      if (!label || !input || input.value === "") return;
+
+      const slot = TIME_SLOTS_DEF.find(s => s.label === label);
+      if (!slot || slot.endMin > 1050) return;
+
+      const existing = existingData && existingData[label];
+      const hadExisting = existing && existing.output !== undefined && existing.output !== "";
+      if (!hadExisting) count++;
+    });
+
+    return count;
+  }
+
+
+  function getActualNormalTotal_(existingData) {
+    const normalOrder = TIME_SLOTS_DEF.filter(s => s.endMin <= 1050);
+    let total = 0;
+    normalOrder.forEach(slot => {
+      const existing = existingData && existingData[slot.label];
+      if (existing && existing.output !== undefined && existing.output !== "") {
+        total += Number(existing.output) || 0;
+      }
+    });
+    // รวมค่าที่ผู้ใช้เพิ่งกรอกในหน้าปัจจุบันด้วย
+    document.querySelectorAll('.slot-row').forEach(row => {
+      const label = row.querySelector('.slot-time')?.getAttribute('data-slot-label');
+      const input = row.querySelector('.input-val');
+      if (!label || !input) return;
+      const slot = TIME_SLOTS_DEF.find(s => s.label === label);
+      if (!slot || slot.endMin > 1050) return;
+      if (input.value !== "") {
+        const old = existingData && existingData[label];
+        const oldQty = old && old.output !== undefined && old.output !== "" ? Number(old.output) || 0 : null;
+        const newQty = Number(input.value) || 0;
+        if (oldQty !== null) total += newQty - oldQty;
+        else total += newQty;
+      }
+    });
+    return total;
+  }
+
+  function updateHourlyPace(existingData) {
+    const reqEl = document.getElementById('requiredPerHour');
+    const actualEl = document.getElementById('actualPerHour');
+    const statusEl = document.getElementById('paceStatus');
+    const latestEl = document.getElementById('latestHourOutput');
+    if (!reqEl || !actualEl || !statusEl) return;
+
+    const normalSlots = TIME_SLOTS_DEF.filter(s => s.endMin <= 1050);
+    const completed = [];
+    let actualTotal = 0;
+
+    normalSlots.forEach(slot => {
+      const existing = existingData && existingData[slot.label];
+      if (existing && existing.output !== undefined && existing.output !== "") {
+        const qty = Number(existing.output) || 0;
+        completed.push({ label: slot.label, qty });
+        actualTotal += qty;
+      }
+    });
+
+    // รวมข้อมูลที่เพิ่งกรอกในหน้าจอปัจจุบัน โดยไม่นับซ้ำกับข้อมูลที่มีในชีท
+    document.querySelectorAll('.slot-row').forEach(row => {
+      const label = row.querySelector('.slot-time')?.getAttribute('data-slot-label');
+      const input = row.querySelector('.input-val');
+      if (!label || !input || input.value === "") return;
+
+      const slot = TIME_SLOTS_DEF.find(s => s.label === label);
+      if (!slot || slot.endMin > 1050) return;
+
+      const existing = existingData && existingData[label];
+      const hadExisting = existing && existing.output !== undefined && existing.output !== "";
+      const newQty = Number(input.value) || 0;
+
+      if (hadExisting) {
+        actualTotal += newQty - (Number(existing.output) || 0);
+        const idx = completed.findIndex(x => x.label === label);
+        if (idx >= 0) completed[idx].qty = newQty;
+      } else {
+        actualTotal += newQty;
+        completed.push({ label, qty: newQty });
+      }
+    });
+
+    const normalHoursDone = completed.length;
+    const requiredAvg = currentHours1 > 0 ? currentTarget1 / currentHours1 : 0;
+    const actualAvg = normalHoursDone > 0 ? actualTotal / normalHoursDone : 0;
+
+    reqEl.textContent = Math.round(requiredAvg).toLocaleString() + ' ชิ้น';
+    actualEl.textContent = normalHoursDone > 0
+      ? Math.round(actualAvg).toLocaleString() + ' ชิ้น'
+      : '-';
+
+    if (latestEl) {
+      latestEl.textContent = completed.length
+        ? completed[completed.length - 1].qty.toLocaleString() + ' ชิ้น'
+        : '-';
+    }
+
+    if (normalHoursDone === 0) {
+      statusEl.textContent = 'ยังไม่มีข้อมูล';
+      return;
+    }
+
+    const ratio = requiredAvg > 0 ? actualAvg / requiredAvg : 1;
+    if (ratio >= 1.05) {
+      statusEl.textContent = '🚀 นำเป้า';
+    } else if (ratio >= 0.95) {
+      statusEl.textContent = '🟢 ตามเป้า';
+    } else if (ratio >= 0.85) {
+      statusEl.textContent = '🟠 ต้องเร่ง';
+    } else {
+      statusEl.textContent = '🔴 ต้องเร่งมาก';
+    }
+  }
+
+
   function openNewLotModal() {
     if (!document.getElementById('line').value) {
       alert("กรุณาเลือก LINE การผลิตก่อนครับ");
@@ -564,46 +719,75 @@
     const newLot = document.getElementById('modalLotNo').value.trim().toUpperCase();
     const newTargetMax = Number(document.getElementById('modalLotTarget').value) || 0;
     const lineVal = document.getElementById('line').value;
-    const switchAt = new Date().toISOString();
-    const switchBtn = document.querySelector('#newLotModal .btn-submit');
 
     if (!newLot || newTargetMax <= 0) {
       alert("กรุณากรอกเลข LOT และเป้าหมายให้ครบถ้วน");
       return;
     }
 
-    if (!lineVal) {
-      alert("กรุณาเลือก LINE การผลิตก่อนครับ");
-      return;
+    // ใช้ "จำนวนรอบปกติที่ทำจบแล้ว" เป็นหลัก
+    // ไม่เอาเวลาที่กดปุ่มตอน OT/นาทีเศษมาปัดเป็นชั่วโมงเพิ่ม
+    let completedNormalHours = getCompletedNormalHours_(currentExistingHourly);
+
+    // รวมรอบที่ผู้ใช้กรอกใหม่ในหน้านี้ด้วย
+    document.querySelectorAll('.slot-row').forEach(row => {
+      const label = row.querySelector('.slot-time')?.getAttribute('data-slot-label');
+      const input = row.querySelector('.input-val');
+      if (!label || !input || input.value === "") return;
+      const slot = TIME_SLOTS_DEF.find(s => s.label === label);
+      if (!slot || slot.endMin > 1050) return;
+
+      const existing = currentExistingHourly && currentExistingHourly[label];
+      const hadExisting = existing && existing.qty !== undefined && existing.qty !== "";
+      if (!hadExisting) completedNormalHours++;
+    });
+
+    // ถ้ายังไม่มีรอบยอดเลย แต่กดสลับ ให้ถือว่าใช้ไป 1 รอบตาม workflow เดิม
+    if (completedNormalHours === 0) completedNormalHours = 1;
+    completedNormalHours = Math.min(9, completedNormalHours);
+
+    const remainingHoursLot2 = Math.max(0, 9 - completedNormalHours);
+    const target1Chunk = Math.round((currentTarget1 / 9) * completedNormalHours);
+    const target2Chunk = Math.round((newTargetMax / 9) * remainingHoursLot2);
+    const displayTotalTarget = target1Chunk + target2Chunk;
+
+    document.getElementById('targetVal').innerText = displayTotalTarget.toLocaleString();
+
+    if (!activeLots.includes(newLot)) {
+      activeLots.push(newLot);
+      const selects = document.querySelectorAll('.input-lot-val');
+      selects.forEach((select, index) => {
+        const opt = document.createElement('option');
+        opt.value = newLot;
+        opt.innerText = newLot;
+        if (index >= completedNormalHours) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
+        updateModelSubtext(select);
+      });
     }
 
-    if (switchBtn) {
-      switchBtn.disabled = true;
-      switchBtn.innerText = "กำลังบันทึกการสลับ LOT...";
-    }
+    closeNewLotModal();
 
-    // B: ไม่ใช้จำนวนช่องที่กรอกเป็นตัวแทนเวลาอีกแล้ว
-    // ระบบจะใช้เวลาที่กด "ยืนยันสลับ LOT" จริงเป็นจุดเปลี่ยน
     const payload = {
       action: "HOURLY_OUTPUT",
       line: lineVal,
       isSwitchLot: true,
       newLotNumber: newLot,
       newLotTarget: newTargetMax,
-      switchAt: switchAt,
+      completedNormalHoursLot1: completedNormalHours,
+      hoursUsedLot1: completedNormalHours,
+      hoursUsedLot2: remainingHoursLot2,
+      calculatedTarget1: target1Chunk,
+      calculatedTarget2: target2Chunk,
+      totalTarget: displayTotalTarget,
+      switchAt: new Date().toISOString(),
       updatedBy: userDisplayName
     };
 
-    // เพิ่ม LOT ใหม่ในหน้าจอทันที เพื่อไม่ให้ UI ค้างถ้าการ reload ช้า
-    if (!activeLots.includes(newLot)) {
-      activeLots.push(newLot);
-    }
-
-    closeNewLotModal();
-    document.getElementById('targetVal').innerText = "กำลังคำนวณ...";
-
     try {
-      await fetch(SCRIPT_URL, {
+      fetch(SCRIPT_URL, {
         method: "POST",
         mode: "no-cors",
         headers: {
@@ -611,22 +795,11 @@
         },
         body: JSON.stringify(payload)
       });
-
-      // Backend เป็นตัวคำนวณ Target/Hours อย่างเป็นทางการ
-      // รอให้บันทึกเสร็จแล้วโหลดข้อมูล LINE ใหม่ทั้งชุด
-      setTimeout(() => {
-        loadLineDetails();
-      }, 1000);
-
     } catch (err) {
       console.error("Sync Error:", err);
-      alert("ส่งข้อมูลสลับ LOT ไม่สำเร็จ กรุณาลองใหม่ครับ");
-      if (switchBtn) {
-        switchBtn.disabled = false;
-        switchBtn.innerText = "ยืนยันสลับ LOT & คำนวณเป้าใหม่";
-      }
     }
   }
+
 
   function calculateTotal() {
     const inputs = document.querySelectorAll('.input-val');
@@ -635,6 +808,7 @@
       total += (Number(input.value) || 0);
     });
     document.getElementById('totalSum').value = total.toLocaleString();
+    updateHourlyPace(currentExistingHourly);
   }
 
   // ปรับปรุงฟังก์ชันบันทึกยอดให้ยิงแบบ no-cors การันตีผ่าน 100% บนมือถือ
