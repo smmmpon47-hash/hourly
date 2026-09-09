@@ -607,31 +607,35 @@
   }
 
 
-  function getCompletedNormalHours_(existingData) {
-    const normalOrder = TIME_SLOTS_DEF.filter(s => s.endMin <= 1050);
-    let count = 0;
+  function getCompletedWorkingHours_(existingData) {
+    // นับรอบที่มีข้อมูลแล้วทั้งหมด รวม OT ด้วย
+    // ไม่ตัดที่ 17:30 และใช้ Set กันการนับซ้ำ
+    const completedLabels = new Set();
 
-    normalOrder.forEach(slot => {
-      const existing = existingData && existingData[slot.label];
-      if (existing && existing.output !== undefined && existing.output !== "") {
-        count++;
+    Object.entries(existingData || {}).forEach(([label, existing]) => {
+      const slot = TIME_SLOTS_DEF.find(s => s.label === label);
+      if (!slot || !existing) return;
+
+      if (existing.output !== undefined && existing.output !== "") {
+        completedLabels.add(label);
       }
     });
 
+    // รวมค่าที่กำลังกรอกบนหน้าปัจจุบัน
+    // ถ้ามีใน existingData แล้ว Set จะไม่ให้นับซ้ำ
     document.querySelectorAll('.slot-row').forEach(row => {
       const label = row.querySelector('.slot-time')?.getAttribute('data-slot-label');
       const input = row.querySelector('.input-val');
+
       if (!label || !input || input.value === "") return;
 
       const slot = TIME_SLOTS_DEF.find(s => s.label === label);
-      if (!slot || slot.endMin > 1050) return;
+      if (!slot) return;
 
-      const existing = existingData && existingData[label];
-      const hadExisting = existing && existing.output !== undefined && existing.output !== "";
-      if (!hadExisting) count++;
+      completedLabels.add(label);
     });
 
-    return count;
+    return completedLabels.size;
   }
 
 
@@ -723,24 +727,24 @@
 
     // getCompletedNormalHours_ นับทั้งข้อมูลที่บันทึกแล้ว
     // และค่าที่กรอกอยู่บนหน้าจอ โดยกันช่องเดิมไม่ให้นับซ้ำไว้แล้ว
-    let completedNormalHours = getCompletedNormalHours_(currentExistingHourly);
+    let completedWorkingHours = getCompletedWorkingHours_(currentExistingHourly);
 
-    if (completedNormalHours === 0) {
-      completedNormalHours = 1;
+    if (completedWorkingHours === 0) {
+      completedWorkingHours = 1;
     }
 
     const totalWorkingHours = Math.max(1, Number(currentHours1) || 9);
-    completedNormalHours = Math.min(totalWorkingHours, completedNormalHours);
+    completedWorkingHours = Math.min(totalWorkingHours, completedWorkingHours);
 
     const remainingHoursLot2 = Math.max(
       0,
-      totalWorkingHours - completedNormalHours
+      totalWorkingHours - completedWorkingHours
     );
 
     // ก่อนสลับครั้งแรก currentTarget1 = เป้ารวมเดิมของ LOT1
     // ใช้ชั่วโมงรวมจริง 8/9/10 เป็นฐาน ไม่ hardcode 9
     const target1Chunk = Math.round(
-      (currentTarget1 / totalWorkingHours) * completedNormalHours
+      (currentTarget1 / totalWorkingHours) * completedWorkingHours
     );
 
     const target2Chunk = Math.round(
@@ -783,7 +787,7 @@
         opt.value = newLot;
         opt.innerText = newLot;
 
-        if (index >= completedNormalHours) {
+        if (index >= completedWorkingHours) {
           opt.selected = true;
         }
 
@@ -804,8 +808,9 @@
       // ส่งชั่วโมงรวมจริงให้ Backend ด้วย
       totalWorkingHours: totalWorkingHours,
 
-      completedNormalHoursLot1: completedNormalHours,
-      hoursUsedLot1: completedNormalHours,
+      completedWorkingHoursLot1: completedWorkingHours,
+      completedNormalHoursLot1: completedWorkingHours,
+      hoursUsedLot1: completedWorkingHours,
       hoursUsedLot2: remainingHoursLot2,
       calculatedTarget1: target1Chunk,
       calculatedTarget2: target2Chunk,
