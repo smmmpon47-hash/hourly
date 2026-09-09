@@ -380,6 +380,15 @@
       <label for="modalLotTarget">เป้าหมายตั้งต้น LOT ใหม่ (ชิ้น)</label>
       <input type="number" id="modalLotTarget" min="0" placeholder="เช่น 500">
     </div>
+    <div class="form-group">
+      <label for="switchAfterSlot">สลับหลังจบรอบ</label>
+      <select id="switchAfterSlot">
+        <option value="">-- เลือกรอบที่ LOT เดิมจบ --</option>
+      </select>
+      <div style="font-size:.74rem;color:#64748b;margin-top:5px;">
+        ระบบจะนับชั่วโมงจากรอบนี้โดยตรง และไม่นับช่วงพัก
+      </div>
+    </div>
     <button type="button" class="btn-submit" onclick="confirmNewLot()">ยืนยันสลับ LOT & คำนวณเป้าใหม่</button>
   </div>
 </div>
@@ -707,11 +716,54 @@
   }
 
 
+  function getBreakSlotForLine_(lineValue) {
+    const cleanLine = String(lineValue || '')
+      .replace(/LINE/i, '')
+      .replace(/\s+/g, '')
+      .toUpperCase();
+
+    if (['B', 'C'].includes(cleanLine)) return '12.30-13.30';
+    if (['D', 'E', 'F', 'G'].includes(cleanLine)) return '11.30-12.30';
+    return '';
+  }
+
+  function getWorkingSlotsForCurrentLine_() {
+    const lineVal = document.getElementById('line').value;
+    const breakSlot = getBreakSlotForLine_(lineVal);
+    const totalHours = Math.max(1, Number(currentHours1) || 9);
+
+    const workingSlots = TIME_SLOTS_DEF
+      .filter(slot => slot.label !== breakSlot)
+      .slice(0, totalHours);
+
+    return workingSlots;
+  }
+
+  function populateSwitchAfterSlot_() {
+    const select = document.getElementById('switchAfterSlot');
+    if (!select) return;
+
+    const workingSlots = getWorkingSlotsForCurrentLine_();
+
+    select.innerHTML =
+      '<option value="">-- เลือกรอบที่ LOT เดิมจบ --</option>';
+
+    workingSlots.forEach((slot, index) => {
+      const option = document.createElement('option');
+      option.value = slot.label;
+      option.textContent =
+        `หลัง ${slot.label} (ครบ ${index + 1} ชม.)`;
+      select.appendChild(option);
+    });
+  }
+
   function openNewLotModal() {
     if (!document.getElementById('line').value) {
       alert("กรุณาเลือก LINE การผลิตก่อนครับ");
       return;
     }
+
+    populateSwitchAfterSlot_();
     document.getElementById('newLotModal').style.display = 'flex';
   }
 
@@ -719,6 +771,9 @@
     document.getElementById('newLotModal').style.display = 'none';
     document.getElementById('modalLotNo').value = '';
     document.getElementById('modalLotTarget').value = '';
+
+    const switchSlot = document.getElementById('switchAfterSlot');
+    if (switchSlot) switchSlot.value = '';
   }
 
   // ปรับปรุงฟังก์ชันสลับ LOT ให้ยิงแบบ no-cors ข้ามข้อจำกัดมือถือ
@@ -726,6 +781,7 @@
     const newLot = document.getElementById('modalLotNo').value.trim().toUpperCase();
     const newTargetMax = Number(document.getElementById('modalLotTarget').value) || 0;
     const lineVal = document.getElementById('line').value;
+    const switchAfterSlot = document.getElementById('switchAfterSlot').value;
 
     if (!newLot || newTargetMax <= 0) {
       alert("กรุณากรอกเลข LOT และเป้าหมายให้ครบถ้วน");
@@ -737,76 +793,30 @@
       return;
     }
 
-    // getCompletedNormalHours_ นับทั้งข้อมูลที่บันทึกแล้ว
-    // และค่าที่กรอกอยู่บนหน้าจอ โดยกันช่องเดิมไม่ให้นับซ้ำไว้แล้ว
-    let completedWorkingHours = getCompletedWorkingHours_(currentExistingHourly);
-
-    if (completedWorkingHours === 0) {
-      completedWorkingHours = 1;
+    if (!switchAfterSlot) {
+      alert("กรุณาเลือกรอบที่ LOT เดิมจบ");
+      return;
     }
 
     const totalWorkingHours = Math.max(1, Number(currentHours1) || 9);
-    completedWorkingHours = Math.min(totalWorkingHours, completedWorkingHours);
 
-    const remainingHoursLot2 = Math.max(
+    // หาจำนวนชั่วโมงจาก "รอบที่ผู้ใช้เลือก" โดยตรง
+    // ไม่เดาจาก Hourly_Log และไม่สนว่ากดปุ่มช้ากี่นาที
+    const workingSlots = getWorkingSlotsForCurrentLine_();
+    const switchIndex = workingSlots.findIndex(
+      slot => slot.label === switchAfterSlot
+    );
+
+    if (switchIndex < 0) {
+      alert("รอบที่เลือกไม่ถูกต้อง กรุณาเลือกใหม่");
+      return;
+    }
+
+    const completedWorkingHours = switchIndex + 1;
+    const remainingHours = Math.max(
       0,
       totalWorkingHours - completedWorkingHours
     );
-
-    // ก่อนสลับครั้งแรก currentTarget1 = เป้ารวมเดิมของ LOT1
-    // ใช้ชั่วโมงรวมจริง 8/9/10 เป็นฐาน ไม่ hardcode 9
-    const target1Chunk = Math.round(
-      (currentTarget1 / totalWorkingHours) * completedWorkingHours
-    );
-
-    const target2Chunk = Math.round(
-      (newTargetMax / totalWorkingHours) * remainingHoursLot2
-    );
-
-    const displayTotalTarget = target1Chunk + target2Chunk;
-
-    document.getElementById('targetVal').innerText =
-      displayTotalTarget.toLocaleString();
-
-    // Preview ค่าเฉลี่ยใหม่ทันที
-    const previewAvg = displayTotalTarget / totalWorkingHours;
-    const reqEl = document.getElementById('requiredPerHour');
-    const noteEl = document.getElementById('paceAverageNote');
-    const panel = document.getElementById('hourlyPacePanel');
-
-    if (reqEl) {
-      reqEl.textContent =
-        Math.round(previewAvg).toLocaleString() + ' ชิ้น';
-    }
-
-    if (noteEl) {
-      noteEl.textContent =
-        `เป้ารวม ${displayTotalTarget.toLocaleString()} ชิ้น ÷ ${totalWorkingHours} ชม.`;
-    }
-
-    if (panel) {
-      panel.style.display = 'block';
-    }
-
-    if (!activeLots.includes(newLot)) {
-      activeLots.push(newLot);
-
-      const selects =
-        document.querySelectorAll('.input-lot-val');
-
-      selects.forEach((select, index) => {
-        const opt = document.createElement('option');
-        opt.value = newLot;
-        opt.innerText = newLot;
-
-        if (index >= completedWorkingHours) {
-          opt.selected = true;
-        }
-
-        select.appendChild(opt);
-        updateModelSubtext(select);
-      });
-    }
 
     closeNewLotModal();
 
@@ -817,16 +827,16 @@
       newLotNumber: newLot,
       newLotTarget: newTargetMax,
 
-      // ส่งชั่วโมงรวมจริงให้ Backend ด้วย
+      // Backend ใช้ 2 ตัวนี้เป็นค่าหลัก
       totalWorkingHours: totalWorkingHours,
+      switchAfterSlot: switchAfterSlot,
 
+      // ส่งไว้เพื่อ backward compatibility / debug
       completedWorkingHoursLot1: completedWorkingHours,
       completedNormalHoursLot1: completedWorkingHours,
       hoursUsedLot1: completedWorkingHours,
-      hoursUsedLot2: remainingHoursLot2,
-      calculatedTarget1: target1Chunk,
-      calculatedTarget2: target2Chunk,
-      totalTarget: displayTotalTarget,
+      hoursUsedLot2: remainingHours,
+
       switchAt: new Date().toISOString(),
       updatedBy: userDisplayName
     };
@@ -841,8 +851,7 @@
         body: JSON.stringify(payload)
       });
 
-      // โหลดค่าจริงจาก Summary หลัง Backend คำนวณ
-      // เพื่อให้เป้าวัน / ชั่วโมง / เฉลี่ย ตรงกัน
+      // โหลดค่าจริงที่ Backend คำนวณแล้วกลับมา
       setTimeout(() => {
         loadLineDetails();
       }, 800);
