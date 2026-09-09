@@ -249,122 +249,49 @@
       line-height: 1;
     }
 
-    /* --- Hourly pace UX refresh: visual-only, no form/data workflow changes --- */
+    /* --- เฉลี่ยที่ต้องทำต่อชั่วโมง: compact only --- */
     .pace-dashboard{
-      display:block;
       width:100%;
       margin-top:12px;
-      width:100%;
+      margin-bottom:18px;
       background:linear-gradient(135deg,#eef8ff 0%,#f8fbff 100%);
       border:1px solid #d7e8f6;
       border-radius:18px;
-      padding:14px;
+      padding:14px 16px;
       box-sizing:border-box;
       box-shadow:0 6px 18px rgba(15,23,42,.06);
+      display:none;
     }
-    .pace-head{
+
+    .pace-only-row{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:10px;
-      margin-bottom:12px;
+      gap:14px;
     }
-    .pace-head-title{
-      font-size:1rem;
+
+    .pace-only-title{
+      font-size:.86rem;
+      font-weight:700;
+      color:#475569;
+    }
+
+    .pace-only-value{
+      font-size:1.55rem;
+      line-height:1;
       font-weight:900;
-      color:#17324d;
-      margin:0;
-    }
-    .pace-head-sub{
-      font-size:.72rem;
-      color:#64748b;
-      margin-top:2px;
-    }
-    .pace-help-btn{
-      border:1px solid #cbd5e1;
-      background:#fff;
-      color:#334155;
-      border-radius:999px;
-      padding:7px 10px;
-      font-size:.72rem;
-      font-weight:800;
-      cursor:pointer;
+      color:#1d4ed8;
       white-space:nowrap;
     }
-    .pace-grid{
-      display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
-      gap:9px;
-    }
-    .pace-card{
-      border-radius:14px;
-      padding:11px 12px;
-      min-height:78px;
-      box-sizing:border-box;
-      display:flex;
-      flex-direction:column;
-      justify-content:center;
-    }
-    .pace-card-label{
+
+    .pace-only-note{
+      margin-top:6px;
       font-size:.72rem;
-      font-weight:700;
       color:#64748b;
-      margin-bottom:4px;
     }
-    .pace-card-value{
-      font-size:1.18rem;
-      line-height:1.1;
-      font-weight:900;
-      color:#1e293b;
-    }
-    .pace-required{background:#edf5ff;border:1px solid #d6e7ff;}
-    .pace-actual{background:#effbf3;border:1px solid #d4f1dd;}
-    .pace-latest{background:#fff;border:1px solid #e2e8f0;}
-    .pace-status{background:#fff7ed;border:1px solid #fed7aa;}
-    .pace-status.good{background:#effbf3;border-color:#bbf7d0;}
-    .pace-status.warn{background:#fff7ed;border-color:#fed7aa;}
-    .pace-status.bad{background:#fff1f2;border-color:#fecdd3;}
-    .pace-status-title{
-      font-size:.72rem;
-      font-weight:700;
-      color:#64748b;
-      margin-bottom:3px;
-    }
-    .pace-status-value{font-size:1.12rem;font-weight:900;color:#9a3412;}
-    .pace-status.good .pace-status-value{color:#15803d;}
-    .pace-status.bad .pace-status-value{color:#be123c;}
-    .pace-gap{
-      margin-top:9px;
-      padding:9px 11px;
-      border-radius:12px;
-      background:#fff;
-      border:1px dashed #cbd5e1;
-      font-size:.78rem;
-      color:#475569;
-      line-height:1.45;
-    }
-    .pace-guide{
-      display:none;
-      margin-top:10px;
-      background:#fff;
-      border:1px solid #e2e8f0;
-      border-radius:14px;
-      padding:11px;
-    }
-    .pace-guide.open{display:block;}
-    .pace-guide-title{font-weight:900;color:#334155;font-size:.82rem;margin-bottom:6px;}
-    .pace-guide-list{margin:0;padding-left:18px;color:#475569;font-size:.76rem;line-height:1.6;}
-    .pace-sketch{
-      width:100%;
-      max-height:210px;
-      object-fit:contain;
-      border-radius:10px;
-      background:#fafafa;
-      margin-top:9px;
-      border:1px solid #e2e8f0;
-    }
-    @media (min-width:700px){
-      .pace-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
+
+    @media (max-width:430px){
+      .pace-only-value{font-size:1.4rem;}
     }
 
   </style>
@@ -400,46 +327,14 @@
     </div>
 
     <div id="hourlyPacePanel" class="pace-dashboard">
-          <div class="pace-head">
-            <div>
-              <div class="pace-head-title">📊 จังหวะการผลิตต่อชั่วโมง</div>
-              <div class="pace-head-sub">ดูว่า “ควรทำเท่าไหร่” เทียบกับ “ทำได้จริงเท่าไหร่”</div>
-            </div>
-            <button type="button" class="pace-help-btn" onclick="togglePaceGuide()">ℹ️ วิธีดู</button>
-          </div>
-
-          <div class="pace-grid">
-            <div class="pace-card pace-required">
-              <div class="pace-card-label">🎯 เฉลี่ยที่ต้องทำ / ชม.</div>
-              <div id="requiredPerHour" class="pace-card-value" style="color:#1d4ed8;">-</div>
-            </div>
-
-            <div class="pace-card pace-actual">
-              <div class="pace-card-label">📈 เฉลี่ยที่ทำได้ / ชม.</div>
-              <div id="actualPerHour" class="pace-card-value" style="color:#15803d;">-</div>
-            </div>
-
-            <div class="pace-card pace-latest">
-              <div class="pace-card-label">🕐 รอบล่าสุด</div>
-              <div id="latestHourOutput" class="pace-card-value">-</div>
-            </div>
-
-            <div id="paceStatusCard" class="pace-card pace-status">
-              <div class="pace-status-title">⚡ สถานะ</div>
-              <div id="paceStatus" class="pace-status-value">-</div>
-            </div>
-          </div>
-
-          <div id="paceGap" class="pace-gap">เลือก LINE เพื่อดูจังหวะการผลิต</div>
-
-          <div id="paceGuide" class="pace-guide">
-            <div class="pace-guide-title">หลักการอ่านหน้าต่างนี้</div>
-            <ul class="pace-guide-list">
-              <li><b>เฉลี่ยที่ต้องทำ/ชม.</b> = เป้าปกติ ÷ ชั่วโมงทำงานปกติ</li>
-              <li><b>เฉลี่ยที่ทำได้/ชม.</b> = ยอดจริงสะสม ÷ จำนวนรอบปกติที่มีการบันทึก</li>
-              <li><b>สถานะ</b> เทียบ “ทำได้จริง ÷ ต้องทำ” เป็นเปอร์เซ็นต์</li>
-            </ul>
-</div>
+      <div class="pace-only-row">
+        <div>
+          <div class="pace-only-title">🎯 เฉลี่ยที่ต้องทำ / ชม.</div>
+          <div class="pace-only-note" id="paceAverageNote">เป้ารวม ÷ ชั่วโมงทำงาน</div>
+        </div>
+        <div id="requiredPerHour" class="pace-only-value">-</div>
+      </div>
+    </div>
 
     <div class="form-group">
       <div class="section-title">กรอกยอดผลิตรายชั่วโมง</div>
@@ -580,7 +475,7 @@
 
       masterLotMap = data.masterMap || {}; 
       currentHours1 = Number(data.totalWorkingHours) || 9;
-      currentTarget1 = Number(data.target1 || data.target) || 1000;
+      currentTarget1 = Number(data.target) || Number(data.target1) || 0;
 
       document.getElementById('targetVal').innerText = currentTarget1.toLocaleString();
       document.getElementById('hoursVal').innerText = currentHours1;
@@ -589,14 +484,14 @@
       btnAddMiddayLot.style.display = 'block';
       currentExistingHourly = data.existingHourly || {};
       generateSmartTimeSlots(currentHours1, currentExistingHourly);
-      updateHourlyPace(currentExistingHourly);
+      updateHourlyAverage();
 
     } catch (err) {
       console.error("Error loading line details:", err);
       btnAddMiddayLot.style.display = 'block';
       currentExistingHourly = {};
       generateSmartTimeSlots(9, currentExistingHourly);
-      updateHourlyPace(currentExistingHourly);
+      updateHourlyAverage();
     }
   }
 
@@ -684,7 +579,7 @@
                min="0" 
                placeholder="0" 
                value="${currentOutput}" 
-               oninput="calculateTotal(); updateHourlyPace(currentExistingHourly)"
+               oninput="calculateTotal()"
                ${isBreakTime ? 'readonly style="background-color: #f1f5f9; color: #94a3b8; cursor: not-allowed;"' : ''}>
       `;
       slotsContainer.appendChild(row);
@@ -767,108 +662,34 @@
     return total;
   }
 
-  function updateHourlyPace(existingData) {
+  function updateHourlyAverage() {
+    const panel = document.getElementById('hourlyPacePanel');
     const reqEl = document.getElementById('requiredPerHour');
-    const actualEl = document.getElementById('actualPerHour');
-    const statusEl = document.getElementById('paceStatus');
-    const latestEl = document.getElementById('latestHourOutput');
-    const statusCard = document.getElementById('paceStatusCard');
-    const gapEl = document.getElementById('paceGap');
-    if (!reqEl || !actualEl || !statusEl) return;
+    const noteEl = document.getElementById('paceAverageNote');
 
-    const normalSlots = TIME_SLOTS_DEF.filter(s => s.endMin <= 1050);
-    const completed = [];
-    let actualTotal = 0;
+    if (!panel || !reqEl) return;
 
-    normalSlots.forEach(slot => {
-      const existing = existingData && existingData[slot.label];
-      if (existing && existing.output !== undefined && existing.output !== "") {
-        const qty = Number(existing.output) || 0;
-        completed.push({ label: slot.label, qty });
-        actualTotal += qty;
-      }
-    });
+    const totalHours = Number(currentHours1) || 0;
+    const totalTarget = Number(currentTarget1) || 0;
 
-    // รวมข้อมูลที่เพิ่งกรอกในหน้าจอ โดยไม่นับช่องเดิมซ้ำ
-    document.querySelectorAll('.slot-row').forEach(row => {
-      const label = row.querySelector('.slot-time')?.getAttribute('data-slot-label');
-      const input = row.querySelector('.input-val');
-      if (!label || !input || input.value === "") return;
-
-      const slot = TIME_SLOTS_DEF.find(s => s.label === label);
-      if (!slot || slot.endMin > 1050) return;
-
-      const existing = existingData && existingData[label];
-      const hadExisting = existing && existing.output !== undefined && existing.output !== "";
-      const newQty = Number(input.value) || 0;
-
-      if (hadExisting) {
-        actualTotal += newQty - (Number(existing.output) || 0);
-        const idx = completed.findIndex(x => x.label === label);
-        if (idx >= 0) completed[idx].qty = newQty;
-      } else {
-        actualTotal += newQty;
-        completed.push({ label, qty: newQty });
-      }
-    });
-
-    const normalHoursDone = completed.length;
-    const requiredAvg = currentHours1 > 0 ? currentTarget1 / currentHours1 : 0;
-    const actualAvg = normalHoursDone > 0 ? actualTotal / normalHoursDone : 0;
-    const ratio = requiredAvg > 0 ? actualAvg / requiredAvg : 0;
-    const pct = requiredAvg > 0 ? ratio * 100 : 0;
-    const gap = Math.round(requiredAvg - actualAvg);
-
-    reqEl.textContent = requiredAvg > 0
-      ? Math.round(requiredAvg).toLocaleString() + ' ชิ้น'
-      : '-';
-
-    actualEl.textContent = normalHoursDone > 0
-      ? Math.round(actualAvg).toLocaleString() + ' ชิ้น'
-      : '-';
-
-    if (latestEl) {
-      latestEl.textContent = completed.length
-        ? completed[completed.length - 1].qty.toLocaleString() + ' ชิ้น'
-        : '-';
-    }
-
-    if (normalHoursDone === 0 || requiredAvg <= 0) {
-      statusEl.textContent = 'ยังไม่มีข้อมูล';
-      if (statusCard) statusCard.className = 'pace-card pace-status';
-      if (gapEl) gapEl.textContent = '';
+    if (totalHours <= 0 || totalTarget <= 0) {
+      panel.style.display = 'none';
+      reqEl.textContent = '-';
       return;
     }
 
-    // หลักการ: เทียบผลจริงกับค่าเฉลี่ยที่ต้องทำ
-    // >=100% = ตามเป้า, 90-99.9% = ต้องเร่ง, <90% = ต้องเร่งมาก
-    if (ratio >= 1) {
-      statusEl.textContent = pct >= 105 ? '🚀 นำเป้า' : '🟢 ตามเป้า';
-      if (statusCard) statusCard.className = 'pace-card pace-status good';
-      if (gapEl) {
-        gapEl.textContent = pct >= 105
-          ? `ทำได้ประมาณ ${Math.round(pct)}% ของที่ต้องทำต่อชั่วโมง — มีเผื่อเหนือเป้า`
-          : `ทำได้ประมาณ ${Math.round(pct)}% ของที่ต้องทำต่อชั่วโมง — ยังอยู่ในเป้า`;
-      }
-    } else if (ratio >= 0.90) {
-      statusEl.textContent = '🟠 ต้องเร่ง';
-      if (statusCard) statusCard.className = 'pace-card pace-status warn';
-      if (gapEl) {
-        gapEl.textContent = `ต่ำกว่าค่าเฉลี่ยเป้าประมาณ ${Math.max(0, gap)} ชิ้น/ชม. — ควรเร่งขึ้น`;
-      }
-    } else {
-      statusEl.textContent = '🔴 ต้องเร่งมาก';
-      if (statusCard) statusCard.className = 'pace-card pace-status bad';
-      if (gapEl) {
-        gapEl.textContent = `ต่ำกว่าค่าเฉลี่ยเป้าประมาณ ${Math.max(0, gap)} ชิ้น/ชม. — ต้องเร่งอย่างชัดเจน`;
-      }
+    const requiredAvg = totalTarget / totalHours;
+
+    reqEl.textContent = Math.round(requiredAvg).toLocaleString() + ' ชิ้น';
+
+    if (noteEl) {
+      noteEl.textContent =
+        `เป้ารวม ${totalTarget.toLocaleString()} ชิ้น ÷ ${totalHours} ชม.`;
     }
+
+    panel.style.display = 'block';
   }
 
-  function togglePaceGuide() {
-    const el = document.getElementById('paceGuide');
-    if (el) el.classList.toggle('open');
-  }
 
   function openNewLotModal() {
     if (!document.getElementById('line').value) {
@@ -895,44 +716,77 @@
       return;
     }
 
-    // ใช้ "จำนวนรอบปกติที่ทำจบแล้ว" เป็นหลัก
-    // ไม่เอาเวลาที่กดปุ่มตอน OT/นาทีเศษมาปัดเป็นชั่วโมงเพิ่ม
+    if (!lineVal) {
+      alert("กรุณาเลือก LINE การผลิตก่อนครับ");
+      return;
+    }
+
+    // getCompletedNormalHours_ นับทั้งข้อมูลที่บันทึกแล้ว
+    // และค่าที่กรอกอยู่บนหน้าจอ โดยกันช่องเดิมไม่ให้นับซ้ำไว้แล้ว
     let completedNormalHours = getCompletedNormalHours_(currentExistingHourly);
 
-    // รวมรอบที่ผู้ใช้กรอกใหม่ในหน้านี้ด้วย
-    document.querySelectorAll('.slot-row').forEach(row => {
-      const label = row.querySelector('.slot-time')?.getAttribute('data-slot-label');
-      const input = row.querySelector('.input-val');
-      if (!label || !input || input.value === "") return;
-      const slot = TIME_SLOTS_DEF.find(s => s.label === label);
-      if (!slot || slot.endMin > 1050) return;
+    if (completedNormalHours === 0) {
+      completedNormalHours = 1;
+    }
 
-      const existing = currentExistingHourly && currentExistingHourly[label];
-      const hadExisting = existing && existing.output !== undefined && existing.output !== "";
-      if (!hadExisting) completedNormalHours++;
-    });
+    const totalWorkingHours = Math.max(1, Number(currentHours1) || 9);
+    completedNormalHours = Math.min(totalWorkingHours, completedNormalHours);
 
-    // ถ้ายังไม่มีรอบยอดเลย แต่กดสลับ ให้ถือว่าใช้ไป 1 รอบตาม workflow เดิม
-    if (completedNormalHours === 0) completedNormalHours = 1;
-    completedNormalHours = Math.min(9, completedNormalHours);
+    const remainingHoursLot2 = Math.max(
+      0,
+      totalWorkingHours - completedNormalHours
+    );
 
-    const remainingHoursLot2 = Math.max(0, 9 - completedNormalHours);
-    const target1Chunk = Math.round((currentTarget1 / 9) * completedNormalHours);
-    const target2Chunk = Math.round((newTargetMax / 9) * remainingHoursLot2);
+    // ก่อนสลับครั้งแรก currentTarget1 = เป้ารวมเดิมของ LOT1
+    // ใช้ชั่วโมงรวมจริง 8/9/10 เป็นฐาน ไม่ hardcode 9
+    const target1Chunk = Math.round(
+      (currentTarget1 / totalWorkingHours) * completedNormalHours
+    );
+
+    const target2Chunk = Math.round(
+      (newTargetMax / totalWorkingHours) * remainingHoursLot2
+    );
+
     const displayTotalTarget = target1Chunk + target2Chunk;
 
-    document.getElementById('targetVal').innerText = displayTotalTarget.toLocaleString();
+    document.getElementById('targetVal').innerText =
+      displayTotalTarget.toLocaleString();
+
+    // Preview ค่าเฉลี่ยใหม่ทันที
+    const previewAvg = displayTotalTarget / totalWorkingHours;
+    const reqEl = document.getElementById('requiredPerHour');
+    const noteEl = document.getElementById('paceAverageNote');
+    const panel = document.getElementById('hourlyPacePanel');
+
+    if (reqEl) {
+      reqEl.textContent =
+        Math.round(previewAvg).toLocaleString() + ' ชิ้น';
+    }
+
+    if (noteEl) {
+      noteEl.textContent =
+        `เป้ารวม ${displayTotalTarget.toLocaleString()} ชิ้น ÷ ${totalWorkingHours} ชม.`;
+    }
+
+    if (panel) {
+      panel.style.display = 'block';
+    }
 
     if (!activeLots.includes(newLot)) {
       activeLots.push(newLot);
-      const selects = document.querySelectorAll('.input-lot-val');
+
+      const selects =
+        document.querySelectorAll('.input-lot-val');
+
       selects.forEach((select, index) => {
         const opt = document.createElement('option');
         opt.value = newLot;
         opt.innerText = newLot;
+
         if (index >= completedNormalHours) {
           opt.selected = true;
         }
+
         select.appendChild(opt);
         updateModelSubtext(select);
       });
@@ -946,6 +800,10 @@
       isSwitchLot: true,
       newLotNumber: newLot,
       newLotTarget: newTargetMax,
+
+      // ส่งชั่วโมงรวมจริงให้ Backend ด้วย
+      totalWorkingHours: totalWorkingHours,
+
       completedNormalHoursLot1: completedNormalHours,
       hoursUsedLot1: completedNormalHours,
       hoursUsedLot2: remainingHoursLot2,
@@ -957,7 +815,7 @@
     };
 
     try {
-      fetch(SCRIPT_URL, {
+      await fetch(SCRIPT_URL, {
         method: "POST",
         mode: "no-cors",
         headers: {
@@ -965,11 +823,18 @@
         },
         body: JSON.stringify(payload)
       });
+
+      // โหลดค่าจริงจาก Summary หลัง Backend คำนวณ
+      // เพื่อให้เป้าวัน / ชั่วโมง / เฉลี่ย ตรงกัน
+      setTimeout(() => {
+        loadLineDetails();
+      }, 800);
+
     } catch (err) {
       console.error("Sync Error:", err);
+      alert("ส่งข้อมูลสลับ LOT ไม่สำเร็จ กรุณาลองใหม่ครับ");
     }
   }
-
 
   function calculateTotal() {
     const inputs = document.querySelectorAll('.input-val');
@@ -978,7 +843,6 @@
       total += (Number(input.value) || 0);
     });
     document.getElementById('totalSum').value = total.toLocaleString();
-    updateHourlyPace(currentExistingHourly);
   }
 
   // ปรับปรุงฟังก์ชันบันทึกยอดให้ยิงแบบ no-cors การันตีผ่าน 100% บนมือถือ
