@@ -609,12 +609,23 @@
 
   function getCompletedWorkingHours_(existingData) {
     // นับรอบที่มีข้อมูลแล้วทั้งหมด รวม OT ด้วย
-    // ไม่ตัดที่ 17:30 และใช้ Set กันการนับซ้ำ
+    // แต่ "ช่วงพัก" ต้องไม่นับเป็นชั่วโมงทำงาน
     const completedLabels = new Set();
+
+    const selectedLine = document.getElementById('line').value.toUpperCase();
+    const cleanLine = selectedLine.replace('LINE', '').trim();
+
+    let breakSlot = "";
+    if (['B', 'C'].includes(cleanLine)) {
+      breakSlot = "12.30-13.30";
+    } else if (['D', 'E', 'F', 'G'].includes(cleanLine)) {
+      breakSlot = "11.30-12.30";
+    }
 
     Object.entries(existingData || {}).forEach(([label, existing]) => {
       const slot = TIME_SLOTS_DEF.find(s => s.label === label);
       if (!slot || !existing) return;
+      if (label === breakSlot) return;
 
       if (existing.output !== undefined && existing.output !== "") {
         completedLabels.add(label);
@@ -631,6 +642,7 @@
 
       const slot = TIME_SLOTS_DEF.find(s => s.label === label);
       if (!slot) return;
+      if (label === breakSlot) return;
 
       completedLabels.add(label);
     });
