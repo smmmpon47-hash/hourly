@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>บันทึกยอดการผลิต</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; font-family: 'Prompt', sans-serif; }
+    * { box-sizing: border-box; font-family: 'Sarabun', sans-serif; }
     body {
       background-color: #1e3a3f;
       min-height: 100vh;
@@ -390,7 +390,7 @@
       border:0;
       background:transparent;
       color:#64748b;
-      font-family:'Kanit',sans-serif;
+      font-family:'Sarabun',sans-serif;
       font-size:.9rem;
       font-weight:700;
       padding:11px 8px;
@@ -484,6 +484,293 @@
     @media (max-width:430px){
       .prod-tab-btn{font-size:.82rem;padding:10px 5px;}
       .edit-plan-grid{grid-template-columns:1fr;}
+    }
+
+  
+
+    /* ===== MOBILE / LIFF READABILITY FIX ===== */
+    html, body { max-width: 100%; overflow-x: hidden; }
+
+    body{
+      padding: 14px 10px;
+      font-size: 16px;
+    }
+
+    .card{
+      max-width: 460px;
+      padding: 20px 16px;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+
+    .header-title{
+      font-size: 1.42rem;
+      line-height: 1.2;
+    }
+
+    .date-badge{
+      font-size: .78rem;
+      padding: 5px 9px;
+      flex-shrink: 0;
+    }
+
+    .user-banner{
+      font-size: .84rem;
+      line-height: 1.45;
+      padding: 9px 10px;
+    }
+
+    .prod-tabs{
+      gap: 4px;
+      margin: 12px 0 16px;
+    }
+
+    .prod-tab-btn{
+      min-width: 0;
+      font-size: .82rem;
+      line-height: 1.25;
+      padding: 10px 6px;
+      white-space: normal;
+    }
+
+    label{
+      font-size: .95rem;
+      line-height: 1.35;
+    }
+
+    select, input, textarea{
+      min-width: 0;
+      font-size: 1rem;
+      padding: 11px 12px;
+    }
+
+    .info-banner{
+      gap: 8px;
+      padding: 11px 12px;
+      font-size: .88rem;
+      line-height: 1.35;
+      flex-wrap: wrap;
+    }
+
+    .pace-dashboard{
+      padding: 12px 13px;
+      border-radius: 15px;
+    }
+
+    .pace-only-row{
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .pace-only-title{ font-size: .82rem; }
+    .pace-only-note{
+      font-size: .70rem;
+      line-height: 1.35;
+    }
+    .pace-only-value{
+      font-size: 1.35rem;
+      flex-shrink: 0;
+    }
+
+    .current-model-banner{
+      font-size: .82rem;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    .section-title{
+      font-size: .95rem;
+      margin-bottom: 10px;
+    }
+
+    /* 3 ช่องเดิม: เวลา | LOT | จำนวน
+       เปลี่ยนจาก flex เป็น grid เพื่อไม่ให้ตกขอบมือถือ */
+    .slot-row{
+      display: grid;
+      grid-template-columns: minmax(104px, 1.05fr) minmax(0, 1.18fr) minmax(68px, .62fr);
+      gap: 7px;
+      width: 100%;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+
+    .slot-time{
+      min-width: 0;
+      width: 100%;
+      padding: 9px 5px 7px;
+      font-size: .82rem;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+
+    .slot-end-lot-btn{
+      margin-top: 6px;
+      padding: 6px 3px;
+      font-size: .68rem;
+      line-height: 1.2;
+      white-space: normal;
+    }
+
+    .slot-lot-container{
+      min-width: 0;
+      width: 100%;
+    }
+
+    .slot-lot-display{
+      min-width: 0;
+      width: 100%;
+      min-height: 44px;
+      padding: 9px 20px 9px 6px;
+      font-size: .78rem;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .slot-lot-display::after{
+      right: 5px;
+      font-size: .62rem;
+    }
+
+    .model-subtext{
+      min-width: 0;
+      padding-left: 2px;
+      font-size: .67rem;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
+
+    .slot-input{
+      min-width: 0;
+      width: 100%;
+      padding: 10px 4px;
+      font-size: 1rem;
+    }
+
+    .sum-box{
+      gap: 7px;
+      padding: 12px 12px;
+      font-size: .9rem;
+    }
+
+    .sum-input{
+      width: 82px;
+      min-width: 72px;
+      font-size: 1.05rem;
+      padding: 6px 4px;
+    }
+
+    .btn-submit{
+      font-size: 1rem;
+      padding: 13px 10px;
+      border-radius: 14px;
+    }
+
+    .modal-overlay{
+      padding: 12px;
+      align-items: center;
+    }
+
+    .modal-card{
+      max-width: 390px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 18px 16px;
+      border-radius: 18px;
+    }
+
+    .modal-title{
+      font-size: 1rem;
+      line-height: 1.35;
+    }
+
+    .switch-picked-slot{
+      font-size: .78rem;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
+    .edit-plan-card,
+    .edit-plan-preview{
+      overflow: hidden;
+    }
+
+    .edit-plan-card-title,
+    .edit-preview-row{
+      min-width: 0;
+    }
+
+    .edit-plan-card-title > div,
+    .edit-preview-row > span{
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 390px){
+      body{ padding: 10px 6px; }
+
+      .card{
+        padding: 16px 12px;
+        border-radius: 18px;
+      }
+
+      .header-top-row{ gap: 8px; }
+      .header-title{ font-size: 1.28rem; }
+      .date-badge{
+        font-size: .72rem;
+        padding: 4px 7px;
+      }
+
+      .prod-tab-btn{
+        font-size: .76rem;
+        padding: 9px 4px;
+      }
+
+      .info-banner{
+        font-size: .82rem;
+      }
+
+      .slot-row{
+        grid-template-columns: minmax(96px, 1fr) minmax(0, 1.08fr) 62px;
+        gap: 5px;
+      }
+
+      .slot-time{
+        font-size: .75rem;
+        padding-left: 3px;
+        padding-right: 3px;
+      }
+
+      .slot-end-lot-btn{
+        font-size: .62rem;
+      }
+
+      .slot-lot-display{
+        font-size: .72rem;
+        padding-left: 4px;
+        padding-right: 18px;
+      }
+
+      .model-subtext{ font-size: .62rem; }
+
+      .slot-input{
+        font-size: .95rem;
+        padding-left: 2px;
+        padding-right: 2px;
+      }
+
+      .pace-only-value{ font-size: 1.22rem; }
+
+      .sum-box{
+        font-size: .84rem;
+        padding: 11px 9px;
+      }
+
+      .sum-input{
+        width: 72px;
+        min-width: 66px;
+        font-size: 1rem;
+      }
     }
 
   </style>
