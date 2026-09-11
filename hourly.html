@@ -214,7 +214,7 @@
     }
 
     .switch-picked-slot{
-      font-size:.82rem;
+      font-size:.84rem;
       color:#1d4ed8;
       background:#eff6ff;
       border:1px solid #bfdbfe;
@@ -900,24 +900,19 @@
 
     <div class="switch-picked-slot">
       LOT ปัจจุบัน: <b id="modalCurrentLot">-</b><br>
-      จบหลังรอบ: <b id="modalSwitchSlot">-</b><br>
-      <span style="color:#64748b;">ระบบกำหนดเวลาจากปุ่มที่กดให้แล้ว ไม่ต้องเลือกเวลาอีก</span>
+      จบหลังรอบ: <b id="modalSwitchSlot">-</b>
     </div>
 
     <div class="form-group">
       <label for="modalLotNo">1) เลข LOT ใหม่</label>
       <input type="text" id="modalLotNo" placeholder="เช่น 26101020" autocomplete="off">
-      <div style="font-size:.74rem;color:#64748b;margin-top:5px;">
-        ห้ามใช้ LOT ที่เคยใช้ใน LINE นี้วันนี้แล้ว
-      </div>
+
     </div>
 
     <div class="form-group">
       <label for="modalLotTarget">2) TG Original ของ LOT ใหม่ (ชิ้น)</label>
       <input type="number" id="modalLotTarget" min="1" placeholder="กรอก TG เต็ม เช่น 742">
-      <div style="font-size:.74rem;color:#64748b;margin-top:5px;">
-        กรอก TG เต็มก่อนแบ่งตามชั่วโมง — ไม่ใช่ Target ที่เหลือของวันนี้
-      </div>
+
     </div>
 
     <div id="switchLotStatus" style="display:none;font-size:.78rem;border-radius:10px;padding:9px 10px;margin-bottom:10px;"></div>
