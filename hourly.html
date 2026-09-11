@@ -144,6 +144,86 @@
       font-size: 1.1rem;
     }
 
+
+    /* ===== AUTO CURRENT LOT / END LOT IN TIME ROW ===== */
+    .current-model-banner{
+      display:none;
+      background:#f0fdfa;
+      border:1px solid #99f6e4;
+      border-radius:14px;
+      padding:10px 13px;
+      margin-bottom:14px;
+      color:#0f766e;
+      font-size:.86rem;
+      font-weight:700;
+    }
+
+    .slot-end-lot-btn{
+      width:100%;
+      margin-top:7px;
+      padding:6px 4px;
+      border-radius:9px;
+      border:1.4px solid #f0b84f;
+      background:#fff8e8;
+      color:#9a5b00;
+      font-size:.72rem;
+      font-weight:700;
+      cursor:pointer;
+    }
+    .slot-end-lot-btn:active{ background:#ffedbd; }
+    .slot-end-lot-btn:disabled{
+      background:#f1f5f9;
+      color:#94a3b8;
+      border-color:#cbd5e1;
+      cursor:not-allowed;
+    }
+    .slot-end-lot-btn.closed{
+      background:#ecfdf5;
+      color:#047857;
+      border-color:#86efac;
+    }
+
+    .slot-lot-display{
+      width:100%;
+      padding:11px 24px 11px 8px;
+      min-height:46px;
+      border:1.8px solid #cbd5e1;
+      border-radius:14px;
+      background:#f8fafc;
+      color:#334155;
+      font-size:.88rem;
+      font-weight:700;
+      text-align:center;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      word-break:break-all;
+    }
+    .slot-lot-display::after{
+      content:"🔒";
+      position:absolute;
+      right:7px;
+      font-size:.68rem;
+      opacity:.55;
+    }
+    .slot-lot-display.current{
+      background:#f0fdfa;
+      border-color:#99f6e4;
+      color:#0f766e;
+    }
+
+    .switch-picked-slot{
+      font-size:.82rem;
+      color:#1d4ed8;
+      background:#eff6ff;
+      border:1px solid #bfdbfe;
+      border-radius:12px;
+      padding:10px 12px;
+      margin-bottom:14px;
+      line-height:1.55;
+    }
+
     .btn-add-lot-midday {
       background: #f0fdf4;
       border: 1.5px dashed #0d9488;
@@ -454,19 +534,16 @@
       </div>
     </div>
 
+    <div id="currentModelBanner" class="current-model-banner">
+      รุ่นที่กำลังผลิต: <span id="currentModelText">-</span>
+    </div>
+
     <div class="form-group">
       <div class="section-title">กรอกยอดผลิตรายชั่วโมง</div>
       <div id="slotsContainer">
         <p style="color: #94a3b8; font-size: 0.95rem; text-align: center; padding: 15px 0;">โปรดเลือก LINE การผลิต</p>
       </div>
     </div>
-
-    <button type="button" class="btn-add-lot-midday" id="btnAddMiddayLot" style="display:none;" onclick="openNewLotModal()">
-      <span style="display:block;font-weight:800;">🔄 LOT เดิมจบแล้ว → เริ่ม LOT ใหม่</span>
-      <span style="display:block;font-size:.76rem;font-weight:500;opacity:.82;margin-top:3px;">
-        ใช้เฉพาะตอนเปลี่ยนรุ่นระหว่างวัน
-      </span>
-    </button>
 
     <div class="sum-box">
       <span>ยอดรวมที่กรอก</span>
@@ -526,17 +603,18 @@
   </div>
 </div>
 
-<!-- Modal สำหรับกรอกสลับ LOT -->
+<!-- Modal ปิดรุ่นจากแถวเวลา แล้วขึ้น LOT ใหม่ -->
 <div class="modal-overlay" id="newLotModal">
   <div class="modal-card">
     <div class="modal-header">
-      <div class="modal-title">🔄 LOT เดิมจบแล้ว → เริ่ม LOT ใหม่</div>
+      <div class="modal-title">🏁 จบรุ่น → ขึ้น LOT ใหม่</div>
       <button type="button" class="btn-close-modal" onclick="closeNewLotModal()">&times;</button>
     </div>
 
-    <div style="font-size:.84rem;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;margin-bottom:14px;line-height:1.55;">
-      ใช้เมื่อ <b>LOT ปัจจุบันผลิตเสร็จแล้ว และต้องเปลี่ยนไป LOT ใหม่เท่านั้น</b><br>
-      ระบบจะเก็บ TG เต็มของ LOT ใหม่ไว้เป็น <b>TG Original</b> แล้วแบ่ง Target ตามชั่วโมงที่เหลือให้อัตโนมัติ
+    <div class="switch-picked-slot">
+      LOT ปัจจุบัน: <b id="modalCurrentLot">-</b><br>
+      จบหลังรอบ: <b id="modalSwitchSlot">-</b><br>
+      <span style="color:#64748b;">ระบบกำหนดเวลาจากปุ่มที่กดให้แล้ว ไม่ต้องเลือกเวลาอีก</span>
     </div>
 
     <div class="form-group">
@@ -555,20 +633,10 @@
       </div>
     </div>
 
-    <div class="form-group">
-      <label for="switchAfterSlot">3) ขึ้นรุ่นใหม่หลังจบรอบ...</label>
-      <select id="switchAfterSlot">
-        <option value="">-- เลือกรอบก่อนขึ้นรุ่นใหม่ --</option>
-      </select>
-      <div style="font-size:.74rem;color:#64748b;margin-top:5px;">
-        เลือกรอบสุดท้ายของ LOT ปัจจุบัน ระบบจะขึ้นรุ่นใหม่ในรอบถัดไป และไม่นับช่วงพัก
-      </div>
-    </div>
-
     <div id="switchLotStatus" style="display:none;font-size:.78rem;border-radius:10px;padding:9px 10px;margin-bottom:10px;"></div>
 
     <button type="button" class="btn-submit" id="confirmSwitchLotBtn" onclick="confirmNewLot()">
-      ยืนยัน → บันทึก TG และเริ่ม LOT ใหม่
+      ยืนยัน → ปิดรุ่นเดิมและเริ่ม LOT ใหม่
     </button>
   </div>
 </div>
@@ -584,6 +652,9 @@
   let userDisplayName = "Unknown";
   let currentExistingHourly = {};
   let currentEditPlanState = null;
+  let currentActiveLot = '';
+  let pendingSwitchAfterSlot = '';
+  let pendingSwitchRow = null;
 
   initLiff();
 
@@ -1031,12 +1102,13 @@
     const line = document.getElementById('line').value;
     const slotsContainer = document.getElementById('slotsContainer');
     const infoBanner = document.getElementById('infoBanner');
-    const btnAddMiddayLot = document.getElementById('btnAddMiddayLot');
+    const modelBanner = document.getElementById('currentModelBanner');
 
     if (!line) {
       slotsContainer.innerHTML = '<p style="color: #94a3b8; font-size: 0.95rem; text-align: center; padding: 15px 0;">โปรดเลือก LINE การผลิต</p>';
       infoBanner.style.display = 'none';
-      btnAddMiddayLot.style.display = 'none';
+      if (modelBanner) modelBanner.style.display = 'none';
+      currentActiveLot = '';
       return;
     }
 
@@ -1051,45 +1123,50 @@
       const res = await fetch(`${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(line)}`);
       const data = await res.json();
 
-      activeLots = Array.isArray(data.lots)
-        ? [...data.lots]
-        : [];
+      activeLots = Array.isArray(data.lots) ? [...data.lots] : [];
 
       const loadedLots = [
         data.lotNumber,
         data.lotNumber2 || data.lot2Number,
         data.lotNumber3 || data.lot3Number
       ]
-        .map(v => String(v || '').trim().toUpperCase())
+        .map(v => normalizeLot_(v))
         .filter(Boolean);
 
       loadedLots.forEach(lot => {
-        if (!activeLots.some(x => String(x || '').trim().toUpperCase() === lot)) {
+        if (!activeLots.some(x => normalizeLot_(x) === lot)) {
           activeLots.push(lot);
         }
       });
 
-      masterLotMap = data.masterMap || {}; 
+      masterLotMap = data.masterMap || {};
       currentHours1 = Number(data.totalWorkingHours) || 9;
       currentTarget1 = Number(data.target) || Number(data.target1) || 0;
+      currentExistingHourly = data.existingHourly || {};
+
+      currentActiveLot =
+        loadedLots[loadedLots.length - 1] ||
+        normalizeLot_(activeLots[activeLots.length - 1]) ||
+        '';
 
       document.getElementById('targetVal').innerText = currentTarget1.toLocaleString();
       document.getElementById('hoursVal').innerText = currentHours1;
       infoBanner.style.display = 'flex';
 
-      btnAddMiddayLot.style.display = 'block';
-      currentExistingHourly = data.existingHourly || {};
+      updateCurrentModelBanner_();
       generateSmartTimeSlots(currentHours1, currentExistingHourly);
       updateHourlyAverage();
 
     } catch (err) {
       console.error("Error loading line details:", err);
-      btnAddMiddayLot.style.display = 'block';
       currentExistingHourly = {};
+      currentActiveLot = normalizeLot_(activeLots[activeLots.length - 1]) || '';
+      updateCurrentModelBanner_();
       generateSmartTimeSlots(9, currentExistingHourly);
       updateHourlyAverage();
     }
   }
+
 
   function generateSmartTimeSlots(totalHours, existingData) {
     const slotsContainer = document.getElementById('slotsContainer');
@@ -1110,20 +1187,12 @@
 
     let targetSlots = [];
 
-    /*
-     * กติกาช่วงเย็น:
-     * - 17:00–17:59 -> ให้กรอก 16.30-17.30 ตาม workflow เดิม
-     * - 18:00 เป็นต้นไป -> ไม่เอา 16.30-17.30 กลับมาแสดงซ้ำ
-     *
-     * จุดสำคัญ: ไม่เปลี่ยนเวลา/หน้าตาเดิม และไม่บังคับให้ผู้ใช้กรอก
-     * slot ที่ผ่านมาแล้วซ้ำอีก
-     */
+    // คง Logic แสดง 2 ชั่วโมงเดิม
     if (currentMinutes >= 1020 && currentMinutes < 1080) {
       targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "16.30-17.30");
     } else if (currentMinutes >= 1080 && currentMinutes < 1140) {
       targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "17.30-18.30");
 
-      // ถ้าเป็นกะ OT (10 ชม.ขึ้นไป) ให้แสดง 18.30-19.30 เพิ่มตามของเดิม
       if (totalHours >= 10) {
         const slot19 = TIME_SLOTS_DEF.find(s => s.label === "18.30-19.30");
         if (slot19) targetSlots.push(slot19);
@@ -1140,7 +1209,6 @@
       }
     }
 
-    // ป้องกัน slot ซ้ำจากการคำนวณในอนาคต
     const seenSlots = new Set();
     targetSlots = targetSlots.filter(slot => {
       if (seenSlots.has(slot.label)) return false;
@@ -1148,57 +1216,81 @@
       return true;
     });
 
-    let lotOptionsHTML = activeLots.length > 0 
-      ? activeLots.map(l => `<option value="${l}">${l}</option>`).join('') 
-      : '<option value="">-- ไม่พบ LOT --</option>';
-
     targetSlots.forEach(slot => {
       const existing = existingData[slot.label] || {};
       const isBreakTime = (slot.label === breakSlot);
-      const currentOutput = isBreakTime ? 0 : (existing.output !== undefined ? existing.output : '');
+      const currentOutput = isBreakTime
+        ? 0
+        : (existing.output !== undefined ? existing.output : '');
+
+      // รอบที่เคย Save แล้วใช้ LOT เดิมตาม Hourly_Log
+      // รอบที่ยังไม่ Save ใช้ Current LOT ล่าสุดอัตโนมัติ
+      const slotLot = normalizeLot_(existing.lot || currentActiveLot);
+      const isClosedHistoricalLot =
+        !!slotLot &&
+        !!currentActiveLot &&
+        slotLot !== normalizeLot_(currentActiveLot);
 
       const row = document.createElement('div');
       row.className = 'slot-row';
       row.dataset.breakTime = isBreakTime ? 'true' : 'false';
+
       row.innerHTML = `
         <div class="slot-time" data-slot-label="${slot.label}">
-          ${slot.label} ${isBreakTime ? '<br><span style="color:#ef4444; font-size:0.75rem;">(พัก)</span>' : ''}
+          ${slot.label}
+          ${isBreakTime ? '<br><span style="color:#ef4444; font-size:0.75rem;">(พัก)</span>' : ''}
+          ${!isBreakTime ? `
+            <button type="button"
+                    class="slot-end-lot-btn ${isClosedHistoricalLot ? 'closed' : ''}"
+                    onclick="openEndLotForSlot_(this)"
+                    ${isClosedHistoricalLot ? 'disabled' : ''}>
+              ${isClosedHistoricalLot ? '✓ จบรุ่นแล้ว' : '🏁 จบรุ่น'}
+            </button>
+          ` : ''}
         </div>
-        <div class="slot-lot-container">
-          <select class="slot-lot-select input-lot-val" onchange="updateModelSubtext(this)" ${isBreakTime ? 'disabled' : ''}>
-            ${lotOptionsHTML}
-          </select>
-          <div class="model-subtext"></div>
-        </div>
-        <input type="number" 
-               class="slot-input input-val" 
-               min="0" 
-               placeholder="0" 
-               value="${currentOutput}" 
-               oninput="calculateTotal()"
-               ${isBreakTime ? 'readonly style="background-color: #f1f5f9; color: #94a3b8; cursor: not-allowed;"' : ''}>
-      `;
-      slotsContainer.appendChild(row);
 
-      const selectElem = row.querySelector('.input-lot-val');
-      if (existing.lot) {
-        selectElem.value = existing.lot;
-      } else if (activeLots.length > 0) {
-        selectElem.value = activeLots[activeLots.length - 1];
-      }
-      updateModelSubtext(selectElem);
+        <div class="slot-lot-container">
+          <div class="slot-lot-display ${(!isClosedHistoricalLot && !isBreakTime) ? 'current' : ''}">
+            ${slotLot || '--'}
+          </div>
+          <input type="hidden" class="input-lot-val" value="${slotLot}">
+          <div class="model-subtext">${getModelTextForLot_(slotLot)}</div>
+        </div>
+
+        <input type="number"
+               class="slot-input input-val"
+               min="0"
+               placeholder="0"
+               value="${currentOutput}"
+               oninput="calculateTotal()"
+               ${isBreakTime ? 'readonly style="background-color:#f1f5f9;color:#94a3b8;cursor:not-allowed;"' : ''}>
+      `;
+
+      slotsContainer.appendChild(row);
     });
 
     calculateTotal();
   }
 
-  function updateModelSubtext(selectElem) {
-    const selectedLot = selectElem.value;
-    const subtextElem = selectElem.nextElementSibling;
-    if (selectedLot && masterLotMap[selectedLot]) {
-      subtextElem.innerText = `(รุ่น: ${masterLotMap[selectedLot]})`;
+  function getModelTextForLot_(lot) {
+    const cleanLot = normalizeLot_(lot);
+    const model = cleanLot ? masterLotMap[cleanLot] : '';
+    return model ? `(รุ่น: ${model})` : '';
+  }
+
+  function updateCurrentModelBanner_() {
+    const banner = document.getElementById('currentModelBanner');
+    const text = document.getElementById('currentModelText');
+    if (!banner || !text) return;
+
+    const model = masterLotMap[normalizeLot_(currentActiveLot)] || '';
+
+    if (currentActiveLot) {
+      text.innerText = model || '-';
+      banner.style.display = 'block';
     } else {
-      subtextElem.innerText = '';
+      text.innerText = '-';
+      banner.style.display = 'none';
     }
   }
 
@@ -1326,31 +1418,70 @@
     return workingSlots;
   }
 
-  function populateSwitchAfterSlot_() {
-    const select = document.getElementById('switchAfterSlot');
-    if (!select) return;
-
+  function hasSavedLaterWorkingSlot_(slotLabel) {
     const workingSlots = getWorkingSlotsForCurrentLine_();
+    const index = workingSlots.findIndex(slot => slot.label === slotLabel);
+    if (index < 0) return false;
 
-    select.innerHTML =
-      '<option value="">-- เลือกรอบที่ LOT เดิมจบ --</option>';
-
-    workingSlots.forEach((slot, index) => {
-      const option = document.createElement('option');
-      option.value = slot.label;
-      option.textContent =
-        `ขึ้นรุ่นใหม่หลังจบรอบ ${slot.label} (ครบ ${index + 1} ชม.)`;
-      select.appendChild(option);
+    return workingSlots.slice(index + 1).some(slot => {
+      const saved = currentExistingHourly && currentExistingHourly[slot.label];
+      return !!(
+        saved &&
+        saved.output !== undefined &&
+        saved.output !== ""
+      );
     });
   }
 
-  function openNewLotModal() {
-    if (!document.getElementById('line').value) {
-      alert("กรุณาเลือก LINE การผลิตก่อนครับ");
+  function openEndLotForSlot_(button) {
+    const lineVal = document.getElementById('line').value;
+    if (!lineVal) {
+      alert("กรุณาเลือก LINE การผลิตก่อน");
       return;
     }
 
-    populateSwitchAfterSlot_();
+    if (activeLots.length >= 3) {
+      alert("วันนี้ LINE นี้มีครบ 3 LOT แล้ว ระบบรองรับสูงสุด 3 LOT ต่อวัน");
+      return;
+    }
+
+    const row = button.closest('.slot-row');
+    if (!row || row.dataset.breakTime === 'true') return;
+
+    const slotLabel =
+      row.querySelector('.slot-time')?.getAttribute('data-slot-label') || '';
+    const lotVal =
+      normalizeLot_(row.querySelector('.input-lot-val')?.value);
+    const outputInput = row.querySelector('.input-val');
+
+    if (!slotLabel || !lotVal) {
+      alert("ไม่พบข้อมูลรอบเวลา/LOT กรุณาโหลดใหม่");
+      return;
+    }
+
+    if (!outputInput || outputInput.value === '') {
+      alert(`กรุณากรอกยอดของรอบ ${slotLabel} ก่อนกดจบรุ่น`);
+      outputInput?.focus();
+      return;
+    }
+
+    if (lotVal !== normalizeLot_(currentActiveLot)) {
+      alert("รอบนี้เป็น LOT ที่จบไปแล้ว ไม่สามารถปิดซ้ำได้");
+      return;
+    }
+
+    if (hasSavedLaterWorkingSlot_(slotLabel)) {
+      alert("มีการบันทึกยอดของรอบถัดไปแล้ว ไม่สามารถปิด LOT ย้อนหลังที่รอบนี้ได้");
+      return;
+    }
+
+    pendingSwitchAfterSlot = slotLabel;
+    pendingSwitchRow = row;
+
+    document.getElementById('modalCurrentLot').innerText = lotVal;
+    document.getElementById('modalSwitchSlot').innerText = slotLabel;
+    document.getElementById('modalLotNo').value = '';
+    document.getElementById('modalLotTarget').value = '';
 
     const statusBox = document.getElementById('switchLotStatus');
     if (statusBox) {
@@ -1366,9 +1497,6 @@
     document.getElementById('modalLotNo').value = '';
     document.getElementById('modalLotTarget').value = '';
 
-    const switchSlot = document.getElementById('switchAfterSlot');
-    if (switchSlot) switchSlot.value = '';
-
     const statusBox = document.getElementById('switchLotStatus');
     if (statusBox) {
       statusBox.style.display = 'none';
@@ -1380,7 +1508,11 @@
       confirmBtn.disabled = false;
       confirmBtn.style.opacity = '1';
     }
+
+    pendingSwitchAfterSlot = '';
+    pendingSwitchRow = null;
   }
+
 
   function normalizeLot_(value) {
     return String(value || '').trim().toUpperCase();
@@ -1463,41 +1595,71 @@
     return null;
   }
 
-  // สลับ LOT แบบกัน LOT ซ้ำ + ตรวจยืนยันว่า TG Original ถูกเก็บจริง
+  function applyNewCurrentLotToVisibleRows_(switchAfterSlot, newLot) {
+    const switchIndex = TIME_SLOTS_DEF.findIndex(s => s.label === switchAfterSlot);
+    if (switchIndex < 0) return;
+
+    document.querySelectorAll('.slot-row').forEach(row => {
+      const label = row.querySelector('.slot-time')?.getAttribute('data-slot-label');
+      const rowIndex = TIME_SLOTS_DEF.findIndex(s => s.label === label);
+      if (rowIndex <= switchIndex) return;
+
+      const saved = currentExistingHourly && currentExistingHourly[label];
+      if (saved && saved.output !== undefined && saved.output !== "") return;
+
+      const lotInput = row.querySelector('.input-lot-val');
+      const lotDisplay = row.querySelector('.slot-lot-display');
+      const modelSubtext = row.querySelector('.model-subtext');
+
+      if (lotInput) lotInput.value = newLot;
+      if (lotDisplay) {
+        lotDisplay.innerText = newLot;
+        if (row.dataset.breakTime !== 'true') lotDisplay.classList.add('current');
+      }
+      if (modelSubtext) modelSubtext.innerText = getModelTextForLot_(newLot);
+    });
+  }
+
   async function confirmNewLot() {
     const newLot = normalizeLot_(document.getElementById('modalLotNo').value);
     const newTargetMax =
       Number(document.getElementById('modalLotTarget').value) || 0;
     const lineVal = document.getElementById('line').value;
-    const switchAfterSlot =
-      document.getElementById('switchAfterSlot').value;
+    const switchAfterSlot = pendingSwitchAfterSlot;
 
     if (!newLot || newTargetMax <= 0) {
       alert("กรุณากรอก LOT ใหม่ และ TG Original ให้ครบถ้วน");
       return;
     }
 
-    if (!lineVal) {
-      alert("กรุณาเลือก LINE การผลิตก่อนครับ");
+    if (!lineVal || !switchAfterSlot || !pendingSwitchRow) {
+      alert("ไม่พบข้อมูลรอบที่ต้องการปิด กรุณาปิดหน้าต่างแล้วกดจบรุ่นใหม่อีกครั้ง");
       return;
     }
 
-    if (!switchAfterSlot) {
-      alert("กรุณาเลือกรอบสุดท้ายของ LOT เดิม");
+    const closingLot =
+      normalizeLot_(pendingSwitchRow.querySelector('.input-lot-val')?.value);
+    const closingQtyRaw =
+      pendingSwitchRow.querySelector('.input-val')?.value;
+
+    if (closingQtyRaw === '' || closingQtyRaw === undefined) {
+      alert(`กรุณากรอกยอดของรอบ ${switchAfterSlot} ก่อนกดจบรุ่น`);
       return;
     }
 
-    // กันซ้ำฝั่งหน้าเว็บทันที
-    const localUsedLots = activeLots
-      .map(normalizeLot_)
-      .filter(Boolean);
+    const closingQty = Number(closingQtyRaw) || 0;
 
+    if (closingLot !== normalizeLot_(currentActiveLot)) {
+      alert("LOT นี้ไม่ใช่ LOT ปัจจุบันแล้ว กรุณาโหลดข้อมูลใหม่");
+      return;
+    }
+
+    const localUsedLots = activeLots.map(normalizeLot_).filter(Boolean);
     if (localUsedLots.includes(newLot)) {
       alert(`LOT ${newLot} ถูกใช้ใน LINE นี้วันนี้แล้ว\nกรุณากรอก LOT ใหม่`);
       return;
     }
 
-    // เช็กข้อมูลสดจาก Backend อีกรอบ ป้องกันหน้าเว็บค้าง/เปิดหลายเครื่อง
     try {
       const latestState = await fetchCurrentLineState_(lineVal);
       const serverUsedLots = getUsedLotsFromState_(latestState);
@@ -1516,45 +1678,37 @@
 
     } catch (err) {
       console.warn("ตรวจ LOT ปัจจุบันจาก Backend ไม่สำเร็จ:", err);
-      // ยังให้ Backend เป็นด่านสุดท้ายต่อ
     }
 
-    const totalWorkingHours = Math.max(
-      1,
-      Number(currentHours1) || 9
-    );
-
+    const totalWorkingHours = Math.max(1, Number(currentHours1) || 9);
     const workingSlots = getWorkingSlotsForCurrentLine_();
     const switchIndex = workingSlots.findIndex(
       slot => slot.label === switchAfterSlot
     );
 
     if (switchIndex < 0) {
-      alert("รอบที่เลือกไม่ถูกต้อง กรุณาเลือกใหม่");
+      alert("รอบที่กดจบรุ่นไม่ถูกต้อง กรุณาโหลดข้อมูลใหม่");
       return;
     }
 
     const completedWorkingHours = switchIndex + 1;
-    const remainingHours = Math.max(
-      0,
-      totalWorkingHours - completedWorkingHours
-    );
+    const remainingHours = Math.max(0, totalWorkingHours - completedWorkingHours);
 
     if (remainingHours <= 0) {
-      alert("รอบที่เลือกเป็นรอบสุดท้ายของวันแล้ว ไม่มีชั่วโมงเหลือสำหรับ LOT ใหม่");
+      alert("รอบนี้เป็นรอบสุดท้ายของวันแล้ว ไม่มีชั่วโมงเหลือสำหรับ LOT ใหม่");
       return;
     }
 
     const confirmMessage =
-      `ยืนยันเปลี่ยน LOT?\n\n` +
+      `ยืนยันจบรุ่น?\n\n` +
+      `LOT เดิม: ${closingLot}\n` +
+      `รอบสุดท้าย: ${switchAfterSlot}\n` +
+      `ยอดสุดท้ายรอบนี้: ${closingQty.toLocaleString()} ชิ้น\n\n` +
       `LOT ใหม่: ${newLot}\n` +
       `TG Original: ${newTargetMax.toLocaleString()} ชิ้น\n` +
-      `LOT เดิมจบหลังรอบ: ${switchAfterSlot}\n` +
       `ชั่วโมงที่เหลือสำหรับ LOT ใหม่: ${remainingHours} ชม.`;
 
-    if (!confirm(confirmMessage)) {
-      return;
-    }
+    if (!confirm(confirmMessage)) return;
 
     const confirmBtn = document.getElementById('confirmSwitchLotBtn');
     if (confirmBtn) {
@@ -1562,9 +1716,7 @@
       confirmBtn.style.opacity = '.6';
     }
 
-    setSwitchLotStatus_(
-      `กำลังบันทึก LOT ${newLot} และ TG Original ${newTargetMax.toLocaleString()}...`
-    );
+    setSwitchLotStatus_(`กำลังปิด LOT ${closingLot} และขึ้น LOT ${newLot}...`);
 
     const payload = {
       action: "HOURLY_OUTPUT",
@@ -1572,8 +1724,6 @@
       isSwitchLot: true,
 
       newLotNumber: newLot,
-
-      // TG เต็มของ LOT ใหม่ — Backend จะเก็บลง TG_ORIGINAL_2 หรือ TG_ORIGINAL_3
       newLotTarget: newTargetMax,
       newLotOriginalTG: newTargetMax,
       tgOriginalNewLot: newTargetMax,
@@ -1581,13 +1731,16 @@
       totalWorkingHours: totalWorkingHours,
       switchAfterSlot: switchAfterSlot,
 
-      // backward compatibility / debug
+      closingLotNumber: closingLot,
+      closingTimeSlot: switchAfterSlot,
+      closingSlotQty: closingQty,
+      closingRemark: document.getElementById('remark')?.value || '',
+
       completedWorkingHoursLot1: completedWorkingHours,
       completedNormalHoursLot1: completedWorkingHours,
       hoursUsedLot1: completedWorkingHours,
       hoursUsedLot2: remainingHours,
 
-      switchAt: new Date().toISOString(),
       updatedBy: userDisplayName
     };
 
@@ -1595,9 +1748,7 @@
       await fetch(SCRIPT_URL, {
         method: "POST",
         mode: "no-cors",
-        headers: {
-          "Content-Type": "text/plain"
-        },
+        headers: { "Content-Type": "text/plain" },
         body: JSON.stringify(payload)
       });
 
@@ -1612,39 +1763,59 @@
           "ยังตรวจไม่พบการบันทึก LOT/TG Original กรุณาอย่ากดซ้ำ และลองรีโหลดข้อมูลก่อน",
           "error"
         );
-
-        alert(
-          "ระบบยังยืนยันการสลับ LOT ไม่ได้\nกรุณาอย่ากดซ้ำ ให้รีโหลดข้อมูลแล้วตรวจอีกครั้ง"
-        );
-
+        alert("ระบบยังยืนยันการปิด LOT ไม่ได้\nกรุณาอย่ากดซ้ำ ให้รีโหลดข้อมูลแล้วตรวจอีกครั้ง");
         return;
       }
 
-      setSwitchLotStatus_(
-        `บันทึกสำเร็จ: LOT ${newLot} • TG Original ${newTargetMax.toLocaleString()}`,
-        "success"
-      );
+      currentExistingHourly[switchAfterSlot] = {
+        lot: closingLot,
+        output: closingQty
+      };
 
-      await loadLineDetails();
+      if (!activeLots.some(lot => normalizeLot_(lot) === newLot)) {
+        activeLots.push(newLot);
+      }
+
+      if (verifiedState.masterMap) {
+        masterLotMap = { ...masterLotMap, ...verifiedState.masterMap };
+      }
+
+      currentActiveLot = newLot;
+
+      const closingInput = pendingSwitchRow.querySelector('.input-val');
+      if (closingInput) {
+        closingInput.readOnly = true;
+        closingInput.style.backgroundColor = '#f8fafc';
+        closingInput.style.color = '#64748b';
+      }
+
+      const closingButton = pendingSwitchRow.querySelector('.slot-end-lot-btn');
+      if (closingButton) {
+        closingButton.disabled = true;
+        closingButton.classList.add('closed');
+        closingButton.innerText = '✓ จบรุ่นแล้ว';
+      }
+
+      applyNewCurrentLotToVisibleRows_(switchAfterSlot, newLot);
+      updateCurrentModelBanner_();
+      calculateTotal();
 
       alert(
-        `✅ สลับ LOT สำเร็จ\n` +
+        `✅ จบรุ่นเดิมและขึ้น LOT ใหม่แล้ว\n` +
         `LOT ใหม่: ${newLot}\n` +
         `TG Original: ${newTargetMax.toLocaleString()} ชิ้น`
       );
 
-      closeNewLotModal();
+      document.getElementById('newLotModal').style.display = 'none';
+      document.getElementById('modalLotNo').value = '';
+      document.getElementById('modalLotTarget').value = '';
+      pendingSwitchAfterSlot = '';
+      pendingSwitchRow = null;
 
     } catch (err) {
       console.error("Sync Error:", err);
-
-      setSwitchLotStatus_(
-        "ส่งข้อมูลสลับ LOT ไม่สำเร็จ กรุณาลองใหม่",
-        "error"
-      );
-
-      alert("ส่งข้อมูลสลับ LOT ไม่สำเร็จ กรุณาลองใหม่ครับ");
-
+      setSwitchLotStatus_("ส่งข้อมูลปิด LOT ไม่สำเร็จ กรุณาลองใหม่", "error");
+      alert("ส่งข้อมูลปิด LOT ไม่สำเร็จ กรุณาลองใหม่");
     } finally {
       if (confirmBtn) {
         confirmBtn.disabled = false;
@@ -1652,6 +1823,7 @@
       }
     }
   }
+
 
   function calculateTotal() {
     const inputs = document.querySelectorAll('.input-val');
