@@ -294,6 +294,118 @@
       .pace-only-value{font-size:1.4rem;}
     }
 
+  
+
+    /* ===== Production two-tab UI ===== */
+    .prod-tabs{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:6px;
+      background:#eef2f7;
+      border-radius:14px;
+      padding:5px;
+      margin:14px 0 18px;
+    }
+    .prod-tab-btn{
+      border:0;
+      background:transparent;
+      color:#64748b;
+      font-family:'Kanit',sans-serif;
+      font-size:.9rem;
+      font-weight:700;
+      padding:11px 8px;
+      border-radius:11px;
+      cursor:pointer;
+    }
+    .prod-tab-btn.active{
+      background:#fff;
+      color:#0f766e;
+      box-shadow:0 3px 10px rgba(15,23,42,.08);
+    }
+    .prod-page{display:none;}
+    .prod-page.active{display:block;}
+
+    .edit-plan-note{
+      background:#fff7ed;
+      border:1px solid #fed7aa;
+      color:#9a3412;
+      border-radius:13px;
+      padding:10px 12px;
+      font-size:.8rem;
+      line-height:1.5;
+      margin-bottom:14px;
+    }
+    .edit-plan-card{
+      border:1px solid #e2e8f0;
+      border-radius:16px;
+      padding:13px;
+      margin-bottom:10px;
+      background:#fff;
+    }
+    .edit-plan-card-title{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:flex-start;
+      font-weight:800;
+      color:#334155;
+      margin-bottom:9px;
+    }
+    .edit-plan-model{
+      font-size:.72rem;
+      color:#64748b;
+      font-weight:500;
+      margin-top:2px;
+    }
+    .edit-plan-hours-badge{
+      white-space:nowrap;
+      font-size:.72rem;
+      color:#475569;
+      background:#f1f5f9;
+      border-radius:999px;
+      padding:4px 8px;
+      font-weight:700;
+    }
+    .edit-plan-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+    .edit-plan-grid .form-group{margin-bottom:0;}
+    .edit-plan-preview{
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      border-radius:16px;
+      padding:13px;
+      margin:14px 0;
+      display:none;
+    }
+    .edit-preview-row{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      padding:5px 0;
+      font-size:.82rem;
+      color:#475569;
+    }
+    .edit-preview-row strong{color:#0f172a;}
+    .edit-preview-divider{
+      border-top:1px dashed #cbd5e1;
+      margin:7px 0;
+    }
+    .edit-status{
+      display:none;
+      font-size:.78rem;
+      border-radius:10px;
+      padding:9px 10px;
+      margin:10px 0;
+    }
+
+    @media (max-width:430px){
+      .prod-tab-btn{font-size:.82rem;padding:10px 5px;}
+      .edit-plan-grid{grid-template-columns:1fr;}
+    }
+
   </style>
 </head>
 <body>
@@ -308,6 +420,12 @@
     👤 ผู้รายงาน: <span id="userDisplayNameDisplay">กำลังดึงโปรไฟล์ LINE...</span>
   </div>
 
+  <div class="prod-tabs">
+    <button type="button" id="recordTabBtn" class="prod-tab-btn active" onclick="switchProductionTab('record')">📈 บันทึกยอด</button>
+    <button type="button" id="editPlanTabBtn" class="prod-tab-btn" onclick="switchProductionTab('edit')">⚙️ แก้ไขเป้า / ชั่วโมง</button>
+  </div>
+
+  <div id="recordPage" class="prod-page active">
   <form id="hourlyForm">
     <div class="form-group">
       <label for="line">LINE การผลิต</label>
@@ -363,6 +481,49 @@
 
     <button type="submit" class="btn-submit" id="btnSubmit">บันทึกยอด</button>
   </form>
+  </div>
+
+  <div id="editPlanPage" class="prod-page">
+    <div class="edit-plan-note">
+      ⚠️ <b>ใช้เมื่อมีการเปลี่ยนแผนการผลิตเท่านั้น</b><br>
+      แก้ได้เฉพาะ TG Original และเวลาทำงานรวม ระบบจะคำนวณ Target ใหม่ให้อัตโนมัติ
+    </div>
+
+    <div class="form-group">
+      <label for="editLine">LINE การผลิต</label>
+      <select id="editLine" onchange="loadEditPlan()">
+        <option value="">-- เลือก LINE --</option>
+        <option value="Line B">Line B</option>
+        <option value="Line C">Line C</option>
+        <option value="Line D">Line D</option>
+        <option value="Line E">Line E</option>
+        <option value="Line F">Line F</option>
+      </select>
+    </div>
+
+    <div id="editPlanLoading" style="display:none;text-align:center;color:#64748b;padding:18px 0;font-size:.85rem;">กำลังโหลดแผนปัจจุบัน...</div>
+
+    <div id="editPlanContent" style="display:none;">
+      <div class="form-group">
+        <label for="editTotalHours">⏱️ เวลาทำงานรวมวันนี้ (ชม.)</label>
+        <input type="number" id="editTotalHours" min="1" max="10" step="1" oninput="updateEditPlanPreview()">
+        <div id="editHoursHint" style="font-size:.74rem;color:#64748b;margin-top:5px;"></div>
+      </div>
+
+      <div id="editLotsContainer"></div>
+
+      <div id="editPlanPreview" class="edit-plan-preview"></div>
+      <div id="editPlanStatus" class="edit-status"></div>
+
+      <button type="button" class="btn-submit" id="savePlanEditBtn" onclick="saveProductionPlanEdit()">
+        บันทึกการแก้ไขเป้า / ชั่วโมง
+      </button>
+    </div>
+
+    <div id="editPlanEmpty" style="display:none;text-align:center;color:#94a3b8;padding:24px 8px;font-size:.86rem;">
+      เลือก LINE เพื่อดูแผนการผลิตของวันนี้
+    </div>
+  </div>
 </div>
 
 <!-- Modal สำหรับกรอกสลับ LOT -->
@@ -422,6 +583,7 @@
   let currentHours1 = 9;
   let userDisplayName = "Unknown";
   let currentExistingHourly = {};
+  let currentEditPlanState = null;
 
   initLiff();
 
@@ -470,6 +632,396 @@
     }
   });
 
+
+  function switchProductionTab(tab) {
+    const recordPage = document.getElementById('recordPage');
+    const editPage = document.getElementById('editPlanPage');
+    const recordBtn = document.getElementById('recordTabBtn');
+    const editBtn = document.getElementById('editPlanTabBtn');
+
+    recordPage.classList.toggle('active', tab === 'record');
+    editPage.classList.toggle('active', tab === 'edit');
+    recordBtn.classList.toggle('active', tab === 'record');
+    editBtn.classList.toggle('active', tab === 'edit');
+
+    if (tab === 'edit') {
+      const currentLine = document.getElementById('line').value || localStorage.getItem('selectedLine') || '';
+      const editLine = document.getElementById('editLine');
+
+      if (currentLine && editLine.value !== currentLine) {
+        editLine.value = currentLine;
+      }
+
+      if (editLine.value) {
+        loadEditPlan();
+      } else {
+        document.getElementById('editPlanContent').style.display = 'none';
+        document.getElementById('editPlanEmpty').style.display = 'block';
+      }
+    }
+  }
+
+  function getEditPlanLots_(data) {
+    return [
+      {
+        index: 1,
+        lot: normalizeLot_(data.lotNumber),
+        hours: Number(data.workingHours) || 0,
+        target: Number(data.target1) || 0,
+        tg: Number(data.tgOriginal1 || data.target1 || 0),
+        model: (data.masterMap || {})[normalizeLot_(data.lotNumber)] || ''
+      },
+      {
+        index: 2,
+        lot: normalizeLot_(data.lotNumber2 || data.lot2Number),
+        hours: Number(data.workingHours2) || 0,
+        target: Number(data.target2) || 0,
+        tg: Number(data.tgOriginal2 || 0),
+        model: (data.masterMap || {})[normalizeLot_(data.lotNumber2 || data.lot2Number)] || ''
+      },
+      {
+        index: 3,
+        lot: normalizeLot_(data.lotNumber3 || data.lot3Number),
+        hours: Number(data.workingHours3) || 0,
+        target: Number(data.target3) || 0,
+        tg: Number(data.tgOriginal3 || 0),
+        model: (data.masterMap || {})[normalizeLot_(data.lotNumber3 || data.lot3Number)] || ''
+      }
+    ].filter(item => item.lot);
+  }
+
+  async function loadEditPlan() {
+    const lineVal = document.getElementById('editLine').value;
+    const loading = document.getElementById('editPlanLoading');
+    const content = document.getElementById('editPlanContent');
+    const empty = document.getElementById('editPlanEmpty');
+
+    currentEditPlanState = null;
+    content.style.display = 'none';
+    empty.style.display = 'none';
+
+    if (!lineVal) {
+      empty.style.display = 'block';
+      return;
+    }
+
+    loading.style.display = 'block';
+
+    try {
+      const data = await fetchCurrentLineState_(lineVal);
+      const lots = getEditPlanLots_(data);
+
+      if (!lots.length) {
+        loading.style.display = 'none';
+        empty.innerText = 'ยังไม่มีแผนการผลิตของ LINE นี้ในวันนี้';
+        empty.style.display = 'block';
+        return;
+      }
+
+      const totalHours = lots.reduce((sum, item) => sum + item.hours, 0) || Number(data.totalWorkingHours) || 0;
+
+      currentEditPlanState = {
+        line: lineVal,
+        data: data,
+        lots: lots,
+        totalHours: totalHours,
+        totalTarget: Number(data.target) || 0
+      };
+
+      document.getElementById('editTotalHours').value = totalHours;
+
+      const container = document.getElementById('editLotsContainer');
+      container.innerHTML = lots.map(item => `
+        <div class="edit-plan-card">
+          <div class="edit-plan-card-title">
+            <div>
+              LOT ${item.index}: ${item.lot}
+              <div class="edit-plan-model">${item.model ? `รุ่น: ${item.model}` : 'ไม่พบชื่อรุ่น'}</div>
+            </div>
+            <span class="edit-plan-hours-badge" id="editHoursBadge${item.index}">${item.hours} ชม.</span>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="editTG${item.index}">TG Original LOT ${item.index} (ชิ้น)</label>
+            <input type="number" id="editTG${item.index}" min="1" step="1" value="${item.tg || ''}" oninput="updateEditPlanPreview()">
+          </div>
+        </div>
+      `).join('');
+
+      loading.style.display = 'none';
+      content.style.display = 'block';
+      setEditPlanStatus_('', 'info', false);
+      updateEditPlanPreview();
+
+    } catch (err) {
+      console.error('loadEditPlan error:', err);
+      loading.style.display = 'none';
+      empty.innerText = 'โหลดแผนการผลิตไม่สำเร็จ กรุณาลองใหม่';
+      empty.style.display = 'block';
+    }
+  }
+
+  function calculateEditedPlan_() {
+    if (!currentEditPlanState) {
+      return { valid: false, error: 'ยังไม่มีข้อมูลแผน' };
+    }
+
+    const lots = currentEditPlanState.lots;
+    const totalHours = Math.floor(Number(document.getElementById('editTotalHours').value) || 0);
+
+    if (totalHours < 1 || totalHours > 10) {
+      return { valid: false, error: 'เวลาทำงานรวมต้องอยู่ระหว่าง 1–10 ชั่วโมง' };
+    }
+
+    let hours1 = 0;
+    let hours2 = 0;
+    let hours3 = 0;
+
+    if (lots.length >= 3) {
+      hours1 = lots[0].hours;
+      hours2 = lots[1].hours;
+      const fixed = hours1 + hours2;
+
+      if (totalHours <= fixed) {
+        return { valid: false, error: `ต้องมากกว่า ${fixed} ชม. เพราะขึ้น LOT3 แล้ว` };
+      }
+
+      hours3 = totalHours - fixed;
+
+    } else if (lots.length === 2) {
+      hours1 = lots[0].hours;
+
+      if (totalHours <= hours1) {
+        return { valid: false, error: `ต้องมากกว่า ${hours1} ชม. เพราะขึ้น LOT2 แล้ว` };
+      }
+
+      hours2 = totalHours - hours1;
+
+    } else {
+      hours1 = totalHours;
+    }
+
+    const hoursByLot = [hours1, hours2, hours3];
+    const editedLots = [];
+
+    for (const item of lots) {
+      const tgEl = document.getElementById(`editTG${item.index}`);
+      const tg = Number(tgEl ? tgEl.value : 0) || 0;
+
+      if (tg <= 0) {
+        return { valid: false, error: `TG Original LOT ${item.index} ต้องมากกว่า 0` };
+      }
+
+      const hours = hoursByLot[item.index - 1] || 0;
+      const target = Math.round((tg / totalHours) * hours);
+
+      editedLots.push({ ...item, tg, hours, target });
+    }
+
+    const totalTarget = editedLots.reduce((sum, item) => sum + item.target, 0);
+
+    return {
+      valid: true,
+      totalHours,
+      totalTarget,
+      lots: editedLots
+    };
+  }
+
+  function updateEditPlanPreview() {
+    const preview = document.getElementById('editPlanPreview');
+    if (!preview || !currentEditPlanState) return;
+
+    const calc = calculateEditedPlan_();
+
+    if (!calc.valid) {
+      preview.style.display = 'block';
+      preview.innerHTML = `<div style="color:#b91c1c;font-size:.82rem;font-weight:700;">⚠️ ${calc.error}</div>`;
+      return;
+    }
+
+    calc.lots.forEach(item => {
+      const badge = document.getElementById(`editHoursBadge${item.index}`);
+      if (badge) badge.innerText = `${item.hours} ชม.`;
+    });
+
+    const lotRows = calc.lots.map(item => `
+      <div class="edit-preview-row">
+        <span>LOT ${item.index} • ${item.hours} ชม. • TG ${item.tg.toLocaleString()}</span>
+        <strong>Target ${item.target.toLocaleString()}</strong>
+      </div>
+    `).join('');
+
+    preview.style.display = 'block';
+    preview.innerHTML = `
+      <div style="font-weight:800;color:#334155;margin-bottom:6px;">ตัวอย่างหลังบันทึก</div>
+      <div class="edit-preview-row">
+        <span>เวลาทำงานรวม</span>
+        <strong>${currentEditPlanState.totalHours} → ${calc.totalHours} ชม.</strong>
+      </div>
+      <div class="edit-preview-row">
+        <span>Target รวม</span>
+        <strong>${currentEditPlanState.totalTarget.toLocaleString()} → ${calc.totalTarget.toLocaleString()} ชิ้น</strong>
+      </div>
+      <div class="edit-preview-divider"></div>
+      ${lotRows}
+    `;
+  }
+
+  function setEditPlanStatus_(message, type = 'info', show = true) {
+    const box = document.getElementById('editPlanStatus');
+    if (!box) return;
+
+    if (!show || !message) {
+      box.style.display = 'none';
+      box.innerText = '';
+      return;
+    }
+
+    box.style.display = 'block';
+    box.innerText = message;
+
+    if (type === 'error') {
+      box.style.background = '#fef2f2';
+      box.style.color = '#b91c1c';
+      box.style.border = '1px solid #fecaca';
+    } else if (type === 'success') {
+      box.style.background = '#ecfdf5';
+      box.style.color = '#047857';
+      box.style.border = '1px solid #a7f3d0';
+    } else {
+      box.style.background = '#eff6ff';
+      box.style.color = '#1d4ed8';
+      box.style.border = '1px solid #bfdbfe';
+    }
+  }
+
+  async function waitForPlanEditSaved_(lineVal, calc) {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      try {
+        const state = await fetchCurrentLineState_(lineVal);
+        const stateLots = getEditPlanLots_(state);
+        const savedHours = stateLots.reduce((sum, item) => sum + item.hours, 0);
+
+        if (savedHours !== calc.totalHours) continue;
+
+        let matches = true;
+        calc.lots.forEach(item => {
+          const saved = stateLots.find(x => x.index === item.index);
+          if (!saved || Math.round(saved.tg) !== Math.round(item.tg)) {
+            matches = false;
+          }
+        });
+
+        if (matches && Math.round(Number(state.target) || 0) === Math.round(calc.totalTarget)) {
+          return state;
+        }
+
+      } catch (err) {
+        console.warn('verify plan edit attempt failed:', err);
+      }
+    }
+
+    return null;
+  }
+
+  async function saveProductionPlanEdit() {
+    const lineVal = document.getElementById('editLine').value;
+    const calc = calculateEditedPlan_();
+
+    if (!lineVal || !currentEditPlanState) {
+      alert('กรุณาเลือก LINE การผลิต');
+      return;
+    }
+
+    if (!calc.valid) {
+      alert(calc.error);
+      return;
+    }
+
+    const summaryLines = calc.lots.map(
+      item => `LOT ${item.index}: TG ${item.tg.toLocaleString()} • ${item.hours} ชม. • Target ${item.target.toLocaleString()}`
+    );
+
+    const ok = confirm(
+      `ยืนยันแก้ไขแผนการผลิต?\n\n` +
+      `LINE: ${lineVal}\n` +
+      `เวลาทำงานรวม: ${calc.totalHours} ชม.\n` +
+      `${summaryLines.join('\n')}\n` +
+      `Target รวมใหม่: ${calc.totalTarget.toLocaleString()} ชิ้น\n\n` +
+      `Actual ที่บันทึกไปแล้วจะไม่ถูกแก้ไข`
+    );
+
+    if (!ok) return;
+
+    const btn = document.getElementById('savePlanEditBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.style.opacity = '.6';
+    }
+
+    setEditPlanStatus_('กำลังบันทึกแผนใหม่...', 'info', true);
+
+    const payload = {
+      action: 'UPDATE_PRODUCTION_PLAN',
+      line: lineVal,
+      totalWorkingHours: calc.totalHours,
+      tgOriginal1: calc.lots.find(x => x.index === 1)?.tg || 0,
+      tgOriginal2: calc.lots.find(x => x.index === 2)?.tg || 0,
+      tgOriginal3: calc.lots.find(x => x.index === 3)?.tg || 0,
+      updatedBy: userDisplayName
+    };
+
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      });
+
+      const verified = await waitForPlanEditSaved_(lineVal, calc);
+
+      if (!verified) {
+        setEditPlanStatus_(
+          'ยังยืนยันการบันทึกไม่ได้ กรุณาอย่ากดซ้ำ ให้โหลดข้อมูลใหม่เพื่อตรวจสอบก่อน',
+          'error',
+          true
+        );
+        alert('ระบบยังยืนยันการบันทึกไม่ได้ กรุณาอย่ากดซ้ำ');
+        return;
+      }
+
+      setEditPlanStatus_(
+        `บันทึกสำเร็จ • Target รวมใหม่ ${calc.totalTarget.toLocaleString()} ชิ้น • ${calc.totalHours} ชม.`,
+        'success',
+        true
+      );
+
+      // อัปเดตทั้งแท็บแก้ไขและหน้าบันทึกยอดให้ใช้ค่าชุดใหม่ทันที
+      await loadEditPlan();
+
+      const recordLine = document.getElementById('line');
+      if (recordLine && recordLine.value === lineVal) {
+        await loadLineDetails();
+      }
+
+      alert('✅ แก้ไขเป้า / ชั่วโมงสำเร็จ');
+
+    } catch (err) {
+      console.error('saveProductionPlanEdit error:', err);
+      setEditPlanStatus_('บันทึกไม่สำเร็จ กรุณาลองใหม่', 'error', true);
+      alert('บันทึกไม่สำเร็จ กรุณาลองใหม่');
+
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      }
+    }
+  }
+
   function displayCurrentDate() {
     const now = new Date();
     document.getElementById('currentDateDisplay').innerText = now.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -489,6 +1041,10 @@
     }
 
     localStorage.setItem("selectedLine", line);
+
+    const editLine = document.getElementById('editLine');
+    if (editLine && editLine.value !== line) editLine.value = line;
+
     slotsContainer.innerHTML = '<p style="color: #64748b; font-size: 0.95rem; text-align: center; padding: 15px 0;">กำลังโหลดข้อมูล...</p>';
 
     try {
