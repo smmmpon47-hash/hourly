@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>บันทึกยอดการผลิต</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -927,6 +930,8 @@
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwziSYLaDcymEHVXQr_qOP6RmIQDjixVPqWwhAQSOMXs_4zAA-gscpeuR7fJp7DY6yp/exec"; 
   const LIFF_ID = "2011198724-JQ60DTBm";
 
+  const FRONTEND_BUILD_LOT_SWITCH = '20260912_1535_UI_IMMEDIATE';
+  console.log('Output build:', FRONTEND_BUILD_LOT_SWITCH);
   let activeLots = []; 
   let masterLotMap = {}; 
   let currentTarget1 = 0;
@@ -2012,6 +2017,92 @@
     });
   }
 
+
+  function applyLocalLotPlanAfterSwitch_(closingLot, newLot, completedWorkingHours, totalWorkingHours) {
+    const closeLot = normalizeLot_(closingLot);
+    const nextLot = normalizeLot_(newLot);
+    const completed = Math.max(0, Number(completedWorkingHours) || 0);
+    const total = Math.max(1, Number(totalWorkingHours) || 9);
+
+    const plan = Array.isArray(currentLotPlan) ? currentLotPlan : [];
+    const activeIndex = plan.findIndex(item => normalizeLot_(item.lot) === closeLot);
+
+    let previous = [];
+    let previousHours = 0;
+
+    if (activeIndex >= 0) {
+      previous = plan.slice(0, activeIndex).map(item => ({
+        lot: normalizeLot_(item.lot),
+        hours: Math.max(0, Number(item.hours) || 0)
+      }));
+      previousHours = previous.reduce((sum, item) => sum + item.hours, 0);
+    } else {
+      // ถ้า plan ในหน้าเก่ายังไม่ทันอัปเดต ให้ถือ LOT ที่กำลังปิดเป็น LOT ปัจจุบัน
+      previous = [];
+      previousHours = 0;
+    }
+
+    const closingLotHours = Math.max(0, completed - previousHours);
+    const newLotHours = Math.max(0, total - completed);
+
+    const nextPlan = [
+      ...previous,
+      { lot: closeLot, hours: closingLotHours }
+    ];
+
+    if (newLotHours > 0) {
+      nextPlan.push({ lot: nextLot, hours: newLotHours });
+    }
+
+    currentLotPlan = nextPlan.filter(item => item.lot && item.hours > 0);
+  }
+
+  function showLotSwitchToast_(message, type = 'success', duration = 2200) {
+    let toast = document.getElementById('lotSwitchToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'lotSwitchToast';
+      toast.style.position = 'fixed';
+      toast.style.left = '50%';
+      toast.style.bottom = '24px';
+      toast.style.transform = 'translateX(-50%)';
+      toast.style.zIndex = '99999';
+      toast.style.maxWidth = 'calc(100vw - 28px)';
+      toast.style.padding = '11px 16px';
+      toast.style.borderRadius = '12px';
+      toast.style.fontSize = '.9rem';
+      toast.style.fontWeight = '700';
+      toast.style.textAlign = 'center';
+      toast.style.boxShadow = '0 8px 24px rgba(15,23,42,.18)';
+      toast.style.transition = 'opacity .2s ease';
+      document.body.appendChild(toast);
+    }
+
+    if (type === 'warn') {
+      toast.style.background = '#fff7ed';
+      toast.style.color = '#9a3412';
+      toast.style.border = '1px solid #fdba74';
+    } else if (type === 'error') {
+      toast.style.background = '#fef2f2';
+      toast.style.color = '#b91c1c';
+      toast.style.border = '1px solid #fecaca';
+    } else {
+      toast.style.background = '#ecfdf5';
+      toast.style.color = '#047857';
+      toast.style.border = '1px solid #6ee7b7';
+    }
+
+    toast.innerText = message;
+    toast.style.display = 'block';
+    toast.style.opacity = '1';
+
+    clearTimeout(window.__lotSwitchToastTimer);
+    window.__lotSwitchToastTimer = setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => { toast.style.display = 'none'; }, 220);
+    }, duration);
+  }
+
   async function confirmNewLot() {
     const newLot = normalizeLot_(document.getElementById('modalLotNo').value);
     const newTargetMax = Number(document.getElementById('modalLotTarget').value) || 0;
@@ -2047,6 +2138,11 @@
 
     const closingLot = normalizeLot_(ctx.closingLot);
     const closingQty = Number(ctx.closingQty);
+
+    if (!closingLot || !Number.isFinite(closingQty) || closingQty < 0) {
+      alert("ข้อมูล LOT เดิมหรือยอดรอบสุดท้ายไม่ถูกต้อง กรุณากดจบรุ่นใหม่");
+      return;
+    }
 
     if (closingLot !== normalizeLot_(currentActiveLot)) {
       alert("LOT นี้ไม่ใช่ LOT ปัจจุบันแล้ว กรุณาโหลดข้อมูลใหม่");
@@ -2117,7 +2213,7 @@
       confirmBtn.style.opacity = '.6';
     }
 
-    setSwitchLotStatus_(`กำลังปิด LOT ${closingLot} และขึ้น LOT ${newLot}...`);
+    setSwitchLotStatus_(`กำลังบันทึก LOT ${newLot}...`);
 
     const payload = {
       action: "HOURLY_OUTPUT",
@@ -2143,6 +2239,8 @@
     };
 
     try {
+      // POST แบบ no-cors: พอส่ง request ออกสำเร็จ ให้ UX เดินต่อทันที
+      // ไม่รอ polling ใน modal เพราะทำให้ User เห็นหน้าค้างและกดซ้ำ
       await fetch(SCRIPT_URL, {
         method: "POST",
         mode: "no-cors",
@@ -2150,24 +2248,13 @@
         body: JSON.stringify(payload)
       });
 
-      const verifiedState = await waitForLotSwitchSaved_(
-        lineVal, newLot, newTargetMax,
-        switchAfterSlot, closingLot, closingQty,
-        completedWorkingHours
+      // อัปเดต plan ในหน้า "ทันที" จากจุดที่ผู้ใช้กด
+      applyLocalLotPlanAfterSwitch_(
+        closingLot,
+        newLot,
+        completedWorkingHours,
+        totalWorkingHours
       );
-
-      if (!verifiedState) {
-        setSwitchLotStatus_(
-          "ระบบบันทึกจุดสลับไม่ตรงกับรอบที่กด กรุณาอย่ากดซ้ำและตรวจข้อมูล",
-          "error"
-        );
-        alert(
-          "ระบบยังยืนยันจุดสลับ LOT ไม่ได้\n" +
-          `รอบที่ต้องเป็น LOT เดิม: ${switchAfterSlot}\n` +
-          "กรุณาอย่ากดซ้ำ ให้ตรวจ Summary / Hourly_Log ก่อน"
-        );
-        return;
-      }
 
       currentExistingHourly[switchAfterSlot] = {
         lot: closingLot,
@@ -2178,57 +2265,44 @@
         activeLots.push(newLot);
       }
 
-      if (verifiedState.masterMap) {
-        masterLotMap = { ...masterLotMap, ...verifiedState.masterMap };
-      }
-
       currentActiveLot = newLot;
 
-      const closingRow = ctx.row;
-      const closingLotInput = closingRow.querySelector('.input-lot-val');
-      const closingLotDisplay = closingRow.querySelector('.slot-lot-display');
-      const closingModel = closingRow.querySelector('.model-subtext');
-      const closingInput = closingRow.querySelector('.input-val');
-      const closingButton = closingRow.querySelector('.slot-end-lot-btn');
-
-      if (closingLotInput) closingLotInput.value = closingLot;
-      if (closingLotDisplay) {
-        closingLotDisplay.innerText = closingLot;
-        closingLotDisplay.classList.remove('current');
-      }
-      if (closingModel) closingModel.innerText = getModelTextForLot_(closingLot);
-      if (closingInput) {
-        closingInput.value = closingQty;
-        closingInput.readOnly = true;
-        closingInput.style.backgroundColor = '#f8fafc';
-        closingInput.style.color = '#64748b';
-      }
-      if (closingButton) {
-        closingButton.disabled = true;
-        closingButton.classList.add('closed');
-        closingButton.innerText = '✓ จบรุ่นแล้ว';
-      }
-
-      applyNewCurrentLotToVisibleRows_(switchAfterSlot, newLot);
+      // วาด 2 แถวใหม่จาก local plan:
+      // แถวที่กด = LOT เก่า / แถวถัดไป = LOT ใหม่
+      generateSmartTimeSlots(currentHours1, currentExistingHourly);
       updateCurrentModelBanner_();
       calculateTotal();
 
-      // สำคัญ: re-fetch สถานะจริงจาก Backend แล้ววาด 2 แถวใหม่
-      // เพื่อให้รอบถัดไปแสดง LOT/Model ใหม่ทันที และไม่ค้างค่าจาก DOM เดิม
-      await loadLineDetails();
-
-      alert(
-        `✅ จบรุ่นเดิมและขึ้น LOT ใหม่แล้ว\n` +
-        `รอบ ${switchAfterSlot} = LOT ${closingLot}\n` +
-        `รอบถัดไป = LOT ${newLot}`
+      // ปิด modal ทันทีหลัง request ถูกส่ง ไม่ปล่อย "กำลัง..." ค้าง
+      closeNewLotModal();
+      showLotSwitchToast_(
+        `✅ LOT ใหม่ ${newLot} เริ่มที่รอบถัดไปแล้ว`,
+        'success',
+        2200
       );
 
-      document.getElementById('newLotModal').style.display = 'none';
-      document.getElementById('modalLotNo').value = '';
-      document.getElementById('modalLotTarget').value = '';
-      pendingSwitchAfterSlot = '';
-      pendingSwitchRow = null;
-      pendingSwitchContext = null;
+      // ตรวจ Backend ต่อ "เบื้องหลัง" เท่านั้น ไม่บล็อกหน้าจอ
+      void (async () => {
+        const verifiedState = await waitForLotSwitchSaved_(
+          lineVal, newLot, newTargetMax,
+          switchAfterSlot, closingLot, closingQty,
+          completedWorkingHours
+        );
+
+        if (verifiedState) {
+          if (verifiedState.masterMap) {
+            masterLotMap = { ...masterLotMap, ...verifiedState.masterMap };
+          }
+          return;
+        }
+
+        // ถ้ายังยืนยันไม่ได้ ให้เตือน แต่ไม่ย้อน UI กลับเป็น LOT เก่า
+        showLotSwitchToast_(
+          "⚠️ ส่งข้อมูลแล้ว แต่ยังยืนยันจากชีทไม่ได้ กรุณารีโหลดก่อนกรอกต่อ",
+          'warn',
+          4500
+        );
+      })();
 
     } catch (err) {
       console.error("Sync Error:", err);
