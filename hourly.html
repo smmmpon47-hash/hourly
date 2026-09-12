@@ -1403,7 +1403,7 @@
     slotsContainer.innerHTML = '<p style="color: #64748b; font-size: 0.95rem; text-align: center; padding: 15px 0;">กำลังโหลดข้อมูล...</p>';
 
     try {
-      const res = await fetch(`${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(line)}`);
+      const res = await fetch(`${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(line)}&_=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
 
       activeLots = Array.isArray(data.lots) ? [...data.lots] : [];
@@ -1852,7 +1852,8 @@
 
   async function fetchCurrentLineState_(lineVal) {
     const res = await fetch(
-      `${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(lineVal)}&_=${Date.now()}`
+      `${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(lineVal)}&_=${Date.now()}`,
+      { cache: 'no-store' }
     );
 
     if (!res.ok) {
@@ -2167,6 +2168,10 @@
       applyNewCurrentLotToVisibleRows_(switchAfterSlot, newLot);
       updateCurrentModelBanner_();
       calculateTotal();
+
+      // สำคัญ: re-fetch สถานะจริงจาก Backend แล้ววาด 2 แถวใหม่
+      // เพื่อให้รอบถัดไปแสดง LOT/Model ใหม่ทันที และไม่ค้างค่าจาก DOM เดิม
+      await loadLineDetails();
 
       alert(
         `✅ จบรุ่นเดิมและขึ้น LOT ใหม่แล้ว\n` +
