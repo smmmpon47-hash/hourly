@@ -935,6 +935,7 @@
   let currentExistingHourly = {};
   let currentEditPlanState = null;
   let currentActiveLot = '';
+  let currentLotPlan = []; // [{ lot, hours }] จาก Summary
   let pendingSwitchAfterSlot = '';
   let pendingSwitchRow = null;
   let pendingSwitchContext = null;
@@ -1427,6 +1428,13 @@
       currentTarget1 = Number(data.target) || Number(data.target1) || 0;
       currentExistingHourly = data.existingHourly || {};
 
+      // Summary เป็นแหล่งความจริงของการแบ่ง LOT ตามชั่วโมง
+      currentLotPlan = [
+        { lot: normalizeLot_(data.lotNumber), hours: Number(data.workingHours) || 0 },
+        { lot: normalizeLot_(data.lotNumber2 || data.lot2Number), hours: Number(data.workingHours2) || 0 },
+        { lot: normalizeLot_(data.lotNumber3 || data.lot3Number), hours: Number(data.workingHours3) || 0 }
+      ].filter(item => item.lot && item.hours > 0);
+
       currentActiveLot =
         loadedLots[loadedLots.length - 1] ||
         normalizeLot_(activeLots[activeLots.length - 1]) ||
@@ -1448,6 +1456,42 @@
       generateSmartTimeSlots(9, currentExistingHourly);
       updateHourlyAverage();
     }
+  }
+
+
+  function getPlannedLotForSlot_(slotLabel, breakSlot) {
+    const cleanLabel = String(slotLabel || '').trim();
+    if (!cleanLabel) return normalizeLot_(currentActiveLot);
+
+    const workingSlots = TIME_SLOTS_DEF
+      .filter(slot => slot.label !== breakSlot)
+      .slice(0, Math.max(1, Number(currentHours1) || 9));
+
+    // ช่วงพักให้ถือ LOT เดียวกับรอบทำงานก่อนหน้า
+    if (cleanLabel === breakSlot) {
+      const fullIndex = TIME_SLOTS_DEF.findIndex(slot => slot.label === cleanLabel);
+      for (let i = fullIndex - 1; i >= 0; i--) {
+        const prevLabel = TIME_SLOTS_DEF[i]?.label || '';
+        if (prevLabel && prevLabel !== breakSlot) {
+          return getPlannedLotForSlot_(prevLabel, breakSlot);
+        }
+      }
+      return normalizeLot_(currentLotPlan[0]?.lot || currentActiveLot);
+    }
+
+    const workingIndex = workingSlots.findIndex(slot => slot.label === cleanLabel);
+    if (workingIndex < 0) return normalizeLot_(currentActiveLot);
+
+    let cursor = 0;
+    for (const item of currentLotPlan) {
+      const hours = Math.max(0, Number(item.hours) || 0);
+      if (workingIndex >= cursor && workingIndex < cursor + hours) {
+        return normalizeLot_(item.lot);
+      }
+      cursor += hours;
+    }
+
+    return normalizeLot_(currentActiveLot);
   }
 
 
@@ -1506,9 +1550,9 @@
         ? 0
         : (existing.output !== undefined ? existing.output : '');
 
-      // รอบที่เคย Save แล้วใช้ LOT เดิมตาม Hourly_Log
-      // รอบที่ยังไม่ Save ใช้ Current LOT ล่าสุดอัตโนมัติ
-      const slotLot = normalizeLot_(existing.lot || currentActiveLot);
+      // LOT ของรอบนี้ยึด Summary plan ก่อน ไม่ให้ LOT เก่าจาก Hourly_Log แถว 0 มาทับ
+      const plannedLot = getPlannedLotForSlot_(slot.label, breakSlot);
+      const slotLot = normalizeLot_(plannedLot || existing.lot || currentActiveLot);
       const isClosedHistoricalLot =
         !!slotLot &&
         !!currentActiveLot &&
