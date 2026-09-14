@@ -777,26 +777,6 @@
     }
 
   </style>
-
-<style id="lot-switch-readable-text">
-  #newLotModal .modal-title { font-size:22px !important; font-weight:800 !important; }
-  #newLotModal .switch-mode-btn,
-  #newLotModal [data-switch-mode] {
-    font-size:19px !important; font-weight:800 !important;
-    line-height:1.35 !important; min-height:68px !important;
-  }
-  #newLotModal .switch-mode-btn span,
-  #newLotModal [data-switch-mode] span {
-    font-size:17px !important; font-weight:700 !important;
-  }
-  #newLotModal .switch-mode-hint,
-  #newLotModal #switchModeHint {
-    font-size:17px !important; font-weight:700 !important; line-height:1.45 !important;
-  }
-  #newLotModal label { font-size:17px !important; font-weight:700 !important; }
-  #newLotModal input { font-size:18px !important; }
-</style>
-
 </head>
 <body>
 
@@ -930,13 +910,13 @@
       <div style="font-weight:800;color:#334155;margin-bottom:8px;">LOT ใหม่จะเริ่มรอบไหน?</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <button type="button" id="switchModeNextBtn" onclick="selectLotSwitchMode_('NEXT')" style="padding:11px 7px;border-radius:12px;border:1.5px solid #0d9488;background:#f0fdfa;color:#0f766e;font-weight:700;cursor:pointer;">
-          🟢 ยัง<br><span style="font-size:.72rem;font-weight:600;">เริ่มรอบถัดไป</span>
+          🟢 รอบถัดไป<br><span style="font-size:.82rem;font-weight:600;">รอบนี้ยังเป็น LOT เดิม</span>
         </button>
         <button type="button" id="switchModeCurrentBtn" onclick="selectLotSwitchMode_('CURRENT')" style="padding:11px 7px;border-radius:12px;border:1.5px solid #f59e0b;background:#fffbeb;color:#92400e;font-weight:700;cursor:pointer;">
-          🟠 เริ่มแล้ว<br><span style="font-size:.72rem;font-weight:600;">ใช้รอบนี้เลย</span>
+          🟠 รอบนี้เลย<br><span style="font-size:.82rem;font-weight:600;">รอบนี้เป็น LOT ใหม่</span>
         </button>
       </div>
-      <div id="switchModeHint" style="display:none;margin-top:8px;padding:8px 10px;border-radius:10px;font-size:.76rem;line-height:1.5;"></div>
+      <div id="switchModeHint" style="display:none;margin-top:8px;padding:9px 11px;border-radius:10px;font-size:.92rem;line-height:1.45;"></div>
     </div>
 
     <div class="form-group">
@@ -1821,12 +1801,12 @@
         hint.style.background = '#fffbeb';
         hint.style.color = '#92400e';
         hint.style.border = '1px solid #fde68a';
-        hint.innerHTML = '🟠 <b>ใช้รอบนี้เลย:</b> รอบที่เลือกจะเป็น LOT ใหม่ทั้งรอบ และ LOT เดิมจบก่อนรอบนี้';
+        hint.innerHTML = '🟠 <b>รอบนี้เลย</b> — รอบนี้เป็น LOT ใหม่';
       } else {
         hint.style.background = '#f0fdfa';
         hint.style.color = '#0f766e';
         hint.style.border = '1px solid #99f6e4';
-        hint.innerHTML = '🟢 <b>เริ่มรอบถัดไป:</b> รอบที่เลือกยังเป็น LOT เดิม และ LOT ใหม่เริ่มรอบทำงานถัดไป';
+        hint.innerHTML = '🟢 <b>รอบถัดไป</b> — รอบนี้ยังเป็น LOT เดิม';
       }
     }
   }
