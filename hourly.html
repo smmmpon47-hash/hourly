@@ -1935,6 +1935,33 @@
     }
   }
 
+  function normalizeLot_(value) {
+    return String(value || '').trim().toUpperCase();
+  }
+
+  function getUsedLotsFromState_(data) {
+    return [
+      data && data.lotNumber,
+      data && (data.lotNumber2 || data.lot2Number),
+      data && (data.lotNumber3 || data.lot3Number)
+    ]
+      .map(normalizeLot_)
+      .filter(Boolean);
+  }
+
+  async function fetchCurrentLineState_(lineVal) {
+    const res = await fetch(
+      `${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(lineVal)}&_=${Date.now()}`,
+      { cache: 'no-store' }
+    );
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    return await res.json();
+  }
+
   function setSwitchLotStatus_(message, type = 'info') {
     const box = document.getElementById('switchLotStatus');
     if (!box) return;
