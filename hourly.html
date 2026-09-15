@@ -905,7 +905,7 @@
 
     <div class="switch-picked-slot">
       LOT ปัจจุบัน: <b id="modalCurrentLot">-</b><br>
-      รอบนี้จะเปลี่ยนเป็น LOT ใหม่: <b id="modalSwitchSlot">-</b>
+      รอบที่เลือก: <b id="modalSwitchSlot">-</b>
     </div>
 
     <div style="margin-bottom:14px;">
@@ -957,7 +957,7 @@
   let pendingSwitchAfterSlot = '';
   let pendingSwitchRow = null;
   let pendingSwitchContext = null;
-  let pendingSwitchMode = ''; // mockup: จะถูกตั้ง CURRENT ตอนกดจบรุ่น
+  let pendingSwitchMode = ''; // NEXT = เริ่มรอบถัดไป, CURRENT = ใช้รอบที่เลือก
 
   initLiff();
 
@@ -1880,7 +1880,7 @@
 
     pendingSwitchAfterSlot = slotLabel;
     pendingSwitchRow = row;
-    pendingSwitchMode = 'CURRENT';
+    pendingSwitchMode = '';
     pendingSwitchContext = {
       line: String(lineVal).trim(),
       slotLabel,
@@ -1896,9 +1896,10 @@
     document.getElementById('modalLotNo').value = '';
     document.getElementById('modalLotTarget').value = '';
 
+    const hint = document.getElementById('switchModeHint');
     if (hint) { hint.style.display = 'none'; hint.innerHTML = ''; }
-
-
+    const nextBtn = document.getElementById('switchModeNextBtn');
+    const currentBtn = document.getElementById('switchModeCurrentBtn');
     [nextBtn, currentBtn].forEach(btn => {
       if (!btn) return;
       btn.style.boxShadow = 'none';
@@ -2160,7 +2161,7 @@
     const lineVal = document.getElementById('line').value;
     const ctx = pendingSwitchContext;
     const switchAfterSlot = ctx?.slotLabel || '';
-    const switchMode = 'CURRENT';
+    const switchMode = pendingSwitchMode;
 
     if (!switchMode) {
       alert("กรุณาเลือกก่อนว่า LOT ใหม่จะเริ่ม ‘รอบถัดไป’ หรือ ‘รอบนี้’");
