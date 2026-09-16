@@ -930,7 +930,7 @@
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwziSYLaDcymEHVXQr_qOP6RmIQDjixVPqWwhAQSOMXs_4zAA-gscpeuR7fJp7DY6yp/exec"; 
   const LIFF_ID = "2011198724-JQ60DTBm";
 
-  const FRONTEND_BUILD_LOT_SWITCH = '20260912_1535_UI_IMMEDIATE';
+  const FRONTEND_BUILD_LOT_SWITCH = '20260916_CONFIRM_NO_PREFETCH_V5';
   console.log('Output build:', FRONTEND_BUILD_LOT_SWITCH);
   let activeLots = []; 
   let masterLotMap = {}; 
@@ -2207,41 +2207,11 @@
       return;
     }
 
-    let latestState = null;
-
-    try {
-      latestState = await fetchCurrentLineState_(lineVal);
-      const serverUsedLots = getUsedLotsFromState_(latestState);
-
-      if (serverUsedLots.includes(newLot)) {
-        alert(`LOT ${newLot} ถูกใช้ใน LINE นี้วันนี้แล้ว\nระบบไม่อนุญาตให้ใส่ LOT เดิมซ้ำ`);
-        await loadLineDetails();
-        return;
-      }
-
-      if (serverUsedLots.length >= 3) {
-        alert("วันนี้ LINE นี้มีครบ 3 LOT แล้ว ระบบรองรับสูงสุด 3 LOT ต่อวัน");
-        await loadLineDetails();
-        return;
-      }
-
-      if (switchMode === 'CURRENT') {
-        const serverSavedCurrent = latestState?.existingHourly?.[switchAfterSlot];
-        if (serverSavedCurrent && serverSavedCurrent.output !== undefined && serverSavedCurrent.output !== '') {
-          alert(`🔒 รอบ ${switchAfterSlot} ถูกบันทึกไปแล้ว\nไม่สามารถเปลี่ยนรอบนี้เป็น LOT ใหม่ได้`);
-          await loadLineDetails();
-          return;
-        }
-      }
-    } catch (err) {
-      console.warn("ตรวจสถานะปัจจุบันจาก Backend ไม่สำเร็จ:", err);
-      if (switchMode === 'CURRENT') {
-        alert("ยังยืนยันไม่ได้ว่ารอบนี้ยังไม่ถูกบันทึก กรุณาลองใหม่เพื่อป้องกัน LOT ผิดรอบ");
-        return;
-      }
-    }
-
-    const totalWorkingHours = Math.max(1, Number(latestState?.totalWorkingHours) || Number(currentHours1) || 9);
+    // ไม่ดึง Backend ซ้ำก่อนเปิด native confirm:
+    // ตอนเปิด popup เรามี state ของ LINE จาก loadLineDetails() อยู่แล้ว
+    // และ Backend จะตรวจความถูกต้องอีกครั้งตอนรับ POST
+    // การ fetch ซ้ำตรงนี้เคยทำให้ปุ่มยืนยันดูเหมือน "กดไม่ไป" เมื่อ request ช้าหรือ fail
+    const totalWorkingHours = Math.max(1, Number(currentHours1) || 9);
     const workingSlots = getWorkingSlotsForCurrentLine_();
     const switchIndex = workingSlots.findIndex(slot => slot.label === switchAfterSlot);
 
