@@ -2258,18 +2258,10 @@
 
     // NEXT: รอบที่เลือกยังเป็น LOT เดิม -> boundary หลังรอบนี้
     // CURRENT: รอบที่เลือกเป็น LOT ใหม่ -> boundary ก่อนรอบนี้
-    // ชั่วโมง LOT เดิม = ชั่วโมงที่บันทึกจริงแล้วของ LOT ปัจจุบัน
-    // ไม่ใช้ตำแหน่งรอบที่กด เพราะ QC อาจรู้ช้ากว่าจังหวะเปลี่ยนรุ่นจริง
-    const currentLotNorm = normalizeLot_(currentActiveLot || pendingSwitchContext?.closingLot || '');
-    const completedWorkingHours = workingSlots.reduce((count, slot) => {
-      const saved = existingHourly && existingHourly[slot.label];
-      if (!saved) return count;
-      const savedLot = normalizeLot_(saved.lot || saved.lotNo || saved.lotNumber || '');
-      return count + (savedLot === currentLotNorm ? 1 : 0);
-    }, 0);
+    const completedWorkingHours = switchIndex;
 
-    if (completedWorkingHours < 1) {
-      alert("ยังไม่มีชั่วโมงของ LOT เดิมที่บันทึกแล้ว จึงยังเปลี่ยนรุ่นไม่ได้");
+    if (switchMode === 'CURRENT' && completedWorkingHours < 1) {
+      alert("ไม่สามารถขึ้น LOT ใหม่ที่รอบทำงานแรกของวันได้ เพราะ LOT เดิมจะไม่มีชั่วโมงผลิต");
       return;
     }
 
