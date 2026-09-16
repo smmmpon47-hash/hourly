@@ -899,13 +899,13 @@
 <div class="modal-overlay" id="newLotModal">
   <div class="modal-card">
     <div class="modal-header">
-      <div class="modal-title">🏁 จบรุ่น → ขึ้น LOT ใหม่</div>
+      <div class="modal-title">🔄 เปลี่ยนรุ่น → ขึ้น LOT ใหม่</div>
       <button type="button" class="btn-close-modal" onclick="closeNewLotModal()">&times;</button>
     </div>
 
     <div class="switch-picked-slot">
       LOT ปัจจุบัน: <b id="modalCurrentLot">-</b><br>
-      รอบนี้จะเป็น LOT ใหม่: <b id="modalSwitchSlot">-</b>
+      รอบนี้จะเปลี่ยนเป็น LOT ใหม่: <b id="modalSwitchSlot">-</b>
     </div>
 
     <div class="form-group">
@@ -1579,7 +1579,7 @@
                     data-slot-label="${slot.label}"
                     onclick="openEndLotForSlot_(this, '${slot.label}')"
                     ${isClosedHistoricalLot ? 'disabled' : ''}>
-              ${isClosedHistoricalLot ? '✓ จบรุ่นแล้ว' : '🏁 จบรุ่น'}
+              ${isClosedHistoricalLot ? '✓ เปลี่ยนรุ่นแล้ว' : '🔄 เปลี่ยนรุ่น'}
             </button>
           ` : ''}
         </div>
@@ -1861,7 +1861,7 @@
     const workingSlots = getWorkingSlotsForCurrentLine_();
     const workingIndex = workingSlots.findIndex(slot => slot.label === slotLabel);
     if (workingIndex < 0) {
-      alert("รอบที่กดจบรุ่นไม่ใช่รอบทำงานของ LINE นี้ กรุณาโหลดหน้าใหม่");
+      alert("รอบที่กดเปลี่ยนรุ่นไม่ใช่รอบทำงานของ LINE นี้ กรุณาโหลดหน้าใหม่");
       return;
     }
 
@@ -2143,12 +2143,12 @@
     }
 
     if (!lineVal || !ctx || !switchAfterSlot || !ctx.row) {
-      alert("ไม่พบข้อมูลรอบที่ต้องการปิด กรุณาปิดหน้าต่างแล้วกดจบรุ่นใหม่อีกครั้ง");
+      alert("ไม่พบข้อมูลรอบที่ต้องการปิด กรุณาปิดหน้าต่างแล้วกดเปลี่ยนรุ่นใหม่อีกครั้ง");
       return;
     }
 
     if (String(lineVal).trim() !== String(ctx.line).trim()) {
-      alert("LINE การผลิตเปลี่ยนหลังจากกดจบรุ่น กรุณากดใหม่");
+      alert("LINE การผลิตเปลี่ยนหลังจากกดเปลี่ยนรุ่น กรุณากดใหม่");
       return;
     }
 
@@ -2159,7 +2159,7 @@
     ).trim();
 
     if (rowSlot !== switchAfterSlot || pendingSwitchAfterSlot !== switchAfterSlot) {
-      alert("ตรวจพบรอบเวลาจบรุ่นไม่ตรงกัน ระบบไม่ส่งข้อมูล กรุณาโหลดหน้าใหม่");
+      alert("ตรวจพบรอบเวลาเปลี่ยนรุ่นไม่ตรงกัน ระบบไม่ส่งข้อมูล กรุณาโหลดหน้าใหม่");
       return;
     }
 
@@ -2168,7 +2168,7 @@
     const currentQty = currentQtyText === '' ? null : Number(currentQtyText);
 
     if (!closingLot) {
-      alert("ข้อมูล LOT เดิมไม่ถูกต้อง กรุณากดจบรุ่นใหม่");
+      alert("ข้อมูล LOT เดิมไม่ถูกต้อง กรุณากดเปลี่ยนรุ่นใหม่");
       return;
     }
 
@@ -2246,13 +2246,13 @@
     const switchIndex = workingSlots.findIndex(slot => slot.label === switchAfterSlot);
 
     if (switchIndex < 0) {
-      alert("รอบที่กดจบรุ่นไม่ถูกต้อง กรุณาโหลดข้อมูลใหม่");
+      alert("รอบที่กดเปลี่ยนรุ่นไม่ถูกต้อง กรุณาโหลดข้อมูลใหม่");
       return;
     }
 
     const selectedWorkingHour = switchIndex + 1;
     if (selectedWorkingHour !== Number(ctx.workingHourNumber)) {
-      alert("ลำดับชั่วโมงเปลี่ยนจากตอนที่กดจบรุ่น กรุณาโหลดหน้าใหม่");
+      alert("ลำดับชั่วโมงเปลี่ยนจากตอนที่กดเปลี่ยนรุ่น กรุณาโหลดหน้าใหม่");
       return;
     }
 
