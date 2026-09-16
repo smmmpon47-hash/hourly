@@ -2207,8 +2207,10 @@
       return;
     }
 
+    let latestState = null;
+
     try {
-      const latestState = await fetchCurrentLineState_(lineVal);
+      latestState = await fetchCurrentLineState_(lineVal);
       const serverUsedLots = getUsedLotsFromState_(latestState);
 
       if (serverUsedLots.includes(newLot)) {
