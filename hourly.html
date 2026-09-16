@@ -905,20 +905,7 @@
 
     <div class="switch-picked-slot">
       LOT ปัจจุบัน: <b id="modalCurrentLot">-</b><br>
-      รอบที่เลือก: <b id="modalSwitchSlot">-</b>
-    </div>
-
-    <div style="margin-bottom:14px;">
-      <div style="font-weight:800;color:#334155;margin-bottom:8px;">LOT ใหม่จะเริ่มรอบไหน?</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <button type="button" id="switchModeNextBtn" onclick="selectLotSwitchMode_('NEXT')" style="padding:11px 7px;border-radius:12px;border:1.5px solid #0d9488;background:#f0fdfa;color:#0f766e;font-weight:700;cursor:pointer;">
-          🟢 รอบถัดไป<br><span style="font-size:.82rem;font-weight:600;">รอบนี้ยังเป็น LOT เดิม</span>
-        </button>
-        <button type="button" id="switchModeCurrentBtn" onclick="selectLotSwitchMode_('CURRENT')" style="padding:11px 7px;border-radius:12px;border:1.5px solid #f59e0b;background:#fffbeb;color:#92400e;font-weight:700;cursor:pointer;">
-          🟠 รอบนี้เลย<br><span style="font-size:.82rem;font-weight:600;">รอบนี้เป็น LOT ใหม่</span>
-        </button>
-      </div>
-      <div id="switchModeHint" style="display:none;margin-top:8px;padding:9px 11px;border-radius:10px;font-size:.92rem;line-height:1.45;"></div>
+      รอบนี้จะเป็น LOT ใหม่: <b id="modalSwitchSlot">-</b>
     </div>
 
     <div class="form-group">
@@ -1880,7 +1867,7 @@
 
     pendingSwitchAfterSlot = slotLabel;
     pendingSwitchRow = row;
-    pendingSwitchMode = '';
+    pendingSwitchMode = 'CURRENT';
     pendingSwitchContext = {
       line: String(lineVal).trim(),
       slotLabel,
@@ -1896,16 +1883,6 @@
     document.getElementById('modalLotNo').value = '';
     document.getElementById('modalLotTarget').value = '';
 
-    const hint = document.getElementById('switchModeHint');
-    if (hint) { hint.style.display = 'none'; hint.innerHTML = ''; }
-    const nextBtn = document.getElementById('switchModeNextBtn');
-    const currentBtn = document.getElementById('switchModeCurrentBtn');
-    [nextBtn, currentBtn].forEach(btn => {
-      if (!btn) return;
-      btn.style.boxShadow = 'none';
-      btn.style.transform = 'none';
-    });
-
     const statusBox = document.getElementById('switchLotStatus');
     if (statusBox) {
       statusBox.style.display = 'none';
@@ -1920,9 +1897,6 @@
     document.getElementById('modalLotNo').value = '';
     document.getElementById('modalLotTarget').value = '';
     pendingSwitchMode = '';
-
-    const hint = document.getElementById('switchModeHint');
-    if (hint) { hint.style.display = 'none'; hint.innerHTML = ''; }
 
     const statusBox = document.getElementById('switchLotStatus');
     if (statusBox) {
@@ -2161,12 +2135,7 @@
     const lineVal = document.getElementById('line').value;
     const ctx = pendingSwitchContext;
     const switchAfterSlot = ctx?.slotLabel || '';
-    const switchMode = pendingSwitchMode;
-
-    if (!switchMode) {
-      alert("กรุณาเลือกก่อนว่า LOT ใหม่จะเริ่ม ‘รอบถัดไป’ หรือ ‘รอบนี้’");
-      return;
-    }
+    const switchMode = 'CURRENT';
 
     if (!newLot || newTargetMax <= 0) {
       alert("กรุณากรอก LOT ใหม่ และ TG Original ให้ครบถ้วน");
@@ -2221,7 +2190,7 @@
       savedCurrent.output !== undefined &&
       savedCurrent.output !== ''
     ) {
-      alert(`🔒 รอบ ${switchAfterSlot} บันทึกยอดแล้ว\nไม่สามารถเปลี่ยนรอบนี้เป็น LOT ใหม่ได้ กรุณาเลือก “เริ่มรอบถัดไป”`);
+      alert(`🔒 รอบ ${switchAfterSlot} บันทึกยอดแล้ว\nไม่สามารถเปลี่ยนรอบนี้เป็น LOT ใหม่ได้`);
       return;
     }
 
@@ -2257,7 +2226,7 @@
       if (switchMode === 'CURRENT') {
         const serverSavedCurrent = latestState?.existingHourly?.[switchAfterSlot];
         if (serverSavedCurrent && serverSavedCurrent.output !== undefined && serverSavedCurrent.output !== '') {
-          alert(`🔒 รอบ ${switchAfterSlot} ถูกบันทึกไปแล้ว\nกรุณาเลือก “เริ่มรอบถัดไป”`);
+          alert(`🔒 รอบ ${switchAfterSlot} ถูกบันทึกไปแล้ว\nไม่สามารถเปลี่ยนรอบนี้เป็น LOT ใหม่ได้`);
           await loadLineDetails();
           return;
         }
@@ -2270,7 +2239,7 @@
       }
     }
 
-    const totalWorkingHours = Math.max(1, Number(currentHours1) || 9);
+    const totalWorkingHours = Math.max(1, Number(latestState?.totalWorkingHours) || Number(currentHours1) || 9);
     const workingSlots = getWorkingSlotsForCurrentLine_();
     const switchIndex = workingSlots.findIndex(slot => slot.label === switchAfterSlot);
 
@@ -2287,12 +2256,10 @@
 
     // NEXT: รอบที่เลือกยังเป็น LOT เดิม -> boundary หลังรอบนี้
     // CURRENT: รอบที่เลือกเป็น LOT ใหม่ -> boundary ก่อนรอบนี้
-    const completedWorkingHours = switchMode === 'CURRENT'
-      ? switchIndex
-      : selectedWorkingHour;
+    const completedWorkingHours = switchIndex;
 
     if (switchMode === 'CURRENT' && completedWorkingHours < 1) {
-      alert("ไม่สามารถใช้ ‘รอบนี้เลย’ กับรอบทำงานแรกของวันได้ เพราะ LOT เดิมจะไม่มีชั่วโมงผลิต");
+      alert("ไม่สามารถขึ้น LOT ใหม่ที่รอบทำงานแรกของวันได้ เพราะ LOT เดิมจะไม่มีชั่วโมงผลิต");
       return;
     }
 
@@ -2302,13 +2269,10 @@
       return;
     }
 
-    const modeText = switchMode === 'CURRENT'
-      ? `LOT ใหม่เริ่ม: รอบนี้ (${switchAfterSlot})`
-      : `LOT ใหม่เริ่ม: รอบทำงานถัดไป`;
+    const modeText = `LOT ใหม่เริ่ม: รอบนี้ (${switchAfterSlot})`;
 
-    const qtyLine = switchMode === 'NEXT'
-      ? `ยอดสุดท้าย LOT เดิม: ${Number(currentQty).toLocaleString()} ชิ้น\n`
-      : `รอบ ${switchAfterSlot} จะเปลี่ยนเป็น LOT ใหม่ทั้งรอบ\n`;
+    const qtyLine = `รอบ ${switchAfterSlot} จะเปลี่ยนเป็น LOT ใหม่ทั้งรอบ
+`;
 
     const confirmMessage =
       `ยืนยันสลับ LOT?\n\n` +
@@ -2342,6 +2306,7 @@
       switchAfterSlot: switchAfterSlot,
       clickedSlotLabel: switchAfterSlot,
       switchWorkingHourNumber: selectedWorkingHour,
+      completedWorkingHours: completedWorkingHours,
       updatedBy: userDisplayName
     };
 
