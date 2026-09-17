@@ -3,1260 +3,2476 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Production Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>บันทึกยอดการผลิต</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <!-- Chart.js และ Plugin แสดงตัวเลขบนกราฟ -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Kanit', sans-serif; background-color: #F8FAFC; }
-    .nav-btn.active { background-color: rgba(255, 255, 255, 0.25); border-left: 4px solid #06C755; }
+    * { box-sizing: border-box; font-family: 'Sarabun', sans-serif; }
+    body {
+      background-color: #1e3a3f;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px 15px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    .card {
+      background: #ffffff;
+      padding: 24px 22px;
+      border-radius: 24px;
+      width: 100%;
+      max-width: 450px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    }
+
+    .header-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .header-title {
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: #0d9488;
+      margin: 0;
+    }
+    .date-badge {
+      font-size: 0.85rem;
+      color: #475569;
+      font-weight: 600;
+      background: #f1f5f9;
+      padding: 5px 12px;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+    }
+
+    .form-group { margin-bottom: 18px; }
+    label { display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b; font-size: 1rem; }
+    
+    select, input, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.8px solid #cbd5e1;
+      border-radius: 14px;
+      font-size: 1.05rem;
+      outline: none;
+      background: #fff;
+      color: #0f172a;
+    }
+    select:focus, input:focus, textarea:focus {
+      border-color: #0d9488;
+      box-shadow: 0 0 0 3.5px rgba(13, 148, 136, 0.2);
+    }
+
+    .info-banner {
+      background: #e0f2fe;
+      border-radius: 14px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      font-size: 0.95rem;
+      color: #0369a1;
+      font-weight: 600;
+    }
+
+    .user-banner {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 14px;
+      padding: 8px 14px;
+      margin-bottom: 16px;
+      font-size: 0.88rem;
+      color: #166534;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 12px;
+    }
+
+    .slot-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .slot-time {
+      flex: 2.2;
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 11px 8px;
+      text-align: center;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #334155;
+    }
+    .slot-lot-container {
+      flex: 2.2;
+      display: flex;
+      flex-direction: column;
+    }
+    .slot-lot-select {
+      width: 100%;
+      padding: 11px 6px;
+      font-size: 0.88rem;
+      border-radius: 14px;
+      font-weight: 600;
+    }
+    .model-subtext {
+      font-size: 0.75rem;
+      color: #0d9488;
+      font-weight: 600;
+      margin-top: 4px;
+      padding-left: 4px;
+      min-height: 16px;
+    }
+    .slot-input {
+      flex: 1.2;
+      padding: 11px 8px;
+      text-align: center;
+      font-weight: 700;
+      border-radius: 14px;
+      font-size: 1.1rem;
+    }
+
+
+    /* ===== AUTO CURRENT LOT / END LOT IN TIME ROW ===== */
+    .current-model-banner{
+      display:none;
+      background:#f0fdfa;
+      border:1px solid #99f6e4;
+      border-radius:14px;
+      padding:10px 13px;
+      margin-bottom:14px;
+      color:#0f766e;
+      font-size:.86rem;
+      font-weight:700;
+    }
+
+    .slot-end-lot-btn{
+      width:100%;
+      margin-top:7px;
+      padding:6px 4px;
+      border-radius:9px;
+      border:1.4px solid #f0b84f;
+      background:#fff8e8;
+      color:#9a5b00;
+      font-size:.72rem;
+      font-weight:700;
+      cursor:pointer;
+    }
+    .slot-end-lot-btn:active{ background:#ffedbd; }
+    .slot-end-lot-btn:disabled{
+      background:#f1f5f9;
+      color:#94a3b8;
+      border-color:#cbd5e1;
+      cursor:not-allowed;
+    }
+    .slot-end-lot-btn.closed{
+      background:#ecfdf5;
+      color:#047857;
+      border-color:#86efac;
+    }
+
+    .slot-lot-display{
+      width:100%;
+      padding:11px 24px 11px 8px;
+      min-height:46px;
+      border:1.8px solid #cbd5e1;
+      border-radius:14px;
+      background:#f8fafc;
+      color:#334155;
+      font-size:.88rem;
+      font-weight:700;
+      text-align:center;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      word-break:break-all;
+    }
+    .slot-lot-display::after{
+      content:"🔒";
+      position:absolute;
+      right:7px;
+      font-size:.68rem;
+      opacity:.55;
+    }
+    .slot-lot-display.current{
+      background:#f0fdfa;
+      border-color:#99f6e4;
+      color:#0f766e;
+    }
+
+    .switch-picked-slot{
+      font-size:.84rem;
+      color:#1d4ed8;
+      background:#eff6ff;
+      border:1px solid #bfdbfe;
+      border-radius:12px;
+      padding:10px 12px;
+      margin-bottom:14px;
+      line-height:1.55;
+    }
+
+    .btn-add-lot-midday {
+      background: #f0fdf4;
+      border: 1.5px dashed #0d9488;
+      color: #0d9488;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 11px;
+      border-radius: 14px;
+      width: 100%;
+      font-size: 0.9rem;
+      margin-top: 5px;
+      margin-bottom: 15px;
+    }
+    .btn-add-lot-midday:active { background: #dcfce7; }
+
+    .sum-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f8fafc;
+      padding: 14px 18px;
+      border-radius: 16px;
+      border: 2px dashed #0d9488;
+      margin-bottom: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 1.05rem;
+    }
+    .sum-input {
+      width: 95px;
+      text-align: center;
+      background: #fff;
+      font-weight: 700;
+      color: #0d9488;
+      border: 2px solid #0d9488;
+      padding: 6px;
+      border-radius: 10px;
+      font-size: 1.15rem;
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 15px;
+      background: #0d9488;
+      color: white;
+      border: none;
+      border-radius: 16px;
+      font-size: 1.15rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
+      margin-top: 10px;
+    }
+    .btn-submit:disabled {
+      background: #94a3b8;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    .modal-card {
+      background: #fff;
+      padding: 22px 20px;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .modal-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #0d9488;
+      margin: 0;
+    }
+    .btn-close-modal {
+      background: #f1f5f9;
+      border: none;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #64748b;
+      cursor: pointer;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    /* --- เฉลี่ยที่ต้องทำต่อชั่วโมง: compact only --- */
+    .pace-dashboard{
+      width:100%;
+      margin-top:12px;
+      margin-bottom:18px;
+      background:linear-gradient(135deg,#eef8ff 0%,#f8fbff 100%);
+      border:1px solid #d7e8f6;
+      border-radius:18px;
+      padding:14px 16px;
+      box-sizing:border-box;
+      box-shadow:0 6px 18px rgba(15,23,42,.06);
+      display:none;
+    }
+
+    .pace-only-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+    }
+
+    .pace-only-title{
+      font-size:.86rem;
+      font-weight:700;
+      color:#475569;
+    }
+
+    .pace-only-value{
+      font-size:1.55rem;
+      line-height:1;
+      font-weight:900;
+      color:#1d4ed8;
+      white-space:nowrap;
+    }
+
+    .pace-only-note{
+      margin-top:6px;
+      font-size:.72rem;
+      color:#64748b;
+    }
+
+    @media (max-width:430px){
+      .pace-only-value{font-size:1.4rem;}
+    }
+
+  
+
+    /* ===== Production two-tab UI ===== */
+    .prod-tabs{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:6px;
+      background:#eef2f7;
+      border-radius:14px;
+      padding:5px;
+      margin:14px 0 18px;
+    }
+    .prod-tab-btn{
+      border:0;
+      background:transparent;
+      color:#64748b;
+      font-family:'Sarabun',sans-serif;
+      font-size:.9rem;
+      font-weight:700;
+      padding:11px 8px;
+      border-radius:11px;
+      cursor:pointer;
+    }
+    .prod-tab-btn.active{
+      background:#fff;
+      color:#0f766e;
+      box-shadow:0 3px 10px rgba(15,23,42,.08);
+    }
+    .prod-page{display:none;}
+    .prod-page.active{display:block;}
+
+    .edit-plan-note{
+      background:#fff7ed;
+      border:1px solid #fed7aa;
+      color:#9a3412;
+      border-radius:13px;
+      padding:10px 12px;
+      font-size:.8rem;
+      line-height:1.5;
+      margin-bottom:14px;
+    }
+    .edit-plan-card{
+      border:1px solid #e2e8f0;
+      border-radius:16px;
+      padding:13px;
+      margin-bottom:10px;
+      background:#fff;
+    }
+    .edit-plan-card-title{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:flex-start;
+      font-weight:800;
+      color:#334155;
+      margin-bottom:9px;
+    }
+    .edit-plan-model{
+      font-size:.72rem;
+      color:#64748b;
+      font-weight:500;
+      margin-top:2px;
+    }
+    .edit-plan-hours-badge{
+      white-space:nowrap;
+      font-size:.72rem;
+      color:#475569;
+      background:#f1f5f9;
+      border-radius:999px;
+      padding:4px 8px;
+      font-weight:700;
+    }
+    .edit-plan-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+    .edit-plan-grid .form-group{margin-bottom:0;}
+    .edit-plan-preview{
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      border-radius:16px;
+      padding:13px;
+      margin:14px 0;
+      display:none;
+    }
+    .edit-preview-row{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      padding:5px 0;
+      font-size:.82rem;
+      color:#475569;
+    }
+    .edit-preview-row strong{color:#0f172a;}
+    .edit-preview-divider{
+      border-top:1px dashed #cbd5e1;
+      margin:7px 0;
+    }
+    .edit-status{
+      display:none;
+      font-size:.78rem;
+      border-radius:10px;
+      padding:9px 10px;
+      margin:10px 0;
+    }
+
+    @media (max-width:430px){
+      .prod-tab-btn{font-size:.82rem;padding:10px 5px;}
+      .edit-plan-grid{grid-template-columns:1fr;}
+    }
+
+  
+
+    /* ===== MOBILE / LIFF READABILITY FIX ===== */
+    html, body { max-width: 100%; overflow-x: hidden; }
+
+    body{
+      padding: 14px 10px;
+      font-size: 16px;
+    }
+
+    .card{
+      max-width: 460px;
+      padding: 20px 16px;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+
+    .header-title{
+      font-size: 1.42rem;
+      line-height: 1.2;
+    }
+
+    .date-badge{
+      font-size: .78rem;
+      padding: 5px 9px;
+      flex-shrink: 0;
+    }
+
+    .user-banner{
+      font-size: .84rem;
+      line-height: 1.45;
+      padding: 9px 10px;
+    }
+
+    .prod-tabs{
+      gap: 4px;
+      margin: 12px 0 16px;
+    }
+
+    .prod-tab-btn{
+      min-width: 0;
+      font-size: .82rem;
+      line-height: 1.25;
+      padding: 10px 6px;
+      white-space: normal;
+    }
+
+    label{
+      font-size: .95rem;
+      line-height: 1.35;
+    }
+
+    select, input, textarea{
+      min-width: 0;
+      font-size: 1rem;
+      padding: 11px 12px;
+    }
+
+    .info-banner{
+      gap: 8px;
+      padding: 11px 12px;
+      font-size: .88rem;
+      line-height: 1.35;
+      flex-wrap: wrap;
+    }
+
+    .pace-dashboard{
+      padding: 12px 13px;
+      border-radius: 15px;
+    }
+
+    .pace-only-row{
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .pace-only-title{ font-size: .82rem; }
+    .pace-only-note{
+      font-size: .70rem;
+      line-height: 1.35;
+    }
+    .pace-only-value{
+      font-size: 1.35rem;
+      flex-shrink: 0;
+    }
+
+    .current-model-banner{
+      font-size: .82rem;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    .section-title{
+      font-size: .95rem;
+      margin-bottom: 10px;
+    }
+
+    /* 3 ช่องเดิม: เวลา | LOT | จำนวน
+       เปลี่ยนจาก flex เป็น grid เพื่อไม่ให้ตกขอบมือถือ */
+    .slot-row{
+      display: grid;
+      grid-template-columns: minmax(104px, 1.05fr) minmax(0, 1.18fr) minmax(68px, .62fr);
+      gap: 7px;
+      width: 100%;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+
+    .slot-time{
+      min-width: 0;
+      width: 100%;
+      padding: 9px 5px 7px;
+      font-size: .82rem;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+
+    .slot-end-lot-btn{
+      margin-top: 6px;
+      padding: 6px 3px;
+      font-size: .68rem;
+      line-height: 1.2;
+      white-space: normal;
+    }
+
+    .slot-lot-container{
+      min-width: 0;
+      width: 100%;
+    }
+
+    .slot-lot-display{
+      min-width: 0;
+      width: 100%;
+      min-height: 44px;
+      padding: 9px 20px 9px 6px;
+      font-size: .78rem;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .slot-lot-display::after{
+      right: 5px;
+      font-size: .62rem;
+    }
+
+    .model-subtext{
+      min-width: 0;
+      padding-left: 2px;
+      font-size: .67rem;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
+
+    .slot-input{
+      min-width: 0;
+      width: 100%;
+      padding: 10px 4px;
+      font-size: 1rem;
+    }
+
+    .sum-box{
+      gap: 7px;
+      padding: 12px 12px;
+      font-size: .9rem;
+    }
+
+    .sum-input{
+      width: 82px;
+      min-width: 72px;
+      font-size: 1.05rem;
+      padding: 6px 4px;
+    }
+
+    .btn-submit{
+      font-size: 1rem;
+      padding: 13px 10px;
+      border-radius: 14px;
+    }
+
+    .modal-overlay{
+      padding: 12px;
+      align-items: center;
+    }
+
+    .modal-card{
+      max-width: 390px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 18px 16px;
+      border-radius: 18px;
+    }
+
+    .modal-title{
+      font-size: 1rem;
+      line-height: 1.35;
+    }
+
+    .switch-picked-slot{
+      font-size: .78rem;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
+    .edit-plan-card,
+    .edit-plan-preview{
+      overflow: hidden;
+    }
+
+    .edit-plan-card-title,
+    .edit-preview-row{
+      min-width: 0;
+    }
+
+    .edit-plan-card-title > div,
+    .edit-preview-row > span{
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 390px){
+      body{ padding: 10px 6px; }
+
+      .card{
+        padding: 16px 12px;
+        border-radius: 18px;
+      }
+
+      .header-top-row{ gap: 8px; }
+      .header-title{ font-size: 1.28rem; }
+      .date-badge{
+        font-size: .72rem;
+        padding: 4px 7px;
+      }
+
+      .prod-tab-btn{
+        font-size: .76rem;
+        padding: 9px 4px;
+      }
+
+      .info-banner{
+        font-size: .82rem;
+      }
+
+      .slot-row{
+        grid-template-columns: minmax(96px, 1fr) minmax(0, 1.08fr) 62px;
+        gap: 5px;
+      }
+
+      .slot-time{
+        font-size: .75rem;
+        padding-left: 3px;
+        padding-right: 3px;
+      }
+
+      .slot-end-lot-btn{
+        font-size: .62rem;
+      }
+
+      .slot-lot-display{
+        font-size: .72rem;
+        padding-left: 4px;
+        padding-right: 18px;
+      }
+
+      .model-subtext{ font-size: .62rem; }
+
+      .slot-input{
+        font-size: .95rem;
+        padding-left: 2px;
+        padding-right: 2px;
+      }
+
+      .pace-only-value{ font-size: 1.22rem; }
+
+      .sum-box{
+        font-size: .84rem;
+        padding: 11px 9px;
+      }
+
+      .sum-input{
+        width: 72px;
+        min-width: 66px;
+        font-size: 1rem;
+      }
+    }
+
   </style>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body>
 
-  <!-- Sidebar ด้านข้าง -->
-  <div class="w-16 bg-slate-900 text-white flex flex-col items-center py-6 gap-8 shadow-xl z-20">
-    <div class="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center font-bold text-xl shadow-lg">📊</div>
-    <div class="flex flex-col gap-4 w-full">
-      <button onclick="switchTab('tab1')" id="nav-tab1" class="nav-btn active p-3 w-full flex justify-center hover:bg-white/10 transition">
-        <span class="text-xl">📈</span>
-      </button>
-      <button onclick="switchTab('tab2')" id="nav-tab2" class="nav-btn p-3 w-full flex justify-center hover:bg-white/10 transition">
-        <span class="text-xl">🔍</span>
-      </button>
-    </div>
+<div class="card">
+  <div class="header-top-row">
+    <h2 class="header-title">บันทึกยอดการผลิต</h2>
+    <div class="date-badge" id="currentDateDisplay">--/--/----</div>
   </div>
 
-  <!-- Content Area -->
-  <div class="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
-    
-    <!-- Top Bar -->
-    <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-      <div>
-        <h1 id="pageTitle" class="text-lg font-bold text-slate-800">Dashboard ภาพรวมการผลิต</h1>
-        <p class="text-xs text-slate-400">
-          <span class="font-semibold text-emerald-600">● LIVE</span>
-          • อัปเดตเมื่อข้อมูลเปลี่ยน
-          • <span id="lastUpdatedText">กำลังโหลด...</span>
-        </p>
-      </div>
-      <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span id="displayName" class="text-xs font-semibold text-slate-700">กำลังเชื่อมต่อ LINE...</span>
-      </div>
-    </div>
-
-    <!-- PAGE 1: Dashboard ภาพรวม -->
-    <div id="tab1" class="space-y-6">
-      
-      <!-- 1. ภาพรวมรายวัน (Daily Overview - Stacked Bar Chart) -->
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
-        <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
-          <div>
-            <h2 class="font-bold text-slate-700 text-base">📊 สรุปยอดผลิตภาพรวมรายวัน (Daily Summary)</h2>
-            <p id="selectedDateText" class="text-xs text-indigo-600 font-semibold mt-0.5">กำลังโหลดข้อมูล...</p>
-          </div>
-          <div class="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl w-full sm:w-auto">
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-slate-500 w-9 shrink-0">📅 จาก:</span>
-              <input type="date" id="datePicker" onchange="onDateChange()" class="flex-1 min-w-0 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-400 cursor-pointer">
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-slate-500 w-9 shrink-0">ถึง:</span>
-              <input type="date" id="datePickerTo" onchange="onDateChange()" class="flex-1 min-w-0 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-400 cursor-pointer">
-            </div>
-          </div>
-        </div>
-
-        <div class="h-64 relative">
-          <canvas id="factoryChart"></canvas>
-        </div>
-      </div>
-
-      <!-- 2. รายละเอียดแยกตามไลน์ & LOT -->
-      <!-- Summary Cards Grid -->
-      <div>
-        <h2 class="font-bold text-slate-700 mb-3">รายละเอียดแยกตามไลน์ & LOT</h2>
-        <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <!-- Cards Dynamic Generation -->
-        </div>
-      </div>
-
-
-      <!-- 3. เจาะลึกรายชั่วโมง (Hourly Tracking Section) -->
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-4">
-        <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-100 pb-3">
-          <div>
-            <h2 class="font-bold text-slate-700 text-base">⏱️ ติดตามผลการผลิตรายชั่วโมง (Hourly Tracking)</h2>
-            <p id="hourlyTargetSubtitle" class="text-xs text-slate-400">เลือกไลน์เพื่อดูเป้าหมายเฉลี่ยต่อชั่วโมง</p>
-          </div>
-          
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-slate-500">เลือกลูกไลน์:</span>
-            <select id="lineSelect" onchange="updateHourlyChart()" class="bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500">
-              <option value="B">LINE B</option>
-              <option value="C">LINE C</option>
-              <option value="D">LINE D</option>
-              <option value="E">LINE E</option>
-              <option value="F">LINE F</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="h-60 relative">
-          <canvas id="hourlyChart"></canvas>
-        </div>
-      </div>
-
-      <!-- 4. Production Pulse -->
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-4">
-        <div class="flex flex-wrap justify-between items-start gap-2 border-b border-slate-100 pb-3">
-          <div>
-            <div class="flex items-center gap-2">
-              <h2 class="font-bold text-slate-700 text-base">⚡ Production Pulse</h2>
-            </div>
-            <p id="pulseSubtitle" class="text-xs text-slate-400 mt-1">ประมาณการจากรอบที่มีข้อมูลของไลน์ที่เลือก</p>
-          </div>
-          <div id="pulseLineBadge" class="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 text-slate-600">LINE B</div>
-        </div>
-
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-            <p class="text-[11px] font-semibold text-slate-400">Actual ตอนนี้</p>
-            <p id="pulseActual" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
-            <p class="text-[10px] text-slate-400 mt-1">ชิ้นสะสม</p>
-          </div>
-          <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-            <p class="text-[11px] font-semibold text-slate-400">Current LOT Pace</p>
-            <p id="pulsePace" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
-            <p class="text-[10px] text-slate-400 mt-1">เฉลี่ยชิ้น / ชม. ของ LOT ปัจจุบัน</p>
-          </div>
-          <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
-            <p class="text-[11px] font-semibold text-indigo-500">Order Progress</p>
-            <p id="pulseProjected" class="text-xl font-extrabold text-indigo-700 mt-1">-</p>
-            <p id="pulseOrderMeta" class="text-[10px] text-indigo-400 mt-1">LOT ปัจจุบัน</p>
-          </div>
-          <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-            <p class="text-[11px] font-semibold text-slate-400">Forecast Completion</p>
-            <p id="pulseGap" class="text-xl font-extrabold text-slate-800 mt-1">-</p>
-            <p id="pulseGapNote" class="text-[10px] text-slate-400 mt-1">อิงกำลังผลิต LOT ปัจจุบัน</p>
-          </div>
-        </div>
-
-        <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-          <div class="flex justify-between items-center gap-2 mb-3">
-            <div>
-              <h3 class="text-sm font-bold text-slate-700">📈 Cumulative Target vs Actual</h3>
-              <p class="text-[11px] text-slate-400">เห็นว่าผลผลิตเริ่มห่างจากแผนตั้งแต่ช่วงไหน</p>
-            </div>
-
-          </div>
-          <div class="h-64 relative">
-            <canvas id="cumulativeChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-
-    </div>
-
-    <!-- PAGE 2: ค้นหา LOT -->
-    <div id="tab2" class="space-y-6 hidden">
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
-        <label class="block text-sm font-bold text-slate-700 mb-2">ค้นหาหมายเลข LOT</label>
-        <div class="flex gap-2">
-          <input type="text" id="lotInput" placeholder="กรอกรหัส LOT..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
-          <button onclick="searchLot()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-3 rounded-xl text-sm transition shadow-md shadow-indigo-100">
-            🔍 ค้นหา
-          </button>
-        </div>
-      </div>
-
-      <div id="searchResult" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
-        <div class="flex justify-between items-start border-b border-slate-100 pb-4">
-          <div>
-            <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">ข้อมูล LOT</span>
-            <h3 id="resLotNo" class="text-xl font-extrabold text-slate-800 mt-1">กรุณากรอกรหัส LOT ด้านบน</h3>
-          </div>
-          <span id="resStatusBadge" class="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 text-slate-500">Standby</span>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4 text-sm">
-          <div class="bg-slate-50 p-3 rounded-2xl">
-            <p class="text-xs text-slate-400">PO QTY.</p>
-            <p id="resPoTarget" class="font-bold text-slate-700 mt-0.5">-</p>
-          </div>
-          <div class="bg-slate-50 p-3 rounded-2xl">
-            <p class="text-xs text-slate-400">ผลิตสะสมแล้ว</p>
-            <p id="resCumulativeActual" class="font-bold text-slate-700 mt-0.5">-</p>
-          </div>
-          <div class="bg-slate-50 p-3 rounded-2xl">
-            <p class="text-xs text-slate-400">Model (รุ่น)</p>
-            <p id="resModel" class="font-bold text-slate-700 mt-0.5">-</p>
-          </div>
-          <div class="bg-slate-50 p-3 rounded-2xl">
-            <p class="text-xs text-slate-400">กำหนดส่งมอบ</p>
-            <p id="resDeliveryDate" class="font-bold text-slate-700 mt-0.5">-</p>
-          </div>
-        </div>
-
-        <div class="mt-4 pt-4 border-t border-slate-100">
-          <p class="text-xs font-bold text-slate-500 mb-2">⚡ ความคืบหน้าการผลิต</p>
-          <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl text-emerald-800 text-sm font-semibold flex items-center gap-3">
-            <span class="text-xl">🏭</span>
-            <span id="resRealtimeStatus">พร้อมค้นหาข้อมูลล็อตการผลิต</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
+  <div class="user-banner">
+    👤 ผู้รายงาน: <span id="userDisplayNameDisplay">กำลังดึงโปรไฟล์ LINE...</span>
   </div>
 
-  <script>
-    Chart.register(ChartDataLabels);
-
-    // วาง Web App URL ของ Apps Script ล่าสุดที่นี่
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyLm1LVkTiwK3PCvPSt3PFA1ifb76KCRsWxC1SkaLdDC-ginxy0RHWstWpHgDytaBmm/exec"; 
-    const LIFF_ID = "2011181755-bLeCO8Hs";
-
-    let chartInstance = null;
-    let hourlyChartInstance = null;
-    let cumulativeChartInstance = null;
-    let globalLinesData = [];
-
-    const CHANGE_CHECK_MS = 30000; // ตรวจเงียบ ๆ ทุก 30 วิ ลด request ไป Apps Script
-    let changeWatchTimer = null;
-    let lastDashboardVersion = "";
-    let dashboardFetchInProgress = false;
-    let currentDashboardIsRange = false;
-
-    function getTodayStr() {
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
-    }
-
-    function switchTab(tabId) {
-      document.getElementById('tab1').classList.add('hidden');
-      document.getElementById('tab2').classList.add('hidden');
-      document.getElementById('nav-tab1').classList.remove('active');
-      document.getElementById('nav-tab2').classList.remove('active');
-
-      document.getElementById(tabId).classList.remove('hidden');
-      if(tabId === 'tab1') {
-        document.getElementById('nav-tab1').classList.add('active');
-        document.getElementById('pageTitle').innerText = "Dashboard ภาพรวมการผลิต";
-      } else {
-        document.getElementById('nav-tab2').classList.add('active');
-        document.getElementById('pageTitle').innerText = "ค้นหาและติดตามสถานะ LOT";
-      }
-    }
-
-    async function fetchDashboardData(selectedDate, endDate) {
-      // กัน request ซ้อนกัน ถ้ารอบก่อนยังโหลดไม่เสร็จ
-      if (dashboardFetchInProgress) return;
-      dashboardFetchInProgress = true;
-
-      const isRange = endDate && endDate !== selectedDate;
-      currentDashboardIsRange = Boolean(isRange);
-
-      try {
-        document.getElementById('selectedDateText').innerText = isRange
-          ? `กำลังโหลดข้อมูลช่วง ${selectedDate} ถึง ${endDate}...`
-          : `กำลังโหลดข้อมูลประจำวันที่ ${selectedDate}...`;
-
-        const url = isRange
-          ? `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}&dateTo=${endDate}`
-          : `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}`;
-
-        const res = await fetch(url, {
-          method: "GET",
-          redirect: "follow",
-          cache: "no-store"
-        });
-
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-
-        const rawText = await res.text();
-        let data;
-
-        try {
-          data = JSON.parse(rawText);
-        } catch (jsonErr) {
-          throw new Error("API ไม่ได้ส่งข้อมูล JSON กลับมา");
-        }
-
-        if (data && data.lines && data.lines.length > 0) {
-          globalLinesData = data.lines;
-          renderCards(data.lines, isRange);
-          renderDailyChart(data.lines);
-          updateHourlyChart();
-
-          document.getElementById('selectedDateText').innerText = isRange
-            ? `แสดงข้อมูลสะสมช่วง: ${data.date || selectedDate} ถึง ${data.dateTo || endDate}`
-            : `แสดงข้อมูลประจำวันที่: ${data.date || selectedDate}`;
-        } else {
-          globalLinesData = [];
-          showEmptyState();
-        }
-
-        updateLastUpdatedText(true);
-
-      } catch (err) {
-        console.error("Fetch Error:", err);
-        document.getElementById('selectedDateText').innerText =
-          `ดึงข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง`;
-        updateLastUpdatedText(false);
-
-      } finally {
-        dashboardFetchInProgress = false;
-      }
-    }
-
-    function updateLastUpdatedText(success) {
-      const el = document.getElementById('lastUpdatedText');
-      if (!el) return;
-
-      const now = new Date();
-      const timeText = now.toLocaleTimeString('th-TH', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      });
-
-      if (success) {
-        el.innerText = `ล่าสุด ${timeText}`;
-        el.className = "font-semibold text-slate-500";
-      } else {
-        el.innerText = `เชื่อมต่อไม่สำเร็จ ${timeText}`;
-        el.className = "font-semibold text-rose-500";
-      }
-    }
-
-    function shouldWatchLiveChanges() {
-      const selectedDate = document.getElementById('datePicker').value;
-      const endDate = document.getElementById('datePickerTo').value;
-      const today = getTodayStr();
-
-      const latestDate = endDate || selectedDate;
-      return latestDate === today;
-    }
-
-    async function getDashboardVersion() {
-      try {
-        const url = `${GAS_API_URL}?action=getDashboardVersion&_=${Date.now()}`;
-        const res = await fetch(url, {
-          method: "GET",
-          redirect: "follow",
-          cache: "no-store"
-        });
-
-        if (!res.ok) return "";
-
-        const data = await res.json();
-        return String(data.version || "");
-
-      } catch (err) {
-        console.warn("Dashboard version check failed:", err);
-        return "";
-      }
-    }
-
-    async function syncDashboardVersionBaseline() {
-      if (!shouldWatchLiveChanges()) return;
-      const version = await getDashboardVersion();
-      if (version) lastDashboardVersion = version;
-    }
-
-    async function checkForDashboardChange() {
-      if (!shouldWatchLiveChanges()) return;
-      if (document.visibilityState !== 'visible') return;
-      if (dashboardFetchInProgress) return;
-
-      const version = await getDashboardVersion();
-      if (!version) return;
-
-      if (!lastDashboardVersion) {
-        lastDashboardVersion = version;
-        return;
-      }
-
-      if (version === lastDashboardVersion) {
-        // ไม่มีข้อมูลใหม่: ไม่ redraw, ไม่แตะกราฟ, ไม่เปลี่ยนเวลา
-        return;
-      }
-
-      lastDashboardVersion = version;
-
-      const selectedDate = document.getElementById('datePicker').value;
-      const endDate = document.getElementById('datePickerTo').value;
-
-      await fetchDashboardData(selectedDate, endDate);
-    }
-
-    function startChangeWatch() {
-      if (changeWatchTimer) clearInterval(changeWatchTimer);
-
-      changeWatchTimer = setInterval(() => {
-        checkForDashboardChange();
-      }, CHANGE_CHECK_MS);
-    }
-
-    async function onDateChange() {
-      const selectedDate = document.getElementById('datePicker').value;
-      const endDate = document.getElementById('datePickerTo').value;
-
-      if (selectedDate) {
-        await fetchDashboardData(selectedDate, endDate);
-
-        if (shouldWatchLiveChanges()) {
-          await syncDashboardVersionBaseline();
-        } else {
-          const el = document.getElementById('lastUpdatedText');
-          if (el) {
-            el.innerText = 'ข้อมูลย้อนหลัง';
-            el.className = "font-semibold text-slate-400";
-          }
-        }
-      }
-    }
-
-    function showEmptyState() {
-      document.getElementById('cardsContainer').innerHTML = `
-        <div class="col-span-full bg-white p-6 rounded-2xl text-center text-slate-400 font-bold">
-          🚫 ไม่พบข้อมูลการผลิตของวันที่เลือก
-        </div>`;
-      if (chartInstance) chartInstance.destroy();
-      if (hourlyChartInstance) hourlyChartInstance.destroy();
-    }
-
-    // 1. กราฟ Daily Stacked Bar + Target Gap + Data Labels
-    function renderDailyChart(lines) {
-      const ctx = document.getElementById('factoryChart').getContext('2d');
-      if(chartInstance) chartInstance.destroy();
-
-      const labels = lines.map(d => `LINE ${d.line || d.lineName || ''}`);
-      const actualData = lines.map(d => Number(d.actual) || ((d.actual1 || 0) + (d.actual2 || 0)));
-      const targetData = lines.map(d => Number(d.target) || ((d.target1 || 0) + (d.target2 || 0)));
-      const remainingData = targetData.map((tg, idx) => Math.max(0, tg - actualData[idx]));
-
-      chartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: 'Actual',
-              data: actualData,
-              backgroundColor: '#10B981',
-              borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 6, bottomRight: 6 }
-            },
-            {
-              label: 'Target Gap',
-              data: remainingData,
-              backgroundColor: '#EF4444',
-              borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 }
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { 
-            legend: { position: 'top' },
-            datalabels: {
-              anchor: 'center',
-              align: 'center',
-              color: '#ffffff',
-              font: { weight: 'bold', size: 11, family: 'Kanit' },
-              formatter: (value) => value > 0 ? value.toLocaleString() : ''
-            },
-            tooltip: {
-              callbacks: {
-                footer: (tooltipItems) => {
-                  const index = tooltipItems[0].dataIndex;
-                  return `Target รวม: ${targetData[index].toLocaleString()} ชิ้น`;
-                }
-              }
-            }
-          },
-          scales: {
-            x: { stacked: true, grid: { display: false } },
-            y: { stacked: true, beginAtZero: true, grid: { color: '#F1F5F9' } }
-          }
-        }
-      });
-    }
-
-    // 2. กราฟ Hourly Tracking
-    function getBreakSlotForDashboardLine(lineCode) {
-      const clean = String(lineCode || '').replace(/LINE/i, '').replace(/\s+/g, '').toUpperCase();
-      if (['B', 'C'].includes(clean)) return '12.30-13.30';
-      if (['D', 'E', 'F', 'G'].includes(clean)) return '11.30-12.30';
-      return '';
-    }
-
-    const hourlyBreakBandPlugin = {
-      id: 'hourlyBreakBand',
-      beforeDatasetsDraw(chart, args, pluginOptions) {
-        const breakIndex = Number(pluginOptions && pluginOptions.breakIndex);
-        if (!Number.isInteger(breakIndex) || breakIndex < 0) return;
-
-        const x = chart.scales.x;
-        const area = chart.chartArea;
-        if (!x || !area) return;
-
-        const center = x.getPixelForValue(breakIndex);
-        const prev = breakIndex > 0 ? x.getPixelForValue(breakIndex - 1) : center;
-        const next = breakIndex < chart.data.labels.length - 1
-          ? x.getPixelForValue(breakIndex + 1)
-          : center;
-
-        const halfLeft = breakIndex > 0 ? (center - prev) / 2 : 18;
-        const halfRight = breakIndex < chart.data.labels.length - 1
-          ? (next - center) / 2
-          : 18;
-
-        const left = center - halfLeft;
-        const right = center + halfRight;
-
-        const ctx = chart.ctx;
-        ctx.save();
-        ctx.fillStyle = 'rgba(148, 163, 184, 0.10)';
-        ctx.fillRect(left, area.top, right - left, area.bottom - area.top);
-
-        ctx.fillStyle = '#94A3B8';
-        ctx.font = '600 10px Kanit';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText('BREAK', center, area.top + 6);
-        ctx.restore();
-      }
-    };
-
-    function updateHourlyChart() {
-      const selectedLine = document.getElementById('lineSelect').value;
-      const hourlyCanvas = document.getElementById('hourlyChart');
-
-      if (!hourlyCanvas) {
-        console.warn("hourlyChart canvas not found");
-        return;
-      }
-
-      const ctx = hourlyCanvas.getContext('2d');
-      if (hourlyChartInstance) hourlyChartInstance.destroy();
-
-      const lineObj = globalLinesData.find(
-        d => String(d.line || d.lineName || '').toUpperCase().includes(selectedLine)
-      ) || {};
-
-      const hourlyDataObj = lineObj.hourly_data || {};
-      const timeSlots = Object.keys(hourlyDataObj);
-      const hourlyActuals = Object.values(hourlyDataObj);
-
-      const target = Number(lineObj.target) ||
-        ((Number(lineObj.target1) || 0) +
-         (Number(lineObj.target2) || 0) +
-         (Number(lineObj.target3) || 0));
-
-      const totalHours = Number(lineObj.total_working_hours) || 8;
-      const overallRate = totalHours > 0 ? target / totalHours : 0;
-
-      const hrs1 = Number(lineObj.hours1) || 0;
-      const hrs2 = Number(lineObj.hours2) || 0;
-      const hrs3 = Number(lineObj.hours3) || 0;
-
-      const target1 = Number(lineObj.target1) || 0;
-      const target2 = Number(lineObj.target2) || 0;
-      const target3 = Number(lineObj.target3) || 0;
-
-      const rate1 = hrs1 > 0 ? target1 / hrs1 : 0;
-      const rate2 = hrs2 > 0 ? target2 / hrs2 : 0;
-      const rate3 = hrs3 > 0 ? target3 / hrs3 : 0;
-
-      const breakSlot = getBreakSlotForDashboardLine(selectedLine);
-
-      const workingSlots = timeSlots
-        .filter(slot => slot !== breakSlot)
-        .slice(0, Math.max(0, totalHours));
-
-      const workingIndex = {};
-      workingSlots.forEach((slot, idx) => {
-        workingIndex[slot] = idx;
-      });
-
-      // Target ต่อรอบต้องเดินตามชั่วโมงที่จัดสรรให้ LOT1 → LOT2 → LOT3
-      // ช่วงพัก Target = 0 และไม่ถูกนับเป็นชั่วโมงผลิต
-      const targetLine = timeSlots.map(slot => {
-        if (slot === breakSlot) return null;
-        if (!(slot in workingIndex)) return null;
-
-        const idx = workingIndex[slot];
-
-        if (hrs1 > 0 && idx < hrs1) {
-          return Math.round(rate1 || overallRate);
-        }
-
-        if (hrs2 > 0 && idx < hrs1 + hrs2) {
-          return Math.round(rate2 || overallRate);
-        }
-
-        if (hrs3 > 0 && idx < hrs1 + hrs2 + hrs3) {
-          return Math.round(rate3 || overallRate);
-        }
-
-        return Math.round(overallRate);
-      });
-
-      const lotRateText = [];
-
-      if (hrs1 > 0) {
-        lotRateText.push(
-          `LOT1: ${Math.round(rate1 || overallRate).toLocaleString()} ชิ้น/ชม. (${hrs1} ชม.)`
-        );
-      }
-
-      if (hrs2 > 0) {
-        lotRateText.push(
-          `LOT2: ${Math.round(rate2 || overallRate).toLocaleString()} ชิ้น/ชม. (${hrs2} ชม.)`
-        );
-      }
-
-      if (hrs3 > 0) {
-        lotRateText.push(
-          `LOT3: ${Math.round(rate3 || overallRate).toLocaleString()} ชิ้น/ชม. (${hrs3} ชม.)`
-        );
-      }
-
-      document.getElementById('hourlyTargetSubtitle').innerText =
-        lotRateText.length > 1
-          ? `${lotRateText.join(' | ')} — LINE ${selectedLine}`
-          : `เป้าหมายเฉลี่ย ${Math.round(overallRate).toLocaleString()} ชิ้น / ชั่วโมง (LINE ${selectedLine})`;
-
-      if (timeSlots.length === 0) {
-        if (hourlyChartInstance) {
-          hourlyChartInstance.destroy();
-          hourlyChartInstance = null;
-        }
-
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
-        ['pulseActual', 'pulsePace', 'pulseProjected', 'pulseGap'].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.innerText = '-';
-        });
-
-        const subtitle = document.getElementById('pulseSubtitle');
-        if (subtitle) subtitle.innerText = 'ยังไม่มีข้อมูลรายชั่วโมงของไลน์นี้';
-
-        if (cumulativeChartInstance) {
-          cumulativeChartInstance.destroy();
-          cumulativeChartInstance = null;
-        }
-        return;
-      }
-
-      updateProductionPulse(
-        lineObj,
-        timeSlots,
-        hourlyActuals,
-        targetLine,
-        selectedLine
-      );
-
-      hourlyChartInstance = new Chart(ctx, {
-        type: 'bar',
-        plugins: [hourlyBreakBandPlugin],
-        data: {
-          labels: timeSlots,
-          datasets: [
-            {
-              type: 'line',
-              label: (hrs2 > 0 || hrs3 > 0)
-                ? 'Target / ชม. (แยกตาม LOT)'
-                : `Target / ชม. (${Math.round(overallRate).toLocaleString()} ชิ้น)`,
-              data: targetLine,
-              borderColor: '#6366F1',
-              borderWidth: 2,
-              borderDash: [5, 5],
-              fill: false,
-              pointRadius: 0,
-              stepped: true,
-              spanGaps: false,
-              datalabels: { display: false }
-            },
-            {
-              type: 'bar',
-              label: 'Actual รายชั่วโมง',
-              data: hourlyActuals,
-              backgroundColor: hourlyActuals.map((val, idx) => {
-                const tg = targetLine[idx];
-                if (tg === null || tg === undefined) return '#CBD5E1';
-                return val >= tg ? '#10B981' : '#F59E0B';
-              }),
-              borderRadius: 6
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            hourlyBreakBand: {
-              breakIndex: breakSlot ? timeSlots.indexOf(breakSlot) : -1
-            },
-            legend: { position: 'top' },
-            datalabels: {
-              anchor: 'center',
-              align: 'center',
-              color: '#ffffff',
-              font: { weight: 'bold', size: 10, family: 'Kanit' },
-              formatter: val => val > 0 ? val : ''
-            }
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: {
-                autoSkip: false,
-                maxRotation: 60,
-                minRotation: 45,
-                font: { size: 9 }
-              }
-            },
-            y: {
-              beginAtZero: true,
-              grid: { color: '#F1F5F9' }
-            }
-          }
-        }
-      });
-    }
-
-
-    // 2.5 Production Pulse + Cumulative
-    function getActiveLotPace(lineObj, selectedLine) {
-      const hourlyData = lineObj.hourly_data || {};
-      const hourlyReported = lineObj.hourly_reported || {};
-      const hourlyLot = lineObj.hourly_lot || {};
-      const activeLot = String(lineObj.active_lot || '').trim().toUpperCase();
-      const breakSlot = getBreakSlotForDashboardLine(selectedLine);
-
-      if (!activeLot) {
-        return { pace: 0, hours: 0, actual: 0 };
-      }
-
-      let actual = 0;
-      let hours = 0;
-
-      Object.keys(hourlyData).forEach(slot => {
-        if (slot === breakSlot) return;
-        if (hourlyReported[slot] !== true) return;
-
-        const slotLot = String(hourlyLot[slot] || '').trim().toUpperCase();
-        if (slotLot !== activeLot) return;
-
-        actual += Number(hourlyData[slot]) || 0;
-        hours += 1;
-      });
-
-      return {
-        pace: hours > 0 ? actual / hours : 0,
-        hours: hours,
-        actual: actual
-      };
-    }
-
-    function updateProductionPulse(lineObj, timeSlots, hourlyActuals, targetLine, selectedLine) {
-      const totalActualToday = Number(lineObj.actual) ||
-        hourlyActuals.reduce((sum, v) => sum + (Number(v) || 0), 0);
-
-      document.getElementById('pulseLineBadge').innerText = `LINE ${selectedLine}`;
-      document.getElementById('pulseActual').innerText = totalActualToday.toLocaleString();
-
-      if (currentDashboardIsRange) {
-        document.getElementById('pulsePace').innerText = '-';
-        document.getElementById('pulseProjected').innerText = '-';
-        document.getElementById('pulseGap').innerText = '-';
-        document.getElementById('pulseOrderMeta').innerText = 'เลือกวันเดียวเพื่อดู Order';
-        document.getElementById('pulseGapNote').innerText = 'Forecast ใช้กับข้อมูลรายวัน';
-        document.getElementById('pulseSubtitle').innerText =
-          'Production Pulse ใช้เมื่อเลือกข้อมูลวันเดียว';
-        renderCumulativeChart(timeSlots, hourlyActuals, targetLine, lineObj.hourly_reported || {}, selectedLine);
-        return;
-      }
-
-      const activeLot = String(lineObj.active_lot || '').trim();
-      const activeModel = String(lineObj.active_model || '').trim();
-      const poTarget = Number(lineObj.active_po_target) || 0;
-      const cumulativeActual = Number(lineObj.active_cumulative_actual) || 0;
-      const deliveryDate = String(lineObj.active_delivery_date || '').trim();
-      const totalHours = Number(lineObj.total_working_hours) || 8;
-
-      const paceInfo = getActiveLotPace(lineObj, selectedLine);
-      const currentLotPace = paceInfo.pace;
-
-      document.getElementById('pulsePace').innerText =
-        currentLotPace > 0
-          ? Math.round(currentLotPace).toLocaleString()
-          : '-';
-
-      const orderValue = document.getElementById('pulseProjected');
-      const orderMeta = document.getElementById('pulseOrderMeta');
-      const forecastValue = document.getElementById('pulseGap');
-      const forecastNote = document.getElementById('pulseGapNote');
-
-      if (!activeLot) {
-        orderValue.innerText = '-';
-        orderMeta.innerText = 'ยังไม่มี LOT ปัจจุบัน';
-        forecastValue.innerText = '-';
-        forecastNote.innerText = 'ยังไม่มีข้อมูลสำหรับ Forecast';
-        document.getElementById('pulseSubtitle').innerText =
-          `LINE ${selectedLine} • ยังไม่มี LOT ปัจจุบัน`;
-
-        renderCumulativeChart(timeSlots, hourlyActuals, targetLine, lineObj.hourly_reported || {}, selectedLine);
-        return;
-      }
-
-      document.getElementById('pulseSubtitle').innerText =
-        `LINE ${selectedLine} • LOT ${activeLot}${activeModel ? ` • ${activeModel}` : ''}`;
-
-      if (poTarget > 0) {
-        const progressPct = Math.min(
-          100,
-          Math.max(0, (cumulativeActual / poTarget) * 100)
-        );
-
-        const remaining = Math.max(0, poTarget - cumulativeActual);
-
-        orderValue.innerText =
-          `${cumulativeActual.toLocaleString()} / ${poTarget.toLocaleString()}`;
-
-        orderMeta.innerText =
-          `${progressPct.toFixed(1)}% ของ Order • เหลือ ${remaining.toLocaleString()} ชิ้น`;
-
-        if (remaining <= 0) {
-          forecastValue.innerText = 'ครบ Order แล้ว';
-          forecastValue.className =
-            'text-xl font-extrabold text-emerald-600 mt-1';
-
-          forecastNote.innerText =
-            deliveryDate ? `Delivery ${deliveryDate}` : 'ผลิตครบตาม PO Target';
-
-        } else if (currentLotPace > 0 && totalHours > 0) {
-          const hoursRemaining = remaining / currentLotPace;
-          const productionDays = hoursRemaining / totalHours;
-
-          forecastValue.innerText = `≈ ${productionDays.toFixed(1)} วันผลิต`;
-          forecastValue.className =
-            'text-xl font-extrabold text-slate-800 mt-1';
-
-          forecastNote.innerText =
-            `เหลือประมาณ ${hoursRemaining.toFixed(1)} ชม.` +
-            (deliveryDate ? ` • Delivery ${deliveryDate}` : '');
-
-        } else {
-          forecastValue.innerText = '-';
-          forecastValue.className =
-            'text-xl font-extrabold text-slate-800 mt-1';
-
-          forecastNote.innerText =
-            deliveryDate
-              ? `ยังไม่มี Pace ของ LOT วันนี้ • Delivery ${deliveryDate}`
-              : 'ยังไม่มี Pace ของ LOT วันนี้';
-        }
-
-      } else {
-        orderValue.innerText = cumulativeActual.toLocaleString();
-        orderMeta.innerText = `LOT ${activeLot} • ไม่พบ PO Target`;
-        forecastValue.innerText = '-';
-        forecastValue.className =
-          'text-xl font-extrabold text-slate-800 mt-1';
-        forecastNote.innerText =
-          deliveryDate
-            ? `ไม่สามารถ Forecast ได้ • Delivery ${deliveryDate}`
-            : 'ไม่สามารถ Forecast ได้';
-      }
-
-      renderCumulativeChart(timeSlots, hourlyActuals, targetLine, lineObj.hourly_reported || {}, selectedLine);
-    }
-
-    function renderCumulativeChart(timeSlots, hourlyActuals, targetLine, hourlyReported = {}, selectedLine = '') {
-      const ctx = document.getElementById('cumulativeChart').getContext('2d');
-      if (cumulativeChartInstance) cumulativeChartInstance.destroy();
-
-      let ac = 0;
-      let tg = 0;
-      const breakSlot = getBreakSlotForDashboardLine(selectedLine);
-
-      // Actual:
-      // - reported working slot = บวกยอดจริง (รวมกรณีรายงาน 0)
-      // - BREAK = carry ยอดสะสมเดิม เพื่อให้เส้นไม่แหว่ง
-      // - future / ยังไม่รายงาน = null เพื่อให้เส้นหยุด
-      const cumulativeActual = timeSlots.map((slot, idx) => {
-        if (slot === breakSlot) {
-          const hasAnyReportedBefore = timeSlots
-            .slice(0, idx)
-            .some(s => s !== breakSlot && hourlyReported[s] === true);
-          return hasAnyReportedBefore ? ac : null;
-        }
-
-        if (hourlyReported[slot] !== true) return null;
-
-        ac += Number(hourlyActuals[idx]) || 0;
-        return ac;
-      });
-
-      const cumulativeTarget = targetLine.map(v => {
-        if (v !== null && v !== undefined) {
-          tg += Number(v) || 0;
-        }
-        return tg;
-      });
-
-      cumulativeChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: timeSlots,
-          datasets: [
-            {
-              label: 'Cumulative Target',
-              data: cumulativeTarget,
-              borderColor: '#6366F1',
-              borderWidth: 2,
-              borderDash: [6, 5],
-              pointRadius: 2,
-              tension: 0.25,
-              fill: false,
-              datalabels: { display: false }
-            },
-            {
-              label: 'Cumulative Actual',
-              data: cumulativeActual,
-              spanGaps: false,
-              borderColor: '#10B981',
-              backgroundColor: 'rgba(16,185,129,0.08)',
-              borderWidth: 3,
-              pointRadius: 3,
-              tension: 0.25,
-              fill: true,
-              datalabels: { display: false }
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: { position: 'top' },
-            tooltip: {
-              callbacks: {
-                footer: items => {
-                  if (!items || !items.length) return '';
-                  const i = items[0].dataIndex;
-                  const gap = cumulativeActual[i] - cumulativeTarget[i];
-                  return `Gap ณ รอบนี้: ${gap >= 0 ? '+' : ''}${gap.toLocaleString()} ชิ้น`;
-                }
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: {
-                autoSkip: false,
-                maxRotation: 60,
-                minRotation: 45,
-                font: { size: 9 }
-              }
-            },
-            y: {
-              beginAtZero: true,
-              grid: { color: '#F1F5F9' }
-            }
-          }
-        }
-      });
-    }
-
-
-    // 3. Render Cards
-    function getLotLiveMetrics(item, lotNo, target, allocatedHours) {
-      const hourlyData = item.hourly_data || {};
-      const hourlyReported = item.hourly_reported || {};
-      const hourlyLot = item.hourly_lot || {};
-      const lineName = item.line || item.lineName || '';
-      const breakSlot = getBreakSlotForDashboardLine(lineName);
-      const lotKey = String(lotNo || '').trim().toUpperCase();
-
-      let reportedHours = 0;
-      let actualReported = 0;
-
-      Object.keys(hourlyData).forEach(slot => {
-        if (slot === breakSlot) return;
-        if (hourlyReported[slot] !== true) return;
-
-        const slotLot = String(hourlyLot[slot] || '').trim().toUpperCase();
-        if (lotKey && slotLot !== lotKey) return;
-
-        reportedHours += 1;
-        actualReported += Number(hourlyData[slot]) || 0;
-      });
-
-      const tgPerHour = allocatedHours > 0 ? Number(target || 0) / allocatedHours : 0;
-      const targetNow = Math.round(tgPerHour * reportedHours);
-      const avgOutput = reportedHours > 0 ? actualReported / reportedHours : 0;
-
-      return {
-        reportedHours,
-        targetNow,
-        avgOutput,
-        tgPerHour
-      };
-    }
-
-    function renderCards(lines, isRange) {
-      const container = document.getElementById('cardsContainer');
-      container.innerHTML = '';
-
-      lines.forEach(item => {
-        const lineName = item.line || item.lineName || '';
-
-        if (isRange) {
-          const totalTg = Number(item.target) || ((Number(item.target1) || 0) + (Number(item.target2) || 0) + (Number(item.target3) || 0));
-          const totalAc = Number(item.actual) || ((Number(item.actual1) || 0) + (Number(item.actual2) || 0) + (Number(item.actual3) || 0));
-          container.innerHTML += createCardHtml(
-            lineName, 'รวมช่วงวันที่', '', '', totalTg, totalAc, item.remarks, null
-          );
-          return;
-        }
-
-        const lots = [
-          {
-            tag: 'LOT 1',
-            model: item.model1 || item.model || '',
-            lot: item.lot_number || item.lot1 || '',
-            target: Number(item.target1) || Number(item.target) || 0,
-            actual: Number(item.actual1) || (item.lot_number2 || item.lot2 ? 0 : (Number(item.actual) || 0)),
-            hours: Number(item.hours1) || Number(item.total_working_hours) || 0
-          },
-          {
-            tag: 'LOT 2',
-            model: item.model2 || '',
-            lot: item.lot_number2 || item.lot2 || '',
-            target: Number(item.target2) || 0,
-            actual: Number(item.actual2) || 0,
-            hours: Number(item.hours2) || 0
-          },
-          {
-            tag: 'LOT 3',
-            model: item.model3 || '',
-            lot: item.lot_number3 || item.lot3 || '',
-            target: Number(item.target3) || 0,
-            actual: Number(item.actual3) || 0,
-            hours: Number(item.hours3) || 0
-          }
-        ];
-
-        lots.forEach((lotInfo, idx) => {
-          if (idx > 0 && !lotInfo.lot) return;
-
-          const live = getLotLiveMetrics(
-            item,
-            lotInfo.lot,
-            lotInfo.target,
-            lotInfo.hours
-          );
-
-          container.innerHTML += createCardHtml(
-            lineName,
-            lotInfo.tag,
-            lotInfo.model,
-            lotInfo.lot,
-            lotInfo.target,
-            lotInfo.actual,
-            item.remarks,
-            live
-          );
-        });
-      });
-    }
-
-    function createCardHtml(line, lotTag, modelName, lotName, target, actual, remarks, liveMetrics) {
-      target = Number(target) || 0;
-      actual = Number(actual) || 0;
-
-      const dayGap = actual - target;
-      const dayGapPct = target > 0 ? Math.round((dayGap / target) * 100) : 0;
-      const dayGapText = `${dayGap >= 0 ? '+' : ''}${dayGap.toLocaleString()} (${dayGapPct >= 0 ? '+' : ''}${dayGapPct}%)`;
-      const dayGapClass = dayGap >= 0 ? 'text-emerald-600' : 'text-rose-600';
-
-      const targetNow = liveMetrics ? (Number(liveMetrics.targetNow) || 0) : 0;
-      const nowGap = actual - targetNow;
-      const nowGapPct = targetNow > 0 ? Math.round((nowGap / targetNow) * 100) : 0;
-      const nowGapText = `${nowGap >= 0 ? '+' : ''}${nowGap.toLocaleString()} (${nowGapPct >= 0 ? '+' : ''}${nowGapPct}%)`;
-      const nowGapClass = nowGap >= 0 ? 'text-emerald-600' : 'text-rose-600';
-
-      const avgOutput = liveMetrics ? Math.round(Number(liveMetrics.avgOutput) || 0) : 0;
-      const tgPerHour = liveMetrics ? Math.round(Number(liveMetrics.tgPerHour) || 0) : 0;
-
-      const progressPct = target > 0 ? Math.round((actual / target) * 100) : 0;
-      const progressWidth = Math.max(0, Math.min(progressPct, 100));
-      const progressColor = progressPct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
-      const remarksList = Array.isArray(remarks) ? remarks : [];
-
-      return `
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-col gap-3">
-
-          <!-- Header: exactly LINE + model + LOT; no LOT1 badge on the right -->
-          <div class="flex flex-wrap items-center gap-x-2 gap-y-1 pb-3 border-b border-slate-100">
-            <span class="inline-flex items-center px-3 py-1.5 rounded-lg bg-slate-800 text-white font-extrabold text-sm">
-              LINE ${line}
-            </span>
-            <span class="text-xs font-bold text-slate-700">
-              รุ่น <span class="text-slate-900">${modelName || '-'}</span>
-            </span>
-            <span class="text-slate-300">•</span>
-            <span class="text-xs font-bold text-slate-700">
-              LOT <span class="text-indigo-600">${lotName || '-'}</span>
-            </span>
-          </div>
-
-          <!-- Hand-drawn layout: four simple rows -->
-          <div class="space-y-2">
-            <div class="grid grid-cols-[1fr_auto] items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
-              <div class="text-sm font-bold text-slate-500">
-                เป้าต่อวัน :
-                <span class="ml-2 text-lg font-extrabold text-slate-900">${target.toLocaleString()}</span>
-              </div>
-              <div class="text-sm font-extrabold ${dayGapClass}">${dayGapText}</div>
-            </div>
-
-            <div class="grid grid-cols-[1fr_auto] items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
-              <div class="text-sm font-bold text-slate-500">
-                เป้าตอนนี้ :
-                <span class="ml-2 text-lg font-extrabold text-slate-900">${targetNow.toLocaleString()}</span>
-              </div>
-              <div class="text-sm font-extrabold ${nowGapClass}">${nowGapText}</div>
-            </div>
-
-            <div class="rounded-xl bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-500">
-              Avg Output/hr :
-              <span class="ml-2 text-lg font-extrabold text-slate-900">${avgOutput.toLocaleString()}</span>
-            </div>
-
-            <div class="rounded-xl bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-500">
-              TG Output/hr :
-              <span class="ml-2 text-lg font-extrabold text-slate-900">${tgPerHour.toLocaleString()}</span>
-            </div>
-          </div>
-
-          <!-- Progress bar -->
-          <div class="flex items-center gap-3 pt-1">
-            <div class="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden">
-              <div class="${progressColor} h-2.5 rounded-full transition-all duration-300" style="width:${progressWidth}%"></div>
-            </div>
-            <span class="text-sm font-extrabold text-slate-700">${progressPct}%</span>
-          </div>
-
-          ${remarksList.length > 0 ? `
-          <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-xs text-amber-800 leading-relaxed">
-            📝 ${remarksList.map(r => String(r).replace(/</g, '&lt;').replace(/>/g, '&gt;')).join(' · ')}
-          </div>` : ''}
+  <div class="prod-tabs">
+    <button type="button" id="recordTabBtn" class="prod-tab-btn active" onclick="switchProductionTab('record')">📈 บันทึกยอด</button>
+    <button type="button" id="editPlanTabBtn" class="prod-tab-btn" onclick="switchProductionTab('edit')">⚙️ แก้ไขเป้า / ชั่วโมง</button>
+  </div>
+
+  <div id="recordPage" class="prod-page active">
+  <form id="hourlyForm">
+    <div class="form-group">
+      <label for="line">LINE การผลิต</label>
+      <select id="line" required onchange="loadLineDetails()">
+        <option value="">-- เลือก LINE --</option>
+        <option value="Line B">Line B</option>
+        <option value="Line C">Line C</option>
+        <option value="Line D">Line D</option>
+        <option value="Line E">Line E</option>
+        <option value="Line F">Line F</option>
+        <option value="Line G">Line G ทดสอบ</option>
+      </select>
+    </div>
+
+    <div id="infoBanner" class="info-banner" style="display:none;">
+      <span>🎯 เป้าวัน: <strong id="targetVal">0</strong> ชิ้น</span>
+      <span>⏱️ เวลาทำงาน: <strong id="hoursVal">0</strong> ชม.</span>
+    </div>
+
+    <div id="hourlyPacePanel" class="pace-dashboard">
+      <div class="pace-only-row">
+        <div>
+          <div class="pace-only-title">🎯 เฉลี่ยที่ต้องทำ / ชม.</div>
+          <div class="pace-only-note" id="paceAverageNote">เป้ารวม ÷ ชั่วโมงทำงาน</div>
         </div>
-      `;
-    }
+        <div id="requiredPerHour" class="pace-only-value">-</div>
+      </div>
+    </div>
 
-    async function searchLot() {
-      const val = document.getElementById('lotInput').value.trim();
-      if(!val) return alert("กรุณากรอกรหัส LOT ก่อนครับ");
+    <div id="currentModelBanner" class="current-model-banner">
+      รุ่นที่กำลังผลิต: <span id="currentModelText">-</span>
+    </div>
 
-      document.getElementById('resRealtimeStatus').innerText = "กำลังค้นหาข้อมูล...";
+    <div class="form-group">
+      <div class="section-title">กรอกยอดผลิตรายชั่วโมง</div>
+      <div id="slotsContainer">
+        <p style="color: #94a3b8; font-size: 0.95rem; text-align: center; padding: 15px 0;">โปรดเลือก LINE การผลิต</p>
+      </div>
+    </div>
 
-      try {
-        const url = `${GAS_API_URL}?searchLot=${encodeURIComponent(val)}`;
-        const res = await fetch(url, { method: "GET", redirect: "follow" });
-        const data = await res.json();
+    <div class="sum-box">
+      <span>ยอดรวมที่กรอก</span>
+      <input type="text" id="totalSum" class="sum-input" value="0" readonly>
+      <span>ชิ้น</span>
+    </div>
 
-        if (data.error) {
-          document.getElementById('resLotNo').innerText = val;
-          document.getElementById('resStatusBadge').innerText = "Not Found";
-          document.getElementById('resStatusBadge').className = "text-xs font-bold px-3 py-1.5 rounded-full bg-rose-100 text-rose-700";
-          document.getElementById('resPoTarget').innerText = "-";
-          document.getElementById('resCumulativeActual').innerText = "-";
-          document.getElementById('resModel').innerText = "-";
-          document.getElementById('resDeliveryDate').innerText = "-";
-          document.getElementById('resRealtimeStatus').innerText = "❌ ไม่พบข้อมูล LOT นี้ในระบบ Master_LOT";
-          return;
-        }
+    <div class="form-group">
+      <label for="remark">หมายเหตุ / ปัญหาที่พบ</label>
+      <textarea id="remark" rows="2" placeholder="ระบุปัญหาที่พบ (ถ้ามี)"></textarea>
+    </div>
 
-        const poTarget = Number(data.po_target) || 0;
-        const cumActual = Number(data.cumulative_actual) || 0;
-        const pct = poTarget > 0 ? ((cumActual / poTarget) * 100).toFixed(1) : 0;
+    <button type="submit" class="btn-submit" id="btnSubmit">บันทึกยอด</button>
+  </form>
+  </div>
 
-        document.getElementById('resLotNo').innerText = data.lot_number || val;
-        document.getElementById('resStatusBadge').innerText = `${pct}% Completed`;
-        document.getElementById('resStatusBadge').className = "text-xs font-bold px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700";
-        
-        document.getElementById('resPoTarget').innerText = `${poTarget.toLocaleString()} ชิ้น`;
-        document.getElementById('resCumulativeActual').innerText = `${cumActual.toLocaleString()} ชิ้น`;
-        document.getElementById('resModel').innerText = data.model || "-";
-        document.getElementById('resDeliveryDate').innerText = data.delivery_date || "-";
-        document.getElementById('resRealtimeStatus').innerText = `ผลิตสะสมได้ ${cumActual.toLocaleString()} จากเป้า ${poTarget.toLocaleString()} ชิ้น (${pct}%)`;
+  <div id="editPlanPage" class="prod-page">
+    <div class="edit-plan-note">
+      ⚠️ <b>ใช้เมื่อมีการเปลี่ยนแผนการผลิตเท่านั้น</b><br>
+      แก้ได้เฉพาะ TG Original และเวลาทำงานรวม ระบบจะคำนวณ Target ใหม่ให้อัตโนมัติ
+    </div>
 
-      } catch (err) {
-        console.error("Search Lot Error:", err);
-        alert("เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์");
-      }
-    }
+    <div class="form-group">
+      <label for="editLine">LINE การผลิต</label>
+      <select id="editLine" onchange="loadEditPlan()">
+        <option value="">-- เลือก LINE --</option>
+        <option value="Line B">Line B</option>
+        <option value="Line C">Line C</option>
+        <option value="Line D">Line D</option>
+        <option value="Line E">Line E</option>
+        <option value="Line F">Line F</option>
+        <option value="Line G">Line G ทดสอบ</option>
+      </select>
+    </div>
 
-    async function initLiffProfile() {
-      try {
+    <div id="editPlanLoading" style="display:none;text-align:center;color:#64748b;padding:18px 0;font-size:.85rem;">กำลังโหลดแผนปัจจุบัน...</div>
+
+    <div id="editPlanContent" style="display:none;">
+      <div class="form-group">
+        <label for="editTotalHours">⏱️ เวลาทำงานรวมวันนี้ (ชม.)</label>
+        <input type="number" id="editTotalHours" min="1" max="10" step="1" oninput="updateEditPlanPreview()">
+        <div id="editHoursHint" style="font-size:.74rem;color:#64748b;margin-top:5px;"></div>
+      </div>
+
+      <div id="editLotsContainer"></div>
+
+      <div id="editPlanPreview" class="edit-plan-preview"></div>
+      <div id="editPlanStatus" class="edit-status"></div>
+
+      <button type="button" class="btn-submit" id="savePlanEditBtn" onclick="saveProductionPlanEdit()">
+        บันทึกการแก้ไขเป้า / ชั่วโมง
+      </button>
+    </div>
+
+    <div id="editPlanEmpty" style="display:none;text-align:center;color:#94a3b8;padding:24px 8px;font-size:.86rem;">
+      เลือก LINE เพื่อดูแผนการผลิตของวันนี้
+    </div>
+  </div>
+</div>
+
+<!-- Modal ปิดรุ่นจากแถวเวลา แล้วขึ้น LOT ใหม่ -->
+<div class="modal-overlay" id="newLotModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">🔄 เปลี่ยนรุ่น → ขึ้น LOT ใหม่</div>
+      <button type="button" class="btn-close-modal" onclick="closeNewLotModal()">&times;</button>
+    </div>
+
+    <div class="switch-picked-slot">
+      LOT ปัจจุบัน: <b id="modalCurrentLot">-</b><br>
+      รอบนี้จะเปลี่ยนเป็น LOT ใหม่: <b id="modalSwitchSlot">-</b>
+    </div>
+
+    <div class="form-group">
+      <label for="modalLotNo">1) เลข LOT ใหม่</label>
+      <input type="text" id="modalLotNo" placeholder="เช่น 26101020" autocomplete="off">
+    </div>
+
+    <div class="form-group">
+      <label for="modalLotTarget">2) TG Original ของ LOT ใหม่ (ชิ้น)</label>
+      <input type="number" id="modalLotTarget" min="1" placeholder="กรอก TG เต็ม เช่น 742">
+    </div>
+
+    <div id="switchLotStatus" style="display:none;font-size:.78rem;border-radius:10px;padding:9px 10px;margin-bottom:10px;"></div>
+
+    <button type="button" class="btn-submit" id="confirmSwitchLotBtn" onclick="confirmNewLot()">
+      ยืนยันการเปลี่ยน LOT
+    </button>
+  </div>
+</div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwziSYLaDcymEHVXQr_qOP6RmIQDjixVPqWwhAQSOMXs_4zAA-gscpeuR7fJp7DY6yp/exec"; 
+  const LIFF_ID = "2011198724-JQ60DTBm";
+
+  const FRONTEND_BUILD_LOT_SWITCH = '20260916_CONFIRM_NO_PREFETCH_V5';
+  console.log('Output build:', FRONTEND_BUILD_LOT_SWITCH);
+  let activeLots = []; 
+  let masterLotMap = {}; 
+  let currentTarget1 = 0;
+  let currentHours1 = 9;
+  let userDisplayName = "Unknown";
+  let currentExistingHourly = {};
+  let currentEditPlanState = null;
+  let currentActiveLot = '';
+  let currentLotPlan = []; // [{ lot, hours }] จาก Summary
+  let pendingSwitchAfterSlot = '';
+  let pendingSwitchRow = null;
+  let pendingSwitchContext = null;
+  let pendingSwitchMode = ''; // NEXT = เริ่มรอบถัดไป, CURRENT = ใช้รอบที่เลือก
+
+  initLiff();
+
+  async function initLiff() {
+    try {
+      if (typeof liff !== "undefined" && LIFF_ID) {
         await liff.init({ liffId: LIFF_ID });
-
         if (liff.isLoggedIn()) {
           const profile = await liff.getProfile();
-          document.getElementById("displayName").innerText = profile.displayName;
+          userDisplayName = profile.displayName || "Unknown";
+          
+          const userElem = document.getElementById('userDisplayNameDisplay');
+          if (userElem) userElem.innerText = userDisplayName;
         } else {
-          document.getElementById("displayName").innerText = "Guest User";
+          document.getElementById('userDisplayNameDisplay').innerText = "ทั่วไป (ไม่ผ่าน LINE)";
         }
+      }
+    } catch (err) {
+      console.error("LIFF Init Error:", err);
+      document.getElementById('userDisplayNameDisplay').innerText = "ทั่วไป (ไม่ผ่าน LINE)";
+    }
+  }
+
+  const TIME_SLOTS_DEF = [
+    { label: "08.30-09.30", endMin: 570 },
+    { label: "09.30-10.30", endMin: 630 },
+    { label: "10.30-11.30", endMin: 690 },
+    { label: "11.30-12.30", endMin: 750 },
+    { label: "12.30-13.30", endMin: 810 },
+    { label: "13.30-14.30", endMin: 870 },
+    { label: "14.30-15.30", endMin: 930 },
+    { label: "15.30-16.30", endMin: 990 },
+    { label: "16.30-17.30", endMin: 1050 },
+    { label: "17.30-18.30", endMin: 1110 },
+    { label: "18.30-19.30", endMin: 1170 }
+  ];
+
+  document.addEventListener("DOMContentLoaded", () => {
+    displayCurrentDate();
+
+    const savedLine = localStorage.getItem("selectedLine");
+    if (savedLine) {
+      const lineSelect = document.getElementById('line');
+      lineSelect.value = savedLine;
+      loadLineDetails();
+    }
+  });
+
+
+  function switchProductionTab(tab) {
+    const recordPage = document.getElementById('recordPage');
+    const editPage = document.getElementById('editPlanPage');
+    const recordBtn = document.getElementById('recordTabBtn');
+    const editBtn = document.getElementById('editPlanTabBtn');
+
+    recordPage.classList.toggle('active', tab === 'record');
+    editPage.classList.toggle('active', tab === 'edit');
+    recordBtn.classList.toggle('active', tab === 'record');
+    editBtn.classList.toggle('active', tab === 'edit');
+
+    if (tab === 'edit') {
+      const currentLine = document.getElementById('line').value || localStorage.getItem('selectedLine') || '';
+      const editLine = document.getElementById('editLine');
+
+      if (currentLine && editLine.value !== currentLine) {
+        editLine.value = currentLine;
+      }
+
+      if (editLine.value) {
+        loadEditPlan();
+      } else {
+        document.getElementById('editPlanContent').style.display = 'none';
+        document.getElementById('editPlanEmpty').style.display = 'block';
+      }
+    }
+  }
+
+  function getEditPlanLots_(data) {
+    return [
+      {
+        index: 1,
+        lot: normalizeLot_(data.lotNumber),
+        hours: Number(data.workingHours) || 0,
+        target: Number(data.target1) || 0,
+        tg: Number(data.tgOriginal1 || data.target1 || 0),
+        model: (data.masterMap || {})[normalizeLot_(data.lotNumber)] || ''
+      },
+      {
+        index: 2,
+        lot: normalizeLot_(data.lotNumber2 || data.lot2Number),
+        hours: Number(data.workingHours2) || 0,
+        target: Number(data.target2) || 0,
+        tg: Number(data.tgOriginal2 || 0),
+        model: (data.masterMap || {})[normalizeLot_(data.lotNumber2 || data.lot2Number)] || ''
+      },
+      {
+        index: 3,
+        lot: normalizeLot_(data.lotNumber3 || data.lot3Number),
+        hours: Number(data.workingHours3) || 0,
+        target: Number(data.target3) || 0,
+        tg: Number(data.tgOriginal3 || 0),
+        model: (data.masterMap || {})[normalizeLot_(data.lotNumber3 || data.lot3Number)] || ''
+      }
+    ].filter(item => item.lot);
+  }
+
+  async function loadEditPlan() {
+    const lineVal = document.getElementById('editLine').value;
+    const loading = document.getElementById('editPlanLoading');
+    const content = document.getElementById('editPlanContent');
+    const empty = document.getElementById('editPlanEmpty');
+
+    currentEditPlanState = null;
+    content.style.display = 'none';
+    empty.style.display = 'none';
+
+    if (!lineVal) {
+      empty.style.display = 'block';
+      return;
+    }
+
+    loading.style.display = 'block';
+
+    try {
+      const data = await fetchCurrentLineState_(lineVal);
+      const lots = getEditPlanLots_(data);
+
+      if (!lots.length) {
+        loading.style.display = 'none';
+        empty.innerText = 'ยังไม่มีแผนการผลิตของ LINE นี้ในวันนี้';
+        empty.style.display = 'block';
+        return;
+      }
+
+      const totalHours = lots.reduce((sum, item) => sum + item.hours, 0) || Number(data.totalWorkingHours) || 0;
+
+      currentEditPlanState = {
+        line: lineVal,
+        data: data,
+        lots: lots,
+        totalHours: totalHours,
+        totalTarget: Number(data.target) || 0
+      };
+
+      document.getElementById('editTotalHours').value = totalHours;
+
+      const container = document.getElementById('editLotsContainer');
+      container.innerHTML = lots.map(item => `
+        <div class="edit-plan-card">
+          <div class="edit-plan-card-title">
+            <div>
+              LOT ${item.index}: ${item.lot}
+              <div class="edit-plan-model">${item.model ? `รุ่น: ${item.model}` : 'ไม่พบชื่อรุ่น'}</div>
+            </div>
+            <span class="edit-plan-hours-badge" id="editHoursBadge${item.index}">${item.hours} ชม.</span>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="editTG${item.index}">TG Original LOT ${item.index} (ชิ้น)</label>
+            <input type="number" id="editTG${item.index}" min="1" step="1" value="${item.tg || ''}" oninput="updateEditPlanPreview()">
+          </div>
+        </div>
+      `).join('');
+
+      loading.style.display = 'none';
+      content.style.display = 'block';
+      setEditPlanStatus_('', 'info', false);
+      updateEditPlanPreview();
+
+    } catch (err) {
+      console.error('loadEditPlan error:', err);
+      loading.style.display = 'none';
+      empty.innerText = 'โหลดแผนการผลิตไม่สำเร็จ กรุณาลองใหม่';
+      empty.style.display = 'block';
+    }
+  }
+
+  function calculateEditedPlan_() {
+    if (!currentEditPlanState) {
+      return { valid: false, error: 'ยังไม่มีข้อมูลแผน' };
+    }
+
+    const lots = currentEditPlanState.lots;
+    const totalHours = Math.floor(Number(document.getElementById('editTotalHours').value) || 0);
+
+    if (totalHours < 1 || totalHours > 10) {
+      return { valid: false, error: 'เวลาทำงานรวมต้องอยู่ระหว่าง 1–10 ชั่วโมง' };
+    }
+
+    let hours1 = 0;
+    let hours2 = 0;
+    let hours3 = 0;
+
+    if (lots.length >= 3) {
+      hours1 = lots[0].hours;
+      hours2 = lots[1].hours;
+      const fixed = hours1 + hours2;
+
+      if (totalHours <= fixed) {
+        return { valid: false, error: `ต้องมากกว่า ${fixed} ชม. เพราะขึ้น LOT3 แล้ว` };
+      }
+
+      hours3 = totalHours - fixed;
+
+    } else if (lots.length === 2) {
+      hours1 = lots[0].hours;
+
+      if (totalHours <= hours1) {
+        return { valid: false, error: `ต้องมากกว่า ${hours1} ชม. เพราะขึ้น LOT2 แล้ว` };
+      }
+
+      hours2 = totalHours - hours1;
+
+    } else {
+      hours1 = totalHours;
+    }
+
+    const hoursByLot = [hours1, hours2, hours3];
+    const editedLots = [];
+
+    for (const item of lots) {
+      const tgEl = document.getElementById(`editTG${item.index}`);
+      const tg = Number(tgEl ? tgEl.value : 0) || 0;
+
+      if (tg <= 0) {
+        return { valid: false, error: `TG Original LOT ${item.index} ต้องมากกว่า 0` };
+      }
+
+      const hours = hoursByLot[item.index - 1] || 0;
+      const target = Math.round((tg / totalHours) * hours);
+
+      editedLots.push({ ...item, tg, hours, target });
+    }
+
+    const totalTarget = editedLots.reduce((sum, item) => sum + item.target, 0);
+
+    return {
+      valid: true,
+      totalHours,
+      totalTarget,
+      lots: editedLots
+    };
+  }
+
+  function updateEditPlanPreview() {
+    const preview = document.getElementById('editPlanPreview');
+    if (!preview || !currentEditPlanState) return;
+
+    const calc = calculateEditedPlan_();
+
+    if (!calc.valid) {
+      preview.style.display = 'block';
+      preview.innerHTML = `<div style="color:#b91c1c;font-size:.82rem;font-weight:700;">⚠️ ${calc.error}</div>`;
+      return;
+    }
+
+    calc.lots.forEach(item => {
+      const badge = document.getElementById(`editHoursBadge${item.index}`);
+      if (badge) badge.innerText = `${item.hours} ชม.`;
+    });
+
+    const lotRows = calc.lots.map(item => `
+      <div class="edit-preview-row">
+        <span>LOT ${item.index} • ${item.hours} ชม. • TG ${item.tg.toLocaleString()}</span>
+        <strong>Target ${item.target.toLocaleString()}</strong>
+      </div>
+    `).join('');
+
+    preview.style.display = 'block';
+    preview.innerHTML = `
+      <div style="font-weight:800;color:#334155;margin-bottom:6px;">ตัวอย่างหลังบันทึก</div>
+      <div class="edit-preview-row">
+        <span>เวลาทำงานรวม</span>
+        <strong>${currentEditPlanState.totalHours} → ${calc.totalHours} ชม.</strong>
+      </div>
+      <div class="edit-preview-row">
+        <span>Target รวม</span>
+        <strong>${currentEditPlanState.totalTarget.toLocaleString()} → ${calc.totalTarget.toLocaleString()} ชิ้น</strong>
+      </div>
+      <div class="edit-preview-divider"></div>
+      ${lotRows}
+    `;
+  }
+
+  function setEditPlanStatus_(message, type = 'info', show = true) {
+    const box = document.getElementById('editPlanStatus');
+    if (!box) return;
+
+    if (!show || !message) {
+      box.style.display = 'none';
+      box.innerText = '';
+      return;
+    }
+
+    box.style.display = 'block';
+    box.innerText = message;
+
+    if (type === 'error') {
+      box.style.background = '#fef2f2';
+      box.style.color = '#b91c1c';
+      box.style.border = '1px solid #fecaca';
+    } else if (type === 'success') {
+      box.style.background = '#ecfdf5';
+      box.style.color = '#047857';
+      box.style.border = '1px solid #a7f3d0';
+    } else {
+      box.style.background = '#eff6ff';
+      box.style.color = '#1d4ed8';
+      box.style.border = '1px solid #bfdbfe';
+    }
+  }
+
+  async function waitForPlanEditSaved_(lineVal, calc) {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      try {
+        const state = await fetchCurrentLineState_(lineVal);
+        const stateLots = getEditPlanLots_(state);
+        const savedHours = stateLots.reduce((sum, item) => sum + item.hours, 0);
+
+        if (savedHours !== calc.totalHours) continue;
+
+        let matches = true;
+        calc.lots.forEach(item => {
+          const saved = stateLots.find(x => x.index === item.index);
+          if (!saved || Math.round(saved.tg) !== Math.round(item.tg)) {
+            matches = false;
+          }
+        });
+
+        if (matches && Math.round(Number(state.target) || 0) === Math.round(calc.totalTarget)) {
+          return state;
+        }
+
       } catch (err) {
-        document.getElementById("displayName").innerText = "Guest User";
+        console.warn('verify plan edit attempt failed:', err);
       }
     }
 
-    async function main() {
-      const todayStr = getTodayStr();
-      document.getElementById('datePicker').value = todayStr;
+    return null;
+  }
 
-      // LINE profile ทำงานแยก ไม่ขวางการโหลด Dashboard
-      initLiffProfile();
+  async function saveProductionPlanEdit() {
+    const lineVal = document.getElementById('editLine').value;
+    const calc = calculateEditedPlan_();
 
-      // โหลดข้อมูลหลักก่อน
-      await fetchDashboardData(todayStr);
-
-      // หน้าแสดงแล้ว ค่อยเช็ก version และเริ่ม watcher
-      syncDashboardVersionBaseline()
-        .catch(err => console.warn("Dashboard baseline failed:", err))
-        .finally(() => startChangeWatch());
-
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-          checkForDashboardChange();
-        }
-      });
+    if (!lineVal || !currentEditPlanState) {
+      alert('กรุณาเลือก LINE การผลิต');
+      return;
     }
 
-    main();
-  </script>
+    if (!calc.valid) {
+      alert(calc.error);
+      return;
+    }
+
+    const summaryLines = calc.lots.map(
+      item => `LOT ${item.index}: TG ${item.tg.toLocaleString()} • ${item.hours} ชม. • Target ${item.target.toLocaleString()}`
+    );
+
+    const ok = confirm(
+      `ยืนยันแก้ไขแผนการผลิต?\n\n` +
+      `LINE: ${lineVal}\n` +
+      `เวลาทำงานรวม: ${calc.totalHours} ชม.\n` +
+      `${summaryLines.join('\n')}\n` +
+      `Target รวมใหม่: ${calc.totalTarget.toLocaleString()} ชิ้น\n\n` +
+      `Actual ที่บันทึกไปแล้วจะไม่ถูกแก้ไข`
+    );
+
+    if (!ok) return;
+
+    const btn = document.getElementById('savePlanEditBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.style.opacity = '.6';
+    }
+
+    setEditPlanStatus_('กำลังบันทึกแผนใหม่...', 'info', true);
+
+    const payload = {
+      action: 'UPDATE_PRODUCTION_PLAN',
+      line: lineVal,
+      totalWorkingHours: calc.totalHours,
+      tgOriginal1: calc.lots.find(x => x.index === 1)?.tg || 0,
+      tgOriginal2: calc.lots.find(x => x.index === 2)?.tg || 0,
+      tgOriginal3: calc.lots.find(x => x.index === 3)?.tg || 0,
+      updatedBy: userDisplayName
+    };
+
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      });
+
+      const verified = await waitForPlanEditSaved_(lineVal, calc);
+
+      if (!verified) {
+        setEditPlanStatus_(
+          'ยังยืนยันการบันทึกไม่ได้ กรุณาอย่ากดซ้ำ ให้โหลดข้อมูลใหม่เพื่อตรวจสอบก่อน',
+          'error',
+          true
+        );
+        alert('ระบบยังยืนยันการบันทึกไม่ได้ กรุณาอย่ากดซ้ำ');
+        return;
+      }
+
+      setEditPlanStatus_(
+        `บันทึกสำเร็จ • Target รวมใหม่ ${calc.totalTarget.toLocaleString()} ชิ้น • ${calc.totalHours} ชม.`,
+        'success',
+        true
+      );
+
+      // อัปเดตทั้งแท็บแก้ไขและหน้าบันทึกยอดให้ใช้ค่าชุดใหม่ทันที
+      await loadEditPlan();
+
+      const recordLine = document.getElementById('line');
+      if (recordLine && recordLine.value === lineVal) {
+        await loadLineDetails();
+      }
+
+      alert('✅ แก้ไขเป้า / ชั่วโมงสำเร็จ');
+
+    } catch (err) {
+      console.error('saveProductionPlanEdit error:', err);
+      setEditPlanStatus_('บันทึกไม่สำเร็จ กรุณาลองใหม่', 'error', true);
+      alert('บันทึกไม่สำเร็จ กรุณาลองใหม่');
+
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      }
+    }
+  }
+
+  function displayCurrentDate() {
+    const now = new Date();
+    document.getElementById('currentDateDisplay').innerText = now.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  async function loadLineDetails() {
+    const line = document.getElementById('line').value;
+    const slotsContainer = document.getElementById('slotsContainer');
+    const infoBanner = document.getElementById('infoBanner');
+    const modelBanner = document.getElementById('currentModelBanner');
+
+    if (!line) {
+      slotsContainer.innerHTML = '<p style="color: #94a3b8; font-size: 0.95rem; text-align: center; padding: 15px 0;">โปรดเลือก LINE การผลิต</p>';
+      infoBanner.style.display = 'none';
+      if (modelBanner) modelBanner.style.display = 'none';
+      currentActiveLot = '';
+      return;
+    }
+
+    localStorage.setItem("selectedLine", line);
+
+    const editLine = document.getElementById('editLine');
+    if (editLine && editLine.value !== line) editLine.value = line;
+
+    slotsContainer.innerHTML = '<p style="color: #64748b; font-size: 0.95rem; text-align: center; padding: 15px 0;">กำลังโหลดข้อมูล...</p>';
+
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(line)}&_=${Date.now()}`, { cache: 'no-store' });
+      const data = await res.json();
+
+      activeLots = Array.isArray(data.lots) ? [...data.lots] : [];
+
+      const loadedLots = [
+        data.lotNumber,
+        data.lotNumber2 || data.lot2Number,
+        data.lotNumber3 || data.lot3Number
+      ]
+        .map(v => normalizeLot_(v))
+        .filter(Boolean);
+
+      loadedLots.forEach(lot => {
+        if (!activeLots.some(x => normalizeLot_(x) === lot)) {
+          activeLots.push(lot);
+        }
+      });
+
+      masterLotMap = data.masterMap || {};
+      currentHours1 = Number(data.totalWorkingHours) || 9;
+      currentTarget1 = Number(data.target) || Number(data.target1) || 0;
+      currentExistingHourly = data.existingHourly || {};
+
+      // Summary เป็นแหล่งความจริงของการแบ่ง LOT ตามชั่วโมง
+      currentLotPlan = [
+        { lot: normalizeLot_(data.lotNumber), hours: Number(data.workingHours) || 0 },
+        { lot: normalizeLot_(data.lotNumber2 || data.lot2Number), hours: Number(data.workingHours2) || 0 },
+        { lot: normalizeLot_(data.lotNumber3 || data.lot3Number), hours: Number(data.workingHours3) || 0 }
+      ].filter(item => item.lot && item.hours > 0);
+
+      currentActiveLot =
+        loadedLots[loadedLots.length - 1] ||
+        normalizeLot_(activeLots[activeLots.length - 1]) ||
+        '';
+
+      document.getElementById('targetVal').innerText = currentTarget1.toLocaleString();
+      document.getElementById('hoursVal').innerText = currentHours1;
+      infoBanner.style.display = 'flex';
+
+      updateCurrentModelBanner_();
+      generateSmartTimeSlots(currentHours1, currentExistingHourly);
+      updateHourlyAverage();
+
+    } catch (err) {
+      console.error("Error loading line details:", err);
+      currentExistingHourly = {};
+      currentActiveLot = normalizeLot_(activeLots[activeLots.length - 1]) || '';
+      updateCurrentModelBanner_();
+      generateSmartTimeSlots(9, currentExistingHourly);
+      updateHourlyAverage();
+    }
+  }
+
+
+  function getPlannedLotForSlot_(slotLabel, breakSlot) {
+    const cleanLabel = String(slotLabel || '').trim();
+    if (!cleanLabel) return normalizeLot_(currentActiveLot);
+
+    const workingSlots = TIME_SLOTS_DEF
+      .filter(slot => slot.label !== breakSlot)
+      .slice(0, Math.max(1, Number(currentHours1) || 9));
+
+    // ช่วงพักให้ถือ LOT เดียวกับรอบทำงานก่อนหน้า
+    if (cleanLabel === breakSlot) {
+      const fullIndex = TIME_SLOTS_DEF.findIndex(slot => slot.label === cleanLabel);
+      for (let i = fullIndex - 1; i >= 0; i--) {
+        const prevLabel = TIME_SLOTS_DEF[i]?.label || '';
+        if (prevLabel && prevLabel !== breakSlot) {
+          return getPlannedLotForSlot_(prevLabel, breakSlot);
+        }
+      }
+      return normalizeLot_(currentLotPlan[0]?.lot || currentActiveLot);
+    }
+
+    const workingIndex = workingSlots.findIndex(slot => slot.label === cleanLabel);
+    if (workingIndex < 0) return normalizeLot_(currentActiveLot);
+
+    let cursor = 0;
+    for (const item of currentLotPlan) {
+      const hours = Math.max(0, Number(item.hours) || 0);
+      if (workingIndex >= cursor && workingIndex < cursor + hours) {
+        return normalizeLot_(item.lot);
+      }
+      cursor += hours;
+    }
+
+    return normalizeLot_(currentActiveLot);
+  }
+
+
+  function generateSmartTimeSlots(totalHours, existingData) {
+    const slotsContainer = document.getElementById('slotsContainer');
+    slotsContainer.innerHTML = '';
+
+    const selectedLine = document.getElementById('line').value.toUpperCase();
+    const cleanLine = selectedLine.replace('LINE', '').trim();
+
+    let breakSlot = "";
+    if (['B', 'C'].includes(cleanLine)) {
+      breakSlot = "12.30-13.30";
+    } else if (['D', 'E', 'F', 'G'].includes(cleanLine)) {
+      breakSlot = "11.30-12.30";
+    }
+
+    const now = new Date();
+    const currentMinutes = (now.getHours() * 60) + now.getMinutes();
+
+    let targetSlots = [];
+
+    // คง Logic เดิมทั้งหมด ยกเว้นรอบท้าย:
+    // 17:30 -> 16.30-17.30
+    // 18:30 -> 17.30-18.30
+    // 19:30 -> 18.30-19.30 (เฉพาะวัน 10 ชม.)
+    // ห้ามโชว์ slot ที่ยังผลิตไม่จบล่วงหน้า
+    if (currentMinutes >= 1020 && currentMinutes < 1080) {
+      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "16.30-17.30");
+    } else if (currentMinutes >= 1080 && currentMinutes < 1170) {
+      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "17.30-18.30");
+    } else if (currentMinutes >= 1170 && totalHours >= 10) {
+      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "18.30-19.30");
+    } else {
+      let passedSlots = TIME_SLOTS_DEF.filter(slot => currentMinutes >= slot.endMin);
+      const maxCount = Math.min(Math.ceil(totalHours), TIME_SLOTS_DEF.length);
+      passedSlots = passedSlots.slice(-maxCount);
+
+      if (passedSlots.length >= 2) {
+        targetSlots = passedSlots.slice(-2);
+      } else {
+        targetSlots = [TIME_SLOTS_DEF[0], TIME_SLOTS_DEF[1]];
+      }
+    }
+
+    const seenSlots = new Set();
+    targetSlots = targetSlots.filter(slot => {
+      if (seenSlots.has(slot.label)) return false;
+      seenSlots.add(slot.label);
+      return true;
+    });
+
+    targetSlots.forEach(slot => {
+      const existing = existingData[slot.label] || {};
+      const isBreakTime = (slot.label === breakSlot);
+      const currentOutput = isBreakTime
+        ? 0
+        : (existing.output !== undefined ? existing.output : '');
+
+      // LOT ของรอบนี้ยึด Summary plan ก่อน ไม่ให้ LOT เก่าจาก Hourly_Log แถว 0 มาทับ
+      const plannedLot = getPlannedLotForSlot_(slot.label, breakSlot);
+      const slotLot = normalizeLot_(plannedLot || existing.lot || currentActiveLot);
+      const isClosedHistoricalLot =
+        !!slotLot &&
+        !!currentActiveLot &&
+        slotLot !== normalizeLot_(currentActiveLot);
+
+      const row = document.createElement('div');
+      row.className = 'slot-row';
+      row.dataset.breakTime = isBreakTime ? 'true' : 'false';
+      row.dataset.slotLabel = slot.label;
+
+      row.innerHTML = `
+        <div class="slot-time" data-slot-label="${slot.label}">
+          ${slot.label}
+          ${isBreakTime ? '<br><span style="color:#ef4444; font-size:0.75rem;">(พัก)</span>' : ''}
+          ${!isBreakTime ? `
+            <button type="button"
+                    class="slot-end-lot-btn ${isClosedHistoricalLot ? 'closed' : ''}"
+                    data-slot-label="${slot.label}"
+                    onclick="openEndLotForSlot_(this, '${slot.label}')"
+                    ${isClosedHistoricalLot ? 'disabled' : ''}>
+              ${isClosedHistoricalLot ? '🔒 บันทึกแล้ว' : '🔄 เปลี่ยนรุ่น'}
+            </button>
+          ` : ''}
+        </div>
+
+        <div class="slot-lot-container">
+          <div class="slot-lot-display ${(!isClosedHistoricalLot && !isBreakTime) ? 'current' : ''}">
+            ${slotLot || '--'}
+          </div>
+          <input type="hidden" class="input-lot-val" value="${slotLot}">
+          <div class="model-subtext">${getModelTextForLot_(slotLot)}</div>
+        </div>
+
+        <input type="number"
+               class="slot-input input-val"
+               min="0"
+               placeholder="0"
+               value="${currentOutput}"
+               oninput="calculateTotal()"
+               ${isBreakTime ? 'readonly style="background-color:#f1f5f9;color:#94a3b8;cursor:not-allowed;"' : ''}>
+      `;
+
+      slotsContainer.appendChild(row);
+    });
+
+    calculateTotal();
+  }
+
+  function getModelTextForLot_(lot) {
+    const cleanLot = normalizeLot_(lot);
+    const model = cleanLot ? masterLotMap[cleanLot] : '';
+    return model ? `(รุ่น: ${model})` : '';
+  }
+
+  function updateCurrentModelBanner_() {
+    const banner = document.getElementById('currentModelBanner');
+    const text = document.getElementById('currentModelText');
+    if (!banner || !text) return;
+
+    const model = masterLotMap[normalizeLot_(currentActiveLot)] || '';
+
+    if (currentActiveLot) {
+      text.innerText = model || '-';
+      banner.style.display = 'block';
+    } else {
+      text.innerText = '-';
+      banner.style.display = 'none';
+    }
+  }
+
+
+  function getCompletedWorkingHours_(existingData) {
+    // นับรอบที่มีข้อมูลแล้วทั้งหมด รวม OT ด้วย
+    // แต่ "ช่วงพัก" ต้องไม่นับเป็นชั่วโมงทำงาน
+    const completedLabels = new Set();
+
+    const selectedLine = document.getElementById('line').value.toUpperCase();
+    const cleanLine = selectedLine.replace('LINE', '').trim();
+
+    let breakSlot = "";
+    if (['B', 'C'].includes(cleanLine)) {
+      breakSlot = "12.30-13.30";
+    } else if (['D', 'E', 'F', 'G'].includes(cleanLine)) {
+      breakSlot = "11.30-12.30";
+    }
+
+    Object.entries(existingData || {}).forEach(([label, existing]) => {
+      const slot = TIME_SLOTS_DEF.find(s => s.label === label);
+      if (!slot || !existing) return;
+      if (label === breakSlot) return;
+
+      if (existing.output !== undefined && existing.output !== "") {
+        completedLabels.add(label);
+      }
+    });
+
+    // รวมค่าที่กำลังกรอกบนหน้าปัจจุบัน
+    // ถ้ามีใน existingData แล้ว Set จะไม่ให้นับซ้ำ
+    document.querySelectorAll('.slot-row').forEach(row => {
+      const label = row.querySelector('.slot-time')?.getAttribute('data-slot-label');
+      const input = row.querySelector('.input-val');
+
+      if (!label || !input || input.value === "") return;
+
+      const slot = TIME_SLOTS_DEF.find(s => s.label === label);
+      if (!slot) return;
+      if (label === breakSlot) return;
+
+      completedLabels.add(label);
+    });
+
+    return completedLabels.size;
+  }
+
+
+  function getActualNormalTotal_(existingData) {
+    const normalOrder = TIME_SLOTS_DEF.filter(s => s.endMin <= 1050);
+    let total = 0;
+    normalOrder.forEach(slot => {
+      const existing = existingData && existingData[slot.label];
+      if (existing && existing.output !== undefined && existing.output !== "") {
+        total += Number(existing.output) || 0;
+      }
+    });
+    // รวมค่าที่ผู้ใช้เพิ่งกรอกในหน้าปัจจุบันด้วย
+    document.querySelectorAll('.slot-row').forEach(row => {
+      const label = row.querySelector('.slot-time')?.getAttribute('data-slot-label');
+      const input = row.querySelector('.input-val');
+      if (!label || !input) return;
+      const slot = TIME_SLOTS_DEF.find(s => s.label === label);
+      if (!slot || slot.endMin > 1050) return;
+      if (input.value !== "") {
+        const old = existingData && existingData[label];
+        const oldQty = old && old.output !== undefined && old.output !== "" ? Number(old.output) || 0 : null;
+        const newQty = Number(input.value) || 0;
+        if (oldQty !== null) total += newQty - oldQty;
+        else total += newQty;
+      }
+    });
+    return total;
+  }
+
+  function updateHourlyAverage() {
+    const panel = document.getElementById('hourlyPacePanel');
+    const reqEl = document.getElementById('requiredPerHour');
+    const noteEl = document.getElementById('paceAverageNote');
+
+    if (!panel || !reqEl) return;
+
+    const totalHours = Number(currentHours1) || 0;
+    const totalTarget = Number(currentTarget1) || 0;
+
+    if (totalHours <= 0 || totalTarget <= 0) {
+      panel.style.display = 'none';
+      reqEl.textContent = '-';
+      return;
+    }
+
+    const requiredAvg = totalTarget / totalHours;
+
+    reqEl.textContent = Math.round(requiredAvg).toLocaleString() + ' ชิ้น';
+
+    if (noteEl) {
+      noteEl.textContent =
+        `เป้ารวม ${totalTarget.toLocaleString()} ชิ้น ÷ ${totalHours} ชม.`;
+    }
+
+    panel.style.display = 'block';
+  }
+
+
+  function getBreakSlotForLine_(lineValue) {
+    const cleanLine = String(lineValue || '')
+      .replace(/LINE/i, '')
+      .replace(/\s+/g, '')
+      .toUpperCase();
+
+    if (['B', 'C'].includes(cleanLine)) return '12.30-13.30';
+    if (['D', 'E', 'F', 'G'].includes(cleanLine)) return '11.30-12.30';
+    return '';
+  }
+
+  function getWorkingSlotsForCurrentLine_() {
+    const lineVal = document.getElementById('line').value;
+    const breakSlot = getBreakSlotForLine_(lineVal);
+    const totalHours = Math.max(1, Number(currentHours1) || 9);
+
+    const workingSlots = TIME_SLOTS_DEF
+      .filter(slot => slot.label !== breakSlot)
+      .slice(0, totalHours);
+
+    return workingSlots;
+  }
+
+  function hasSavedLaterWorkingSlot_(slotLabel) {
+    const workingSlots = getWorkingSlotsForCurrentLine_();
+    const index = workingSlots.findIndex(slot => slot.label === slotLabel);
+    if (index < 0) return false;
+
+    return workingSlots.slice(index + 1).some(slot => {
+      const saved = currentExistingHourly && currentExistingHourly[slot.label];
+      return !!(
+        saved &&
+        saved.output !== undefined &&
+        saved.output !== ""
+      );
+    });
+  }
+
+  function selectLotSwitchMode_(mode) {
+    pendingSwitchMode = mode === 'CURRENT' ? 'CURRENT' : 'NEXT';
+
+    const nextBtn = document.getElementById('switchModeNextBtn');
+    const currentBtn = document.getElementById('switchModeCurrentBtn');
+    const hint = document.getElementById('switchModeHint');
+
+    if (nextBtn) {
+      nextBtn.style.boxShadow = pendingSwitchMode === 'NEXT' ? '0 0 0 3px rgba(13,148,136,.18)' : 'none';
+      nextBtn.style.transform = pendingSwitchMode === 'NEXT' ? 'translateY(-1px)' : 'none';
+    }
+    if (currentBtn) {
+      currentBtn.style.boxShadow = pendingSwitchMode === 'CURRENT' ? '0 0 0 3px rgba(245,158,11,.20)' : 'none';
+      currentBtn.style.transform = pendingSwitchMode === 'CURRENT' ? 'translateY(-1px)' : 'none';
+    }
+
+    if (hint) {
+      hint.style.display = 'block';
+      if (pendingSwitchMode === 'CURRENT') {
+        hint.style.background = '#fffbeb';
+        hint.style.color = '#92400e';
+        hint.style.border = '1px solid #fde68a';
+        hint.innerHTML = '🟠 <b>รอบนี้เลย</b> — รอบนี้เป็น LOT ใหม่';
+      } else {
+        hint.style.background = '#f0fdfa';
+        hint.style.color = '#0f766e';
+        hint.style.border = '1px solid #99f6e4';
+        hint.innerHTML = '🟢 <b>รอบถัดไป</b> — รอบนี้ยังเป็น LOT เดิม';
+      }
+    }
+  }
+
+  function openEndLotForSlot_(button, explicitSlotLabel) {
+    const lineVal = document.getElementById('line').value;
+    if (!lineVal) {
+      alert("กรุณาเลือก LINE การผลิตก่อน");
+      return;
+    }
+
+    if (activeLots.length >= 3) {
+      alert("วันนี้ LINE นี้มีครบ 3 LOT แล้ว ระบบรองรับสูงสุด 3 LOT ต่อวัน");
+      return;
+    }
+
+    const row = button.closest('.slot-row');
+    if (!row || row.dataset.breakTime === 'true') return;
+
+    const slotFromArg = String(explicitSlotLabel || '').trim();
+    const slotFromButton = String(button.dataset.slotLabel || '').trim();
+    const slotFromRow = String(
+      row.dataset.slotLabel ||
+      row.querySelector('.slot-time')?.getAttribute('data-slot-label') ||
+      ''
+    ).trim();
+
+    if (!slotFromArg || slotFromArg !== slotFromButton || slotFromArg !== slotFromRow) {
+      alert("ตรวจพบรอบเวลาไม่ตรงกัน ระบบหยุดไว้ก่อน กรุณาโหลดหน้าใหม่");
+      return;
+    }
+
+    const slotLabel = slotFromArg;
+    const lotVal = normalizeLot_(row.querySelector('.input-lot-val')?.value);
+    const outputInput = row.querySelector('.input-val');
+
+    if (!lotVal) {
+      alert("ไม่พบ LOT ของรอบนี้ กรุณาโหลดใหม่");
+      return;
+    }
+
+    // NEXT ต้องใช้ยอดรอบนี้เป็นยอดสุดท้ายของ LOT เดิม
+    // CURRENT ไม่บังคับยอด เพราะ LOT ใหม่อาจเพิ่งขึ้นกลางรอบและรอบนี้ยังผลิตไม่จบ
+    let closingQty = null;
+    if (outputInput && outputInput.value !== '') {
+      closingQty = Number(outputInput.value);
+      if (!Number.isFinite(closingQty) || closingQty < 0) {
+        alert(`ยอดของรอบ ${slotLabel} ไม่ถูกต้อง`);
+        return;
+      }
+    }
+
+    if (lotVal !== normalizeLot_(currentActiveLot)) {
+      alert("รอบนี้เป็น LOT ที่จบไปแล้ว ไม่สามารถปิดซ้ำได้");
+      return;
+    }
+
+    if (hasSavedLaterWorkingSlot_(slotLabel)) {
+      alert("มีการบันทึกยอดของรอบถัดไปแล้ว ไม่สามารถปิด LOT ย้อนหลังที่รอบนี้ได้");
+      return;
+    }
+
+    const workingSlots = getWorkingSlotsForCurrentLine_();
+    const workingIndex = workingSlots.findIndex(slot => slot.label === slotLabel);
+    if (workingIndex < 0) {
+      alert("รอบที่กดเปลี่ยนรุ่นไม่ใช่รอบทำงานของ LINE นี้ กรุณาโหลดหน้าใหม่");
+      return;
+    }
+
+    pendingSwitchAfterSlot = slotLabel;
+    pendingSwitchRow = row;
+    pendingSwitchMode = 'CURRENT';
+    pendingSwitchContext = {
+      line: String(lineVal).trim(),
+      slotLabel,
+      closingLot: lotVal,
+      closingQty,
+      workingHourNumber: workingIndex + 1,
+      row,
+      outputInput
+    };
+
+    document.getElementById('modalCurrentLot').innerText = lotVal;
+    document.getElementById('modalSwitchSlot').innerText = slotLabel;
+    document.getElementById('modalLotNo').value = '';
+    document.getElementById('modalLotTarget').value = '';
+
+    const statusBox = document.getElementById('switchLotStatus');
+    if (statusBox) {
+      statusBox.style.display = 'none';
+      statusBox.innerText = '';
+    }
+
+    document.getElementById('newLotModal').style.display = 'flex';
+  }
+
+  function closeNewLotModal() {
+    document.getElementById('newLotModal').style.display = 'none';
+    document.getElementById('modalLotNo').value = '';
+    document.getElementById('modalLotTarget').value = '';
+    pendingSwitchMode = '';
+
+    const statusBox = document.getElementById('switchLotStatus');
+    if (statusBox) {
+      statusBox.style.display = 'none';
+      statusBox.innerText = '';
+    }
+
+    const confirmBtn = document.getElementById('confirmSwitchLotBtn');
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.style.opacity = '1';
+    }
+  }
+
+  function normalizeLot_(value) {
+    return String(value || '').trim().toUpperCase();
+  }
+
+  function getUsedLotsFromState_(data) {
+    return [
+      data && data.lotNumber,
+      data && (data.lotNumber2 || data.lot2Number),
+      data && (data.lotNumber3 || data.lot3Number)
+    ]
+      .map(normalizeLot_)
+      .filter(Boolean);
+  }
+
+  async function fetchCurrentLineState_(lineVal) {
+    const res = await fetch(
+      `${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(lineVal)}&_=${Date.now()}`,
+      { cache: 'no-store' }
+    );
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    return await res.json();
+  }
+
+  function setSwitchLotStatus_(message, type = 'info') {
+    const box = document.getElementById('switchLotStatus');
+    if (!box) return;
+
+    box.style.display = 'block';
+    box.innerText = message;
+
+    if (type === 'error') {
+      box.style.background = '#fef2f2';
+      box.style.color = '#b91c1c';
+      box.style.border = '1px solid #fecaca';
+    } else if (type === 'success') {
+      box.style.background = '#ecfdf5';
+      box.style.color = '#047857';
+      box.style.border = '1px solid #a7f3d0';
+    } else {
+      box.style.background = '#eff6ff';
+      box.style.color = '#1d4ed8';
+      box.style.border = '1px solid #bfdbfe';
+    }
+  }
+
+  async function waitForLotSwitchSaved_(
+    lineVal, newLot, newTG,
+    closingSlot, closingLot, closingQty,
+    expectedCompletedWorkingHours
+  ) {
+    for (let attempt = 0; attempt < 10; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      try {
+        const state = await fetchCurrentLineState_(lineVal);
+        const lot2 = normalizeLot_(state.lotNumber2 || state.lot2Number);
+        const lot3 = normalizeLot_(state.lotNumber3 || state.lot3Number);
+
+        let newLotAndTgOk = false;
+        let completedHoursOnServer = 0;
+
+        if (lot2 === newLot) {
+          newLotAndTgOk =
+            Math.round(Number(state.tgOriginal2 || 0)) === Math.round(newTG);
+          completedHoursOnServer = Number(state.workingHours || 0);
+        } else if (lot3 === newLot) {
+          newLotAndTgOk =
+            Math.round(Number(state.tgOriginal3 || 0)) === Math.round(newTG);
+          completedHoursOnServer =
+            Number(state.workingHours || 0) +
+            Number(state.workingHours2 || 0);
+        }
+
+        const savedClosing =
+          state.existingHourly && state.existingHourly[closingSlot];
+
+        const closingSlotOk = !!(
+          savedClosing &&
+          normalizeLot_(savedClosing.lot) === normalizeLot_(closingLot) &&
+          Number(savedClosing.output) === Number(closingQty)
+        );
+
+        const completedHoursOk =
+          Number(completedHoursOnServer) === Number(expectedCompletedWorkingHours);
+
+        if (newLotAndTgOk && closingSlotOk && completedHoursOk) {
+          return state;
+        }
+      } catch (err) {
+        console.warn('Verify switch attempt failed:', err);
+      }
+    }
+
+    return null;
+  }
+
+  function applyNewCurrentLotToVisibleRows_(switchAfterSlot, newLot) {
+    const switchIndex = TIME_SLOTS_DEF.findIndex(s => s.label === switchAfterSlot);
+    if (switchIndex < 0) return;
+
+    document.querySelectorAll('.slot-row').forEach(row => {
+      const label = String(
+        row.dataset.slotLabel ||
+        row.querySelector('.slot-time')?.getAttribute('data-slot-label') ||
+        ''
+      ).trim();
+
+      const rowIndex = TIME_SLOTS_DEF.findIndex(s => s.label === label);
+
+      // แถวที่กดและแถวก่อนหน้า ห้ามเปลี่ยน LOT
+      if (rowIndex < 0 || rowIndex <= switchIndex) return;
+
+      const saved = currentExistingHourly && currentExistingHourly[label];
+      if (saved && saved.output !== undefined && saved.output !== "") return;
+
+      const lotInput = row.querySelector('.input-lot-val');
+      const lotDisplay = row.querySelector('.slot-lot-display');
+      const modelSubtext = row.querySelector('.model-subtext');
+
+      if (lotInput) lotInput.value = newLot;
+      if (lotDisplay) {
+        lotDisplay.innerText = newLot;
+        if (row.dataset.breakTime !== 'true') lotDisplay.classList.add('current');
+      }
+      if (modelSubtext) modelSubtext.innerText = getModelTextForLot_(newLot);
+    });
+  }
+
+
+  function applyLocalLotPlanAfterSwitch_(closingLot, newLot, completedWorkingHours, totalWorkingHours) {
+    const closeLot = normalizeLot_(closingLot);
+    const nextLot = normalizeLot_(newLot);
+    const completed = Math.max(0, Number(completedWorkingHours) || 0);
+    const total = Math.max(1, Number(totalWorkingHours) || 9);
+
+    const plan = Array.isArray(currentLotPlan) ? currentLotPlan : [];
+    const activeIndex = plan.findIndex(item => normalizeLot_(item.lot) === closeLot);
+
+    let previous = [];
+    let previousHours = 0;
+
+    if (activeIndex >= 0) {
+      previous = plan.slice(0, activeIndex).map(item => ({
+        lot: normalizeLot_(item.lot),
+        hours: Math.max(0, Number(item.hours) || 0)
+      }));
+      previousHours = previous.reduce((sum, item) => sum + item.hours, 0);
+    } else {
+      // ถ้า plan ในหน้าเก่ายังไม่ทันอัปเดต ให้ถือ LOT ที่กำลังปิดเป็น LOT ปัจจุบัน
+      previous = [];
+      previousHours = 0;
+    }
+
+    const closingLotHours = Math.max(0, completed - previousHours);
+    const newLotHours = Math.max(0, total - completed);
+
+    const nextPlan = [
+      ...previous,
+      { lot: closeLot, hours: closingLotHours }
+    ];
+
+    if (newLotHours > 0) {
+      nextPlan.push({ lot: nextLot, hours: newLotHours });
+    }
+
+    currentLotPlan = nextPlan.filter(item => item.lot && item.hours > 0);
+  }
+
+  function showLotSwitchToast_(message, type = 'success', duration = 2200) {
+    let toast = document.getElementById('lotSwitchToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'lotSwitchToast';
+      toast.style.position = 'fixed';
+      toast.style.left = '50%';
+      toast.style.bottom = '24px';
+      toast.style.transform = 'translateX(-50%)';
+      toast.style.zIndex = '99999';
+      toast.style.maxWidth = 'calc(100vw - 28px)';
+      toast.style.padding = '11px 16px';
+      toast.style.borderRadius = '12px';
+      toast.style.fontSize = '.9rem';
+      toast.style.fontWeight = '700';
+      toast.style.textAlign = 'center';
+      toast.style.boxShadow = '0 8px 24px rgba(15,23,42,.18)';
+      toast.style.transition = 'opacity .2s ease';
+      document.body.appendChild(toast);
+    }
+
+    if (type === 'warn') {
+      toast.style.background = '#fff7ed';
+      toast.style.color = '#9a3412';
+      toast.style.border = '1px solid #fdba74';
+    } else if (type === 'error') {
+      toast.style.background = '#fef2f2';
+      toast.style.color = '#b91c1c';
+      toast.style.border = '1px solid #fecaca';
+    } else {
+      toast.style.background = '#ecfdf5';
+      toast.style.color = '#047857';
+      toast.style.border = '1px solid #6ee7b7';
+    }
+
+    toast.innerText = message;
+    toast.style.display = 'block';
+    toast.style.opacity = '1';
+
+    clearTimeout(window.__lotSwitchToastTimer);
+    window.__lotSwitchToastTimer = setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => { toast.style.display = 'none'; }, 220);
+    }, duration);
+  }
+
+  async function confirmNewLot() {
+    const newLot = normalizeLot_(document.getElementById('modalLotNo').value);
+    const newTargetMax = Number(document.getElementById('modalLotTarget').value) || 0;
+    const lineVal = document.getElementById('line').value;
+    const ctx = pendingSwitchContext;
+    const switchAfterSlot = ctx?.slotLabel || '';
+    const switchMode = 'CURRENT';
+
+    if (!newLot || newTargetMax <= 0) {
+      alert("กรุณากรอก LOT ใหม่ และ TG Original ให้ครบถ้วน");
+      return;
+    }
+
+    if (!lineVal || !ctx || !switchAfterSlot || !ctx.row) {
+      alert("ไม่พบข้อมูลรอบที่ต้องการปิด กรุณาปิดหน้าต่างแล้วกดเปลี่ยนรุ่นใหม่อีกครั้ง");
+      return;
+    }
+
+    if (String(lineVal).trim() !== String(ctx.line).trim()) {
+      alert("LINE การผลิตเปลี่ยนหลังจากกดเปลี่ยนรุ่น กรุณากดใหม่");
+      return;
+    }
+
+    const rowSlot = String(
+      ctx.row.dataset.slotLabel ||
+      ctx.row.querySelector('.slot-time')?.getAttribute('data-slot-label') ||
+      ''
+    ).trim();
+
+    if (rowSlot !== switchAfterSlot || pendingSwitchAfterSlot !== switchAfterSlot) {
+      alert("ตรวจพบรอบเวลาเปลี่ยนรุ่นไม่ตรงกัน ระบบไม่ส่งข้อมูล กรุณาโหลดหน้าใหม่");
+      return;
+    }
+
+    const closingLot = normalizeLot_(ctx.closingLot);
+    const currentQtyText = String(ctx.outputInput?.value ?? '').trim();
+    const currentQty = currentQtyText === '' ? null : Number(currentQtyText);
+
+    if (!closingLot) {
+      alert("ข้อมูล LOT เดิมไม่ถูกต้อง กรุณากดเปลี่ยนรุ่นใหม่");
+      return;
+    }
+
+    if (currentQty !== null && (!Number.isFinite(currentQty) || currentQty < 0)) {
+      alert(`ยอดของรอบ ${switchAfterSlot} ไม่ถูกต้อง`);
+      return;
+    }
+
+    if (closingLot !== normalizeLot_(currentActiveLot)) {
+      alert("LOT นี้ไม่ใช่ LOT ปัจจุบันแล้ว กรุณาโหลดข้อมูลใหม่");
+      return;
+    }
+
+    // CURRENT ใช้ได้เฉพาะ Slot ที่ยังไม่เคยบันทึกลงชีท
+    const savedCurrent = currentExistingHourly && currentExistingHourly[switchAfterSlot];
+    if (
+      switchMode === 'CURRENT' &&
+      savedCurrent &&
+      savedCurrent.output !== undefined &&
+      savedCurrent.output !== ''
+    ) {
+      alert(`🔒 รอบ ${switchAfterSlot} บันทึกยอดแล้ว\nไม่สามารถเปลี่ยนรอบนี้เป็น LOT ใหม่ได้`);
+      return;
+    }
+
+    // NEXT ต้องมียอด เพราะ Backend จะบันทึกรอบที่เลือกเป็นยอดสุดท้ายของ LOT เดิมทันที
+    if (switchMode === 'NEXT' && currentQty === null) {
+      alert(`กรุณากรอกยอดของรอบ ${switchAfterSlot} ก่อนเลือก “เริ่มรอบถัดไป”`);
+      ctx.outputInput?.focus();
+      return;
+    }
+
+    const localUsedLots = activeLots.map(normalizeLot_).filter(Boolean);
+    if (localUsedLots.includes(newLot)) {
+      alert(`LOT ${newLot} ถูกใช้ใน LINE นี้วันนี้แล้ว\nกรุณากรอก LOT ใหม่`);
+      return;
+    }
+
+    // ไม่ดึง Backend ซ้ำก่อนเปิด native confirm:
+    // ตอนเปิด popup เรามี state ของ LINE จาก loadLineDetails() อยู่แล้ว
+    // และ Backend จะตรวจความถูกต้องอีกครั้งตอนรับ POST
+    // การ fetch ซ้ำตรงนี้เคยทำให้ปุ่มยืนยันดูเหมือน "กดไม่ไป" เมื่อ request ช้าหรือ fail
+    const totalWorkingHours = Math.max(1, Number(currentHours1) || 9);
+    const workingSlots = getWorkingSlotsForCurrentLine_();
+    const switchIndex = workingSlots.findIndex(slot => slot.label === switchAfterSlot);
+
+    if (switchIndex < 0) {
+      alert("รอบที่กดเปลี่ยนรุ่นไม่ถูกต้อง กรุณาโหลดข้อมูลใหม่");
+      return;
+    }
+
+    const selectedWorkingHour = switchIndex + 1;
+    if (selectedWorkingHour !== Number(ctx.workingHourNumber)) {
+      alert("ลำดับชั่วโมงเปลี่ยนจากตอนที่กดเปลี่ยนรุ่น กรุณาโหลดหน้าใหม่");
+      return;
+    }
+
+    // NEXT: รอบที่เลือกยังเป็น LOT เดิม -> boundary หลังรอบนี้
+    // CURRENT: รอบที่เลือกเป็น LOT ใหม่ -> boundary ก่อนรอบนี้
+    const completedWorkingHours = switchIndex;
+
+    if (switchMode === 'CURRENT' && completedWorkingHours < 1) {
+      alert("ไม่สามารถขึ้น LOT ใหม่ที่รอบทำงานแรกของวันได้ เพราะ LOT เดิมจะไม่มีชั่วโมงผลิต");
+      return;
+    }
+
+    const remainingHours = Math.max(0, totalWorkingHours - completedWorkingHours);
+    if (remainingHours <= 0) {
+      alert("ไม่มีชั่วโมงเหลือสำหรับ LOT ใหม่ กรุณาตรวจรอบที่เลือก");
+      return;
+    }
+
+    const modeText = `LOT ใหม่เริ่ม: รอบนี้ (${switchAfterSlot})`;
+
+    const qtyLine = `รอบ ${switchAfterSlot} จะเปลี่ยนเป็น LOT ใหม่ทั้งรอบ
+`;
+
+    const confirmMessage =
+      `ยืนยันสลับ LOT?\n\n` +
+      `LOT เดิม: ${closingLot}\n` +
+      `${modeText}\n` +
+      qtyLine + `\n` +
+      `LOT ใหม่: ${newLot}\n` +
+      `TG Original: ${newTargetMax.toLocaleString()} ชิ้น\n` +
+      `ชั่วโมง LOT ใหม่: ${remainingHours} ชม.`;
+
+    if (!confirm(confirmMessage)) return;
+
+    const confirmBtn = document.getElementById('confirmSwitchLotBtn');
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.style.opacity = '.6';
+    }
+
+    setSwitchLotStatus_(`กำลังบันทึก LOT ${newLot}...`);
+
+    const payload = {
+      action: "HOURLY_OUTPUT",
+      line: lineVal,
+      isSwitchLot: true,
+      switchMode: switchMode,
+      newLotNumber: newLot,
+      newLotTarget: newTargetMax,
+      newLotOriginalTG: newTargetMax,
+      tgOriginalNewLot: newTargetMax,
+      totalWorkingHours: totalWorkingHours,
+      switchAfterSlot: switchAfterSlot,
+      clickedSlotLabel: switchAfterSlot,
+      switchWorkingHourNumber: selectedWorkingHour,
+      completedWorkingHours: completedWorkingHours,
+      updatedBy: userDisplayName
+    };
+
+    // เฉพาะ NEXT: รอบที่เลือกเป็นยอดสุดท้ายของ LOT เดิมและ Backend จะ upsert ลง Hourly_Log
+    if (switchMode === 'NEXT') {
+      payload.closingLotNumber = closingLot;
+      payload.closingTimeSlot = switchAfterSlot;
+      payload.closingSlotQty = currentQty;
+      payload.closingRemark = document.getElementById('remark')?.value || '';
+      payload.completedWorkingHoursLot1 = completedWorkingHours;
+      payload.completedNormalHoursLot1 = completedWorkingHours;
+      payload.hoursUsedLot1 = completedWorkingHours;
+      payload.hoursUsedLot2 = remainingHours;
+    }
+
+    try {
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify(payload)
+      });
+
+      applyLocalLotPlanAfterSwitch_(
+        closingLot,
+        newLot,
+        completedWorkingHours,
+        totalWorkingHours
+      );
+
+      if (switchMode === 'NEXT') {
+        currentExistingHourly[switchAfterSlot] = {
+          lot: closingLot,
+          output: Number(currentQty)
+        };
+      } else {
+        // CURRENT ยังไม่ถือว่ารอบนี้ถูกบันทึกยอด
+        // User กรอกยอดต่อได้ตามปกติ แล้วกดบันทึก Output ภายหลัง
+        if (currentExistingHourly && currentExistingHourly[switchAfterSlot]) {
+          delete currentExistingHourly[switchAfterSlot];
+        }
+      }
+
+      if (!activeLots.some(lot => normalizeLot_(lot) === newLot)) {
+        activeLots.push(newLot);
+      }
+      currentActiveLot = newLot;
+
+      generateSmartTimeSlots(currentHours1, currentExistingHourly);
+      updateCurrentModelBanner_();
+      calculateTotal();
+
+      closeNewLotModal();
+      showLotSwitchToast_(
+        switchMode === 'CURRENT'
+          ? `✅ LOT ใหม่ ${newLot} เริ่มที่รอบ ${switchAfterSlot} แล้ว`
+          : `✅ LOT ใหม่ ${newLot} เริ่มที่รอบถัดไปแล้ว`,
+        'success',
+        2400
+      );
+
+      // NEXT ตรวจทั้ง LOT + ยอดปิดรอบแบบเดิม
+      // CURRENT ตรวจเฉพาะ state ของ LOT/ชั่วโมง เพราะรอบนี้ยังไม่ได้บันทึกยอด
+      void (async () => {
+        if (switchMode === 'NEXT') {
+          const verifiedState = await waitForLotSwitchSaved_(
+            lineVal, newLot, newTargetMax,
+            switchAfterSlot, closingLot, Number(currentQty),
+            completedWorkingHours
+          );
+          if (verifiedState) {
+            if (verifiedState.masterMap) masterLotMap = { ...masterLotMap, ...verifiedState.masterMap };
+            return;
+          }
+        } else {
+          for (let attempt = 0; attempt < 10; attempt++) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            try {
+              const state = await fetchCurrentLineState_(lineVal);
+              const usedLots = getUsedLotsFromState_(state);
+              if (usedLots.includes(newLot)) {
+                if (state.masterMap) masterLotMap = { ...masterLotMap, ...state.masterMap };
+                return;
+              }
+            } catch (err) {
+              console.warn('Verify CURRENT switch attempt failed:', err);
+            }
+          }
+        }
+
+        showLotSwitchToast_(
+          "⚠️ ส่งข้อมูลแล้ว แต่ยังยืนยันจากชีทไม่ได้ กรุณารีโหลดก่อนกรอกต่อ",
+          'warn',
+          4500
+        );
+      })();
+
+    } catch (err) {
+      console.error("Sync Error:", err);
+      setSwitchLotStatus_("ส่งข้อมูลปิด LOT ไม่สำเร็จ กรุณาลองใหม่", "error");
+      alert("ส่งข้อมูลปิด LOT ไม่สำเร็จ กรุณาลองใหม่");
+    } finally {
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.style.opacity = '1';
+      }
+    }
+  }
+
+  function calculateTotal() {
+    const inputs = document.querySelectorAll('.input-val');
+    let total = 0;
+    inputs.forEach(input => {
+      total += (Number(input.value) || 0);
+    });
+    document.getElementById('totalSum').value = total.toLocaleString();
+  }
+
+  // ปรับปรุงฟังก์ชันบันทึกยอดให้ยิงแบบ no-cors การันตีผ่าน 100% บนมือถือ
+  document.getElementById('hourlyForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const lineVal = document.getElementById('line').value;
+    const remarkVal = document.getElementById('remark').value;
+    const btnSubmit = document.getElementById('btnSubmit');
+
+    if (!lineVal) {
+      alert("กรุณาเลือก LINE การผลิต");
+      return;
+    }
+
+    btnSubmit.disabled = true;
+    btnSubmit.innerText = "กำลังบันทึก...";
+
+    if ((userDisplayName === "Unknown" || !userDisplayName) && typeof liff !== "undefined" && liff.isLoggedIn()) {
+      try {
+        const profile = await liff.getProfile();
+        userDisplayName = profile.displayName || "Unknown";
+      } catch (e) {}
+    }
+
+    const hourlyDetails = [];
+    const slotRows = document.querySelectorAll('.slot-row');
+    
+    slotRows.forEach(row => {
+      const timeLabel = row.querySelector('.slot-time').getAttribute('data-slot-label');
+      const lotVal = row.querySelector('.input-lot-val').value;
+      const outputVal = row.querySelector('.input-val').value;
+      const isBreakTime = row.dataset.breakTime === 'true';
+
+      // ช่วงพักถูกล็อกเป็น 0 แต่ต้องส่งเข้า Hourly_Log ด้วย
+      if (isBreakTime || outputVal !== "") {
+        hourlyDetails.push({
+          timeSlot: timeLabel,
+          lot: lotVal,
+          qty: Number(outputVal)
+        });
+      }
+    });
+
+    const payload = {
+      action: "HOURLY_OUTPUT",
+      line: lineVal,
+      remark: remarkVal,
+      updatedBy: userDisplayName,
+      hourlyData: hourlyDetails
+    };
+
+    try {
+      // ส่งข้อมูลด้วย mode: 'no-cors' ป้องกันการบล็อก Preflight บน LINE Browser และ iOS
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      alert("บันทึกข้อมูลเรียบร้อยแล้ว!");
+      if (typeof liff !== "undefined" && liff.isInClient()) {
+        liff.closeWindow();
+      } else {
+        location.reload();
+      }
+
+    } catch (err) {
+      alert("บันทึกไม่สำเร็จ: " + err.message);
+      btnSubmit.disabled = false;
+      btnSubmit.innerText = "บันทึกยอด";
+    }
+  });
+</script>
+
 </body>
 </html>
