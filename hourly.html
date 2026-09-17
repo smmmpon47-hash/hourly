@@ -1095,88 +1095,86 @@
       target = Number(target) || 0;
       actual = Number(actual) || 0;
 
-      const diff = actual - target;
-      const pct = target > 0 ? Math.round((actual / target) * 100) : (actual > 0 ? 100 : 0);
-      const pctDiff = target > 0 ? Math.round((diff / target) * 100) : (actual > 0 ? 100 : 0);
-      const diffText = diff >= 0
-        ? `+${diff.toLocaleString()} (+${pctDiff}%)`
-        : `${diff.toLocaleString()} (${pctDiff}%)`;
-      const diffColor = diff >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50';
-      const progressColor = pct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
-      const remarksList = remarks || [];
+      const dayGap = actual - target;
+      const dayGapPct = target > 0 ? Math.round((dayGap / target) * 100) : 0;
+      const dayGapText = `${dayGap >= 0 ? '+' : ''}${dayGap.toLocaleString()} (${dayGapPct >= 0 ? '+' : ''}${dayGapPct}%)`;
+      const dayGapClass = dayGap >= 0 ? 'text-emerald-600' : 'text-rose-600';
 
-      let liveHtml = '';
-      if (liveMetrics) {
-        const targetNow = Number(liveMetrics.targetNow) || 0;
-        const currentDiff = actual - targetNow;
-        const currentPctDiff = targetNow > 0
-          ? Math.round((currentDiff / targetNow) * 100)
-          : (actual > 0 ? 100 : 0);
+      const targetNow = liveMetrics ? (Number(liveMetrics.targetNow) || 0) : 0;
+      const nowGap = actual - targetNow;
+      const nowGapPct = targetNow > 0 ? Math.round((nowGap / targetNow) * 100) : 0;
+      const nowGapText = `${nowGap >= 0 ? '+' : ''}${nowGap.toLocaleString()} (${nowGapPct >= 0 ? '+' : ''}${nowGapPct}%)`;
+      const nowGapClass = nowGap >= 0 ? 'text-emerald-600' : 'text-rose-600';
 
-        const currentDiffText = currentDiff >= 0
-          ? `+${currentDiff.toLocaleString()} (+${currentPctDiff}%)`
-          : `${currentDiff.toLocaleString()} (${currentPctDiff}%)`;
+      const avgOutput = liveMetrics ? Math.round(Number(liveMetrics.avgOutput) || 0) : 0;
+      const tgPerHour = liveMetrics ? Math.round(Number(liveMetrics.tgPerHour) || 0) : 0;
 
-        const currentDiffClass = currentDiff >= 0 ? 'text-emerald-600' : 'text-rose-600';
-        const avgOutput = Math.round(Number(liveMetrics.avgOutput) || 0);
-        const tgPerHour = Math.round(Number(liveMetrics.tgPerHour) || 0);
-
-        liveHtml = `
-          <div class="border-t border-slate-100 pt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-[11px]">
-            <div>
-              <span class="text-slate-400">เป้าตอนนี้:</span>
-              <span class="font-extrabold text-slate-700 ml-1">${targetNow.toLocaleString()}</span>
-            </div>
-            <div class="text-right font-extrabold ${currentDiffClass}">
-              ${currentDiffText}
-            </div>
-            <div>
-              <span class="text-slate-400">Avg. Output/hr:</span>
-              <span class="font-extrabold text-slate-700 ml-1">${avgOutput.toLocaleString()}</span>
-            </div>
-            <div class="text-right">
-              <span class="text-slate-400">TG Output/hr:</span>
-              <span class="font-extrabold text-slate-700 ml-1">${tgPerHour.toLocaleString()}</span>
-            </div>
-          </div>`;
-      }
+      const progressPct = target > 0 ? Math.round((actual / target) * 100) : 0;
+      const progressWidth = Math.max(0, Math.min(progressPct, 100));
+      const progressColor = progressPct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
+      const remarksList = Array.isArray(remarks) ? remarks : [];
 
       return `
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between space-y-3">
-          <div class="flex justify-between items-center">
-            <div class="flex items-center gap-2">
-              <span class="font-extrabold text-slate-800">LINE ${line}</span>
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-600">${lotTag}</span>
-            </div>
-            <span class="text-xs font-bold px-2.5 py-1 rounded-lg whitespace-nowrap ${diffColor}">${diffText}</span>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-col gap-3">
+          <!-- Header: LINE | Model | LOT -->
+          <div class="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-slate-100 pb-3">
+            <span class="inline-flex items-center px-3 py-1 rounded-lg bg-slate-800 text-white font-extrabold text-sm">
+              LINE ${line}
+            </span>
+            <span class="text-xs font-bold text-slate-700">
+              รุ่น <span class="text-slate-900">${modelName || '-'}</span>
+            </span>
+            <span class="text-slate-300">•</span>
+            <span class="text-xs font-bold text-slate-700">
+              LOT <span class="text-indigo-600">${lotName || '-'}</span>
+            </span>
+            <span class="ml-auto text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-600">${lotTag}</span>
           </div>
 
-          <div class="grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <span class="text-slate-400">TG:</span>
-              <span class="font-bold text-slate-700 ml-1">${target.toLocaleString()}</span>
+          <!-- Manager summary -->
+          <div class="space-y-2">
+            <div class="grid grid-cols-[1fr_auto] items-baseline gap-3">
+              <div class="text-sm font-bold text-slate-600">
+                เป้าต่อวัน:
+                <span class="ml-1 text-base font-extrabold text-slate-900">${target.toLocaleString()}</span>
+              </div>
+              <div class="text-sm font-extrabold ${dayGapClass}">${dayGapText}</div>
             </div>
-            <div>
-              <span class="text-slate-400">AC:</span>
-              <span class="font-bold text-slate-700 ml-1">${actual.toLocaleString()}</span>
+
+            <div class="grid grid-cols-[1fr_auto] items-baseline gap-3">
+              <div class="text-sm font-bold text-slate-600">
+                เป้าตอนนี้:
+                <span class="ml-1 text-base font-extrabold text-slate-900">${targetNow.toLocaleString()}</span>
+              </div>
+              <div class="text-sm font-extrabold ${nowGapClass}">${nowGapText}</div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-1">
+              <div class="rounded-xl bg-slate-50 px-3 py-2">
+                <div class="text-[10px] font-bold text-slate-400">Avg. Output/hr</div>
+                <div class="text-lg font-extrabold text-slate-800">${avgOutput.toLocaleString()}</div>
+              </div>
+              <div class="rounded-xl bg-slate-50 px-3 py-2">
+                <div class="text-[10px] font-bold text-slate-400">TG Output/hr</div>
+                <div class="text-lg font-extrabold text-slate-800">${tgPerHour.toLocaleString()}</div>
+              </div>
             </div>
           </div>
 
-          ${liveHtml}
-
-          <div>
-            <div class="flex justify-between text-xs font-bold mb-1">
-              <span class="text-slate-500">${(modelName || lotName) ? `รุ่น: <span class="text-slate-800">${modelName || '-'}</span> <span class="text-slate-400">(${lotName || '-'})</span>` : ''}</span>
-              <span class="text-slate-700">${pct}%</span>
+          <!-- Progress -->
+          <div class="pt-1">
+            <div class="flex justify-between items-center mb-1.5">
+              <span class="text-[10px] font-bold text-slate-400">Actual ${actual.toLocaleString()} / TG ${target.toLocaleString()}</span>
+              <span class="text-xs font-extrabold text-slate-700">${progressPct}%</span>
             </div>
-            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-              <div class="${progressColor} h-2 rounded-full" style="width: ${Math.min(pct, 100)}%"></div>
+            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+              <div class="${progressColor} h-2.5 rounded-full transition-all duration-300" style="width:${progressWidth}%"></div>
             </div>
           </div>
 
           ${remarksList.length > 0 ? `
           <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-xs text-amber-800 leading-relaxed">
-            📝 ${remarksList.map(r => r.replace(/</g, '&lt;').replace(/>/g, '&gt;')).join(' · ')}
+            📝 ${remarksList.map(r => String(r).replace(/</g, '&lt;').replace(/>/g, '&gt;')).join(' · ')}
           </div>` : ''}
         </div>
       `;
