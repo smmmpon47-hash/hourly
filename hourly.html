@@ -1520,16 +1520,17 @@
 
     let targetSlots = [];
 
-    // คง Logic แสดง 2 ชั่วโมงเดิม
+    // คง Logic เดิมทั้งหมด ยกเว้นรอบท้าย:
+    // 17:30 -> 16.30-17.30
+    // 18:30 -> 17.30-18.30
+    // 19:30 -> 18.30-19.30 (เฉพาะวัน 10 ชม.)
+    // ห้ามโชว์ slot ที่ยังผลิตไม่จบล่วงหน้า
     if (currentMinutes >= 1020 && currentMinutes < 1080) {
       targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "16.30-17.30");
-    } else if (currentMinutes >= 1080 && currentMinutes < 1140) {
+    } else if (currentMinutes >= 1080 && currentMinutes < 1170) {
       targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "17.30-18.30");
-
-      if (totalHours >= 10) {
-        const slot19 = TIME_SLOTS_DEF.find(s => s.label === "18.30-19.30");
-        if (slot19) targetSlots.push(slot19);
-      }
+    } else if (currentMinutes >= 1170 && totalHours >= 10) {
+      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "18.30-19.30");
     } else {
       let passedSlots = TIME_SLOTS_DEF.filter(slot => currentMinutes >= slot.endMin);
       const maxCount = Math.min(Math.ceil(totalHours), TIME_SLOTS_DEF.length);
