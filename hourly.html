@@ -930,7 +930,7 @@
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwziSYLaDcymEHVXQr_qOP6RmIQDjixVPqWwhAQSOMXs_4zAA-gscpeuR7fJp7DY6yp/exec"; 
   const LIFF_ID = "2011198724-JQ60DTBm";
 
-  const FRONTEND_BUILD_LOT_SWITCH = '20260916_CONFIRM_NO_PREFETCH_V5';
+  const FRONTEND_BUILD_LOT_SWITCH = '20260918_AA_SOURCE_HOURLY_V6';
   console.log('Output build:', FRONTEND_BUILD_LOT_SWITCH);
   let activeLots = []; 
   let masterLotMap = {}; 
@@ -1079,7 +1079,7 @@
         return;
       }
 
-      const totalHours = lots.reduce((sum, item) => sum + item.hours, 0) || Number(data.totalWorkingHours) || 0;
+      const totalHours = getAuthoritativeTotalWorkingHours_(data) || lots.reduce((sum, item) => sum + item.hours, 0) || 0;
 
       currentEditPlanState = {
         line: lineVal,
@@ -1263,7 +1263,7 @@
       try {
         const state = await fetchCurrentLineState_(lineVal);
         const stateLots = getEditPlanLots_(state);
-        const savedHours = stateLots.reduce((sum, item) => sum + item.hours, 0);
+        const savedHours = getAuthoritativeTotalWorkingHours_(state) || stateLots.reduce((sum, item) => sum + item.hours, 0);
 
         if (savedHours !== calc.totalHours) continue;
 
@@ -1388,6 +1388,22 @@
     document.getElementById('currentDateDisplay').innerText = now.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
+  function getAuthoritativeTotalWorkingHours_(data) {
+    const candidates = [
+      data && data.totalWorkingHoursAA,
+      data && data.totalWorkingHours,
+      data && data.total_working_hours
+    ];
+
+    for (const value of candidates) {
+      const hours = Math.floor(Number(value) || 0);
+      if (hours >= 1 && hours <= 10) return hours;
+    }
+
+    return 0;
+  }
+
+
   async function loadLineDetails() {
     const line = document.getElementById('line').value;
     const slotsContainer = document.getElementById('slotsContainer');
@@ -1430,7 +1446,7 @@
       });
 
       masterLotMap = data.masterMap || {};
-      currentHours1 = Number(data.totalWorkingHours) || 9;
+      currentHours1 = getAuthoritativeTotalWorkingHours_(data) || 9;
       currentTarget1 = Number(data.target) || Number(data.target1) || 0;
       currentExistingHourly = data.existingHourly || {};
 
@@ -1459,7 +1475,7 @@
       currentExistingHourly = {};
       currentActiveLot = normalizeLot_(activeLots[activeLots.length - 1]) || '';
       updateCurrentModelBanner_();
-      generateSmartTimeSlots(9, currentExistingHourly);
+      generateSmartTimeSlots(currentHours1 || 9, currentExistingHourly);
       updateHourlyAverage();
     }
   }
