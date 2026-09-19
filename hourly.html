@@ -968,12 +968,13 @@
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwziSYLaDcymEHVXQr_qOP6RmIQDjixVPqWwhAQSOMXs_4zAA-gscpeuR7fJp7DY6yp/exec"; 
   const LIFF_ID = "2011198724-JQ60DTBm";
 
-  const FRONTEND_BUILD_LOT_SWITCH = '20260919_SLOT_REMARK_V7';
+  const FRONTEND_BUILD_LOT_SWITCH = '20260919_AA_LOCK_V1';
+  const EXPECTED_BACKEND_LOT_SWITCH_VERSION = 'LOT_SLOT_DIRECT_AA_LOCK_20260919_V1';
   console.log('Output build:', FRONTEND_BUILD_LOT_SWITCH);
   let activeLots = []; 
   let masterLotMap = {}; 
   let currentTarget1 = 0;
-  let currentHours1 = 9;
+  let currentHours1 = 0;
   let userDisplayName = "Unknown";
   let currentExistingHourly = {};
   let currentEditPlanState = null;
@@ -1484,7 +1485,23 @@
       });
 
       masterLotMap = data.masterMap || {};
-      currentHours1 = getAuthoritativeTotalWorkingHours_(data) || 9;
+
+      // ห้าม fallback เป็น 9 ชม. เด็ดขาด:
+      // หน้า Output ต้องคุยกับ Backend รุ่นเดียวกันและอ่านชั่วโมงจาก AA เท่านั้น
+      if (String(data.lotSwitchVersion || '') !== EXPECTED_BACKEND_LOT_SWITCH_VERSION) {
+        throw new Error(
+          'BACKEND_VERSION_MISMATCH: หน้า Output กำลังคุยกับ Web App deployment เก่า'
+        );
+      }
+
+      const authoritativeAAHours = Math.floor(Number(data.totalWorkingHoursAA) || 0);
+      if (authoritativeAAHours < 1 || authoritativeAAHours > 10) {
+        throw new Error(
+          'TOTAL_WORKING_HOURS_AA_MISSING: ไม่พบเวลาทำงานรวมจาก AA'
+        );
+      }
+
+      currentHours1 = authoritativeAAHours;
       currentTarget1 = Number(data.target) || Number(data.target1) || 0;
       currentExistingHourly = data.existingHourly || {};
 
@@ -1511,9 +1528,22 @@
     } catch (err) {
       console.error("Error loading line details:", err);
       currentExistingHourly = {};
-      currentActiveLot = normalizeLot_(activeLots[activeLots.length - 1]) || '';
-      updateCurrentModelBanner_();
-      generateSmartTimeSlots(currentHours1 || 9, currentExistingHourly);
+      currentActiveLot = '';
+      currentHours1 = 0;
+      if (infoBanner) infoBanner.style.display = 'none';
+      if (modelBanner) modelBanner.style.display = 'none';
+
+      const message = String(err && err.message || '');
+      if (message.includes('BACKEND_VERSION_MISMATCH')) {
+        slotsContainer.innerHTML =
+          '<p style="color:#b91c1c;font-weight:700;text-align:center;padding:14px;">⚠️ หน้า Output ยังเชื่อมกับ Apps Script deployment เก่า กรุณาอัปเดต Web App URL/Deployment ก่อนใช้งาน</p>';
+      } else if (message.includes('TOTAL_WORKING_HOURS_AA_MISSING')) {
+        slotsContainer.innerHTML =
+          '<p style="color:#b91c1c;font-weight:700;text-align:center;padding:14px;">⚠️ ไม่พบเวลาทำงานรวมจากคอลัมน์ AA ระบบหยุดไว้เพื่อป้องกันการเดาเป็น 9 ชั่วโมง</p>';
+      } else {
+        slotsContainer.innerHTML =
+          '<p style="color:#b91c1c;font-weight:700;text-align:center;padding:14px;">โหลดข้อมูล LINE ไม่สำเร็จ กรุณารีโหลดแล้วลองใหม่</p>';
+      }
       updateHourlyAverage();
     }
   }
@@ -1525,7 +1555,7 @@
 
     const workingSlots = TIME_SLOTS_DEF
       .filter(slot => slot.label !== breakSlot)
-      .slice(0, Math.max(1, Number(currentHours1) || 9));
+      .slice(0, Math.max(0, Number(currentHours1) || 0));
 
     // ช่วงพักให้ถือ LOT เดียวกับรอบทำงานก่อนหน้า
     if (cleanLabel === breakSlot) {
@@ -1814,7 +1844,11 @@
   function getWorkingSlotsForCurrentLine_() {
     const lineVal = document.getElementById('line').value;
     const breakSlot = getBreakSlotForLine_(lineVal);
-    const totalHours = Math.max(1, Number(currentHours1) || 9);
+    const totalHours = Math.floor(Number(currentHours1) || 0);
+
+    if (totalHours < 1 || totalHours > 10) {
+      return [];
+    }
 
     const workingSlots = TIME_SLOTS_DEF
       .filter(slot => slot.label !== breakSlot)
@@ -2094,8 +2128,8 @@
 
       const rowIndex = TIME_SLOTS_DEF.findIndex(s => s.label === label);
 
-      // แถวที่กดและแถวก่อนหน้า ห้ามเปลี่ยน LOT
-      if (rowIndex < 0 || rowIndex <= switchIndex) return;
+      // Slot ที่กด = LOT ใหม่ทันที; ห้ามเปลี่ยนเฉพาะแถวก่อนหน้า
+      if (rowIndex < 0 || rowIndex < switchIndex) return;
 
       const saved = currentExistingHourly && currentExistingHourly[label];
       if (saved && saved.output !== undefined && saved.output !== "") return;
@@ -2118,7 +2152,8 @@
     const closeLot = normalizeLot_(closingLot);
     const nextLot = normalizeLot_(newLot);
     const completed = Math.max(0, Number(completedWorkingHours) || 0);
-    const total = Math.max(1, Number(totalWorkingHours) || 9);
+    const total = Math.floor(Number(totalWorkingHours) || 0);
+    if (total < 1 || total > 10) return;
 
     const plan = Array.isArray(currentLotPlan) ? currentLotPlan : [];
     const activeIndex = plan.findIndex(item => normalizeLot_(item.lot) === closeLot);
@@ -2281,7 +2316,12 @@
     // ตอนเปิด popup เรามี state ของ LINE จาก loadLineDetails() อยู่แล้ว
     // และ Backend จะตรวจความถูกต้องอีกครั้งตอนรับ POST
     // การ fetch ซ้ำตรงนี้เคยทำให้ปุ่มยืนยันดูเหมือน "กดไม่ไป" เมื่อ request ช้าหรือ fail
-    const totalWorkingHours = Math.max(1, Number(currentHours1) || 9);
+    const totalWorkingHours = Math.floor(Number(currentHours1) || 0);
+    if (totalWorkingHours < 1 || totalWorkingHours > 10) {
+      alert("ไม่พบเวลาทำงานรวมจาก AA ระบบจะไม่เดาเป็น 9 ชั่วโมง กรุณารีโหลดข้อมูล");
+      return;
+    }
+
     const workingSlots = getWorkingSlotsForCurrentLine_();
     const switchIndex = workingSlots.findIndex(slot => slot.label === switchAfterSlot);
 
