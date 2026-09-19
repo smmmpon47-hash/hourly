@@ -147,6 +147,38 @@
       font-size: 1.1rem;
     }
 
+    /* ===== REMARK PER TIME SLOT ===== */
+    .slot-remark-wrap{
+      grid-column: 2 / 4;
+      min-width: 0;
+      margin-top: -2px;
+    }
+    .slot-remark-label{
+      display:block;
+      margin:0 0 5px 2px;
+      font-size:.72rem;
+      font-weight:700;
+      color:#64748b;
+    }
+    .slot-remark-input{
+      width:100%;
+      min-width:0;
+      box-sizing:border-box;
+      padding:9px 10px;
+      border:1.5px solid #cbd5e1;
+      border-radius:11px;
+      background:#fff;
+      color:#334155;
+      font-family:'Sarabun',sans-serif;
+      font-size:.82rem;
+      line-height:1.3;
+    }
+    .slot-remark-input:focus{
+      outline:none;
+      border-color:#14b8a6;
+      box-shadow:0 0 0 3px rgba(20,184,166,.10);
+    }
+
 
     /* ===== AUTO CURRENT LOT / END LOT IN TIME ROW ===== */
     .current-model-banner{
@@ -762,6 +794,17 @@
         padding-right: 2px;
       }
 
+      .slot-remark-wrap{
+        grid-column: 2 / 4;
+      }
+      .slot-remark-label{
+        font-size:.64rem;
+      }
+      .slot-remark-input{
+        font-size:.74rem;
+        padding:8px 9px;
+      }
+
       .pace-only-value{ font-size: 1.22rem; }
 
       .sum-box{
@@ -840,11 +883,6 @@
       <span>ยอดรวมที่กรอก</span>
       <input type="text" id="totalSum" class="sum-input" value="0" readonly>
       <span>ชิ้น</span>
-    </div>
-
-    <div class="form-group">
-      <label for="remark">หมายเหตุ / ปัญหาที่พบ</label>
-      <textarea id="remark" rows="2" placeholder="ระบุปัญหาที่พบ (ถ้ามี)"></textarea>
     </div>
 
     <button type="submit" class="btn-submit" id="btnSubmit">บันทึกยอด</button>
@@ -930,7 +968,7 @@
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwziSYLaDcymEHVXQr_qOP6RmIQDjixVPqWwhAQSOMXs_4zAA-gscpeuR7fJp7DY6yp/exec"; 
   const LIFF_ID = "2011198724-JQ60DTBm";
 
-  const FRONTEND_BUILD_LOT_SWITCH = '20260918_AA_SOURCE_HOURLY_V6';
+  const FRONTEND_BUILD_LOT_SWITCH = '20260919_SLOT_REMARK_V7';
   console.log('Output build:', FRONTEND_BUILD_LOT_SWITCH);
   let activeLots = []; 
   let masterLotMap = {}; 
@@ -1573,6 +1611,10 @@
         ? 0
         : (existing.output !== undefined ? existing.output : '');
 
+      const currentRemark = isBreakTime
+        ? ''
+        : (existing.remark !== undefined ? String(existing.remark || '') : '');
+
       // LOT ของรอบนี้ยึด Summary plan ก่อน ไม่ให้ LOT เก่าจาก Hourly_Log แถว 0 มาทับ
       const plannedLot = getPlannedLotForSlot_(slot.label, breakSlot);
       const slotLot = normalizeLot_(plannedLot || existing.lot || currentActiveLot);
@@ -1616,6 +1658,17 @@
                value="${currentOutput}"
                oninput="calculateTotal()"
                ${isBreakTime ? 'readonly style="background-color:#f1f5f9;color:#94a3b8;cursor:not-allowed;"' : ''}>
+
+        ${!isBreakTime ? `
+          <div class="slot-remark-wrap">
+            <label class="slot-remark-label">หมายเหตุ (สำหรับช่วง ${slot.label})</label>
+            <input type="text"
+                   class="slot-remark-input"
+                   maxlength="200"
+                   placeholder="ระบุปัญหาในช่วง ${slot.label} (ถ้ามี)"
+                   value="${String(currentRemark).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}">
+          </div>
+        ` : ''}
       `;
 
       slotsContainer.appendChild(row);
@@ -2304,7 +2357,8 @@
       payload.closingLotNumber = closingLot;
       payload.closingTimeSlot = switchAfterSlot;
       payload.closingSlotQty = currentQty;
-      payload.closingRemark = document.getElementById('remark')?.value || '';
+      payload.closingRemark =
+        pendingSwitchRow?.querySelector('.slot-remark-input')?.value || '';
       payload.completedWorkingHoursLot1 = completedWorkingHours;
       payload.completedNormalHoursLot1 = completedWorkingHours;
       payload.hoursUsedLot1 = completedWorkingHours;
@@ -2419,7 +2473,6 @@
     e.preventDefault();
 
     const lineVal = document.getElementById('line').value;
-    const remarkVal = document.getElementById('remark').value;
     const btnSubmit = document.getElementById('btnSubmit');
 
     if (!lineVal) {
@@ -2445,13 +2498,17 @@
       const lotVal = row.querySelector('.input-lot-val').value;
       const outputVal = row.querySelector('.input-val').value;
       const isBreakTime = row.dataset.breakTime === 'true';
+      const remarkVal = isBreakTime
+        ? ''
+        : String(row.querySelector('.slot-remark-input')?.value || '').trim();
 
       // ช่วงพักถูกล็อกเป็น 0 แต่ต้องส่งเข้า Hourly_Log ด้วย
       if (isBreakTime || outputVal !== "") {
         hourlyDetails.push({
           timeSlot: timeLabel,
           lot: lotVal,
-          qty: Number(outputVal)
+          qty: Number(outputVal),
+          remark: remarkVal
         });
       }
     });
@@ -2459,7 +2516,6 @@
     const payload = {
       action: "HOURLY_OUTPUT",
       line: lineVal,
-      remark: remarkVal,
       updatedBy: userDisplayName,
       hourlyData: hourlyDetails
     };
