@@ -937,22 +937,22 @@
 <div class="modal-overlay" id="newLotModal">
   <div class="modal-card">
     <div class="modal-header">
-      <div class="modal-title">🔄 เปลี่ยนรุ่น → ขึ้น LOT ใหม่</div>
+      <div class="modal-title">🔄 เปลี่ยนรุ่น / สลับ LOT</div>
       <button type="button" class="btn-close-modal" onclick="closeNewLotModal()">&times;</button>
     </div>
 
     <div class="switch-picked-slot">
       LOT ปัจจุบัน: <b id="modalCurrentLot">-</b><br>
-      รอบนี้จะเปลี่ยนเป็น LOT ใหม่: <b id="modalSwitchSlot">-</b>
+      รอบที่ LOT ปลายทางเริ่ม: <b id="modalSwitchSlot">-</b>
     </div>
 
     <div class="form-group">
-      <label for="modalLotNo">1) เลข LOT ใหม่</label>
-      <input type="text" id="modalLotNo" placeholder="เช่น 26101020" autocomplete="off">
+      <label for="modalLotNo">1) เลข LOT ปลายทาง</label>
+      <input type="text" id="modalLotNo" placeholder="LOT ใหม่ หรือ LOT เดิมที่ต้องการกลับไป" autocomplete="off" oninput="syncSwitchLotTargetField_()">
     </div>
 
     <div class="form-group">
-      <label for="modalLotTarget">2) TG Original ของ LOT ใหม่ (ชิ้น)</label>
+      <label for="modalLotTarget" id="modalLotTargetLabel">2) TG Original ของ LOT ใหม่ (ชิ้น)</label>
       <input type="number" id="modalLotTarget" min="1" placeholder="กรอก TG เต็ม เช่น 742">
     </div>
 
@@ -968,8 +968,9 @@
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLm1LVkTiwK3PCvPSt3PFA1ifb76KCRsWxC1SkaLdDC-ginxy0RHWstWpHgDytaBmm/exec"; 
   const LIFF_ID = "2011198724-JQ60DTBm";
 
-  const FRONTEND_BUILD_LOT_SWITCH = '20260919_AA_LOCK_V1';
+  const FRONTEND_BUILD_LOT_SWITCH = '20260922_REPEAT_LOT_V1';
   const EXPECTED_BACKEND_LOT_SWITCH_VERSION = 'LOT_SLOT_DIRECT_AA_LOCK_20260919_V1';
+  const EXPECTED_REPEAT_LOT_VERSION = 'REPEAT_LOT_20260922_V1';
   console.log('Output build:', FRONTEND_BUILD_LOT_SWITCH);
   let activeLots = []; 
   let masterLotMap = {}; 
@@ -979,7 +980,9 @@
   let currentExistingHourly = {};
   let currentEditPlanState = null;
   let currentActiveLot = '';
-  let currentLotPlan = []; // [{ lot, hours }] จาก Summary
+  let currentLotPlan = []; // [{ lot, hours }] รวมชั่วโมงต่อ LOT จาก Summary
+  let currentLotSwitchHistory = []; // [{ slot, to }] ลำดับสลับ LOT จริงของวันนี้
+  let currentLotTGMap = {}; // { LOT: TG Original }
   let pendingSwitchAfterSlot = '';
   let pendingSwitchRow = null;
   let pendingSwitchContext = null;
@@ -1125,7 +1128,13 @@
         data: data,
         lots: lots,
         totalHours: totalHours,
-        totalTarget: Number(data.target) || 0
+        totalTarget: Number(data.target) || 0,
+        switchHistory: normalizeLotSwitchHistoryForLine_(
+          data.lotSwitchHistory,
+          lineVal,
+          totalHours,
+          lots.map(item => item.lot)
+        )
       };
 
       document.getElementById('editTotalHours').value = totalHours;
@@ -1176,7 +1185,40 @@
     let hours2 = 0;
     let hours3 = 0;
 
-    if (lots.length >= 3) {
+    const switchHistory = Array.isArray(currentEditPlanState.switchHistory)
+      ? currentEditPlanState.switchHistory
+      : [];
+
+    if (switchHistory.length > 0) {
+      const newWorkingSlots = new Set(
+        getWorkingSlotsForLineValue_(currentEditPlanState.line, totalHours)
+          .map(slot => slot.label)
+      );
+
+      const invalidEvent = switchHistory.find(
+        item => !newWorkingSlots.has(String(item.slot || '').trim())
+      );
+
+      if (invalidEvent) {
+        return {
+          valid: false,
+          error: `ลดชั่วโมงไม่ได้ เพราะมีการสลับ LOT ที่รอบ ${invalidEvent.slot} แล้ว`
+        };
+      }
+
+      const allocation = calculateLotHoursFromHistoryForLine_(
+        currentEditPlanState.line,
+        totalHours,
+        lots[0]?.lot || '',
+        switchHistory,
+        lots.map(item => item.lot)
+      );
+
+      hours1 = allocation.hoursByLot[lots[0]?.lot] || 0;
+      hours2 = lots[1] ? (allocation.hoursByLot[lots[1].lot] || 0) : 0;
+      hours3 = lots[2] ? (allocation.hoursByLot[lots[2].lot] || 0) : 0;
+
+    } else if (lots.length >= 3) {
       hours1 = lots[0].hours;
       hours2 = lots[1].hours;
       const fixed = hours1 + hours2;
@@ -1309,7 +1351,11 @@
         let matches = true;
         calc.lots.forEach(item => {
           const saved = stateLots.find(x => x.index === item.index);
-          if (!saved || Math.round(saved.tg) !== Math.round(item.tg)) {
+          if (
+            !saved ||
+            Math.round(saved.tg) !== Math.round(item.tg) ||
+            Number(saved.hours || 0) !== Number(item.hours || 0)
+          ) {
             matches = false;
           }
         });
@@ -1454,6 +1500,8 @@
       infoBanner.style.display = 'none';
       if (modelBanner) modelBanner.style.display = 'none';
       currentActiveLot = '';
+      currentLotSwitchHistory = [];
+      currentLotTGMap = {};
       return;
     }
 
@@ -1488,9 +1536,12 @@
 
       // ห้าม fallback เป็น 9 ชม. เด็ดขาด:
       // หน้า Output ต้องคุยกับ Backend รุ่นเดียวกันและอ่านชั่วโมงจาก AA เท่านั้น
-      if (String(data.lotSwitchVersion || '') !== EXPECTED_BACKEND_LOT_SWITCH_VERSION) {
+      if (
+        String(data.lotSwitchVersion || '') !== EXPECTED_BACKEND_LOT_SWITCH_VERSION ||
+        String(data.repeatLotVersion || '') !== EXPECTED_REPEAT_LOT_VERSION
+      ) {
         throw new Error(
-          'BACKEND_VERSION_MISMATCH: หน้า Output กำลังคุยกับ Web App deployment เก่า'
+          'BACKEND_VERSION_MISMATCH: หน้า Output กำลังคุยกับ Web App deployment ที่ยังไม่รองรับ Repeat LOT'
         );
       }
 
@@ -1505,7 +1556,25 @@
       currentTarget1 = Number(data.target) || Number(data.target1) || 0;
       currentExistingHourly = data.existingHourly || {};
 
-      // Summary เป็นแหล่งความจริงของการแบ่ง LOT ตามชั่วโมง
+      currentLotTGMap = {};
+      const lotTgPairs = [
+        [data.lotNumber, data.tgOriginal1 || data.target1],
+        [data.lotNumber2 || data.lot2Number, data.tgOriginal2 || data.target2],
+        [data.lotNumber3 || data.lot3Number, data.tgOriginal3 || data.target3]
+      ];
+      lotTgPairs.forEach(([lot, tg]) => {
+        const cleanLot = normalizeLot_(lot);
+        if (cleanLot) currentLotTGMap[cleanLot] = Number(tg) || 0;
+      });
+
+      currentLotSwitchHistory = normalizeLotSwitchHistoryForLine_(
+        data.lotSwitchHistory,
+        line,
+        authoritativeAAHours,
+        activeLots
+      );
+
+      // Summary เก็บชั่วโมงรวมต่อ LOT; Timeline จริงอ่านจาก lotSwitchHistory
       currentLotPlan = [
         { lot: normalizeLot_(data.lotNumber), hours: Number(data.workingHours) || 0 },
         { lot: normalizeLot_(data.lotNumber2 || data.lot2Number), hours: Number(data.workingHours2) || 0 },
@@ -1513,6 +1582,10 @@
       ].filter(item => item.lot && item.hours > 0);
 
       currentActiveLot =
+        normalizeLot_(data.currentLot) ||
+        (currentLotSwitchHistory.length
+          ? normalizeLot_(currentLotSwitchHistory[currentLotSwitchHistory.length - 1].to)
+          : '') ||
         loadedLots[loadedLots.length - 1] ||
         normalizeLot_(activeLots[activeLots.length - 1]) ||
         '';
@@ -1529,6 +1602,8 @@
       console.error("Error loading line details:", err);
       currentExistingHourly = {};
       currentActiveLot = '';
+      currentLotSwitchHistory = [];
+      currentLotTGMap = {};
       currentHours1 = 0;
       if (infoBanner) infoBanner.style.display = 'none';
       if (modelBanner) modelBanner.style.display = 'none';
@@ -1553,9 +1628,10 @@
     const cleanLabel = String(slotLabel || '').trim();
     if (!cleanLabel) return normalizeLot_(currentActiveLot);
 
-    const workingSlots = TIME_SLOTS_DEF
-      .filter(slot => slot.label !== breakSlot)
-      .slice(0, Math.max(0, Number(currentHours1) || 0));
+    const workingSlots = getWorkingSlotsForLineValue_(
+      document.getElementById('line').value,
+      currentHours1
+    );
 
     // ช่วงพักให้ถือ LOT เดียวกับรอบทำงานก่อนหน้า
     if (cleanLabel === breakSlot) {
@@ -1572,6 +1648,29 @@
     const workingIndex = workingSlots.findIndex(slot => slot.label === cleanLabel);
     if (workingIndex < 0) return normalizeLot_(currentActiveLot);
 
+    // ถ้ามี history ให้ Timeline จริงเป็น source of truth
+    if (currentLotSwitchHistory.length > 0) {
+      const initialLot = normalizeLot_(
+        currentLotPlan[0]?.lot ||
+        activeLots[0] ||
+        currentActiveLot
+      );
+
+      const allocation = calculateLotHoursFromHistoryForLine_(
+        document.getElementById('line').value,
+        currentHours1,
+        initialLot,
+        currentLotSwitchHistory,
+        activeLots
+      );
+
+      return normalizeLot_(
+        allocation.slotLotMap[cleanLabel] ||
+        currentActiveLot
+      );
+    }
+
+    // fallback สำหรับวันเก่าที่ยังไม่มี history
     let cursor = 0;
     for (const item of currentLotPlan) {
       const hours = Math.max(0, Number(item.hours) || 0);
@@ -1583,7 +1682,6 @@
 
     return normalizeLot_(currentActiveLot);
   }
-
 
   function generateSmartTimeSlots(totalHours, existingData) {
     const slotsContainer = document.getElementById('slotsContainer');
@@ -1648,10 +1746,18 @@
       // LOT ของรอบนี้ยึด Summary plan ก่อน ไม่ให้ LOT เก่าจาก Hourly_Log แถว 0 มาทับ
       const plannedLot = getPlannedLotForSlot_(slot.label, breakSlot);
       const slotLot = normalizeLot_(plannedLot || existing.lot || currentActiveLot);
+      const hasSavedOutputForSlot =
+        !isBreakTime &&
+        existing.output !== undefined &&
+        existing.output !== '';
+
       const isClosedHistoricalLot =
-        !!slotLot &&
-        !!currentActiveLot &&
-        slotLot !== normalizeLot_(currentActiveLot);
+        hasSavedOutputForSlot ||
+        (
+          !!slotLot &&
+          !!currentActiveLot &&
+          slotLot !== normalizeLot_(currentActiveLot)
+        );
 
       const row = document.createElement('div');
       row.className = 'slot-row';
@@ -1911,11 +2017,6 @@
       return;
     }
 
-    if (activeLots.length >= 3) {
-      alert("วันนี้ LINE นี้มีครบ 3 LOT แล้ว ระบบรองรับสูงสุด 3 LOT ต่อวัน");
-      return;
-    }
-
     const row = button.closest('.slot-row');
     if (!row || row.dataset.breakTime === 'true') return;
 
@@ -1986,6 +2087,7 @@
     document.getElementById('modalSwitchSlot').innerText = slotLabel;
     document.getElementById('modalLotNo').value = '';
     document.getElementById('modalLotTarget').value = '';
+    syncSwitchLotTargetField_();
 
     const statusBox = document.getElementById('switchLotStatus');
     if (statusBox) {
@@ -2000,6 +2102,7 @@
     document.getElementById('newLotModal').style.display = 'none';
     document.getElementById('modalLotNo').value = '';
     document.getElementById('modalLotTarget').value = '';
+    syncSwitchLotTargetField_();
     pendingSwitchMode = '';
 
     const statusBox = document.getElementById('switchLotStatus');
@@ -2017,6 +2120,109 @@
 
   function normalizeLot_(value) {
     return String(value || '').trim().toUpperCase();
+  }
+
+  function getWorkingSlotsForLineValue_(lineValue, totalHours) {
+    const breakSlot = getBreakSlotForLine_(lineValue);
+    const hours = Math.max(0, Math.floor(Number(totalHours) || 0));
+
+    return TIME_SLOTS_DEF
+      .filter(slot => slot.label !== breakSlot)
+      .slice(0, hours);
+  }
+
+  function normalizeLotSwitchHistoryForLine_(history, lineValue, totalHours, allowedLots) {
+    const workingSlots = getWorkingSlotsForLineValue_(lineValue, totalHours);
+    const slotIndex = {};
+    workingSlots.forEach((slot, index) => { slotIndex[slot.label] = index; });
+
+    const allowed = new Set(
+      (allowedLots || [])
+        .map(normalizeLot_)
+        .filter(Boolean)
+    );
+
+    const bySlot = {};
+    (Array.isArray(history) ? history : []).forEach(item => {
+      const slot = String(item && item.slot || '').trim();
+      const to = normalizeLot_(item && item.to);
+
+      if (!Object.prototype.hasOwnProperty.call(slotIndex, slot)) return;
+      if (!to) return;
+      if (allowed.size > 0 && !allowed.has(to)) return;
+
+      bySlot[slot] = { slot, to };
+    });
+
+    return Object.values(bySlot).sort(
+      (a, b) => slotIndex[a.slot] - slotIndex[b.slot]
+    );
+  }
+
+  function calculateLotHoursFromHistoryForLine_(
+    lineValue,
+    totalHours,
+    initialLot,
+    history,
+    allowedLots
+  ) {
+    const workingSlots = getWorkingSlotsForLineValue_(lineValue, totalHours);
+    const cleanInitial = normalizeLot_(initialLot);
+    const normalizedHistory = normalizeLotSwitchHistoryForLine_(
+      history,
+      lineValue,
+      totalHours,
+      allowedLots
+    );
+
+    const switchBySlot = {};
+    normalizedHistory.forEach(item => { switchBySlot[item.slot] = item.to; });
+
+    const hoursByLot = {};
+    const slotLotMap = {};
+    let currentLot = cleanInitial;
+
+    workingSlots.forEach(slot => {
+      if (switchBySlot[slot.label]) {
+        currentLot = switchBySlot[slot.label];
+      }
+
+      if (!currentLot) return;
+      slotLotMap[slot.label] = currentLot;
+      hoursByLot[currentLot] = (hoursByLot[currentLot] || 0) + 1;
+    });
+
+    return {
+      history: normalizedHistory,
+      hoursByLot,
+      slotLotMap,
+      currentLot
+    };
+  }
+
+  function syncSwitchLotTargetField_() {
+    const lotInput = document.getElementById('modalLotNo');
+    const tgInput = document.getElementById('modalLotTarget');
+    const tgLabel = document.getElementById('modalLotTargetLabel');
+    if (!lotInput || !tgInput || !tgLabel) return;
+
+    const lot = normalizeLot_(lotInput.value);
+    const isExisting = !!lot && activeLots.some(x => normalizeLot_(x) === lot);
+
+    if (isExisting) {
+      const existingTG = Number(currentLotTGMap[lot]) || 0;
+      tgInput.value = existingTG > 0 ? existingTG : '';
+      tgInput.readOnly = true;
+      tgInput.style.backgroundColor = '#f1f5f9';
+      tgInput.style.color = '#64748b';
+      tgLabel.innerText = '2) TG Original เดิม (ระบบดึงให้อัตโนมัติ)';
+    } else {
+      if (tgInput.readOnly) tgInput.value = '';
+      tgInput.readOnly = false;
+      tgInput.style.backgroundColor = '';
+      tgInput.style.color = '';
+      tgLabel.innerText = '2) TG Original ของ LOT ใหม่ (ชิ้น)';
+    }
   }
 
   function getUsedLotsFromState_(data) {
@@ -2148,44 +2354,51 @@
   }
 
 
-  function applyLocalLotPlanAfterSwitch_(closingLot, newLot, completedWorkingHours, totalWorkingHours) {
-    const closeLot = normalizeLot_(closingLot);
+  function applyLocalLotPlanAfterSwitch_(
+    closingLot,
+    newLot,
+    completedWorkingHours,
+    totalWorkingHours,
+    switchSlot
+  ) {
     const nextLot = normalizeLot_(newLot);
-    const completed = Math.max(0, Number(completedWorkingHours) || 0);
     const total = Math.floor(Number(totalWorkingHours) || 0);
-    if (total < 1 || total > 10) return;
+    if (!nextLot || total < 1 || total > 10 || !switchSlot) return;
 
-    const plan = Array.isArray(currentLotPlan) ? currentLotPlan : [];
-    const activeIndex = plan.findIndex(item => normalizeLot_(item.lot) === closeLot);
-
-    let previous = [];
-    let previousHours = 0;
-
-    if (activeIndex >= 0) {
-      previous = plan.slice(0, activeIndex).map(item => ({
-        lot: normalizeLot_(item.lot),
-        hours: Math.max(0, Number(item.hours) || 0)
-      }));
-      previousHours = previous.reduce((sum, item) => sum + item.hours, 0);
-    } else {
-      // ถ้า plan ในหน้าเก่ายังไม่ทันอัปเดต ให้ถือ LOT ที่กำลังปิดเป็น LOT ปัจจุบัน
-      previous = [];
-      previousHours = 0;
+    if (!activeLots.some(lot => normalizeLot_(lot) === nextLot)) {
+      activeLots.push(nextLot);
     }
 
-    const closingLotHours = Math.max(0, completed - previousHours);
-    const newLotHours = Math.max(0, total - completed);
+    currentLotSwitchHistory = normalizeLotSwitchHistoryForLine_(
+      [
+        ...(Array.isArray(currentLotSwitchHistory) ? currentLotSwitchHistory : []),
+        { slot: switchSlot, to: nextLot }
+      ],
+      document.getElementById('line').value,
+      total,
+      activeLots
+    );
 
-    const nextPlan = [
-      ...previous,
-      { lot: closeLot, hours: closingLotHours }
-    ];
+    const initialLot = normalizeLot_(
+      currentLotPlan[0]?.lot ||
+      activeLots[0] ||
+      closingLot
+    );
 
-    if (newLotHours > 0) {
-      nextPlan.push({ lot: nextLot, hours: newLotHours });
-    }
+    const allocation = calculateLotHoursFromHistoryForLine_(
+      document.getElementById('line').value,
+      total,
+      initialLot,
+      currentLotSwitchHistory,
+      activeLots
+    );
 
-    currentLotPlan = nextPlan.filter(item => item.lot && item.hours > 0);
+    currentLotPlan = activeLots
+      .map(lot => ({
+        lot: normalizeLot_(lot),
+        hours: allocation.hoursByLot[normalizeLot_(lot)] || 0
+      }))
+      .filter(item => item.lot && item.hours > 0);
   }
 
   function showLotSwitchToast_(message, type = 'success', duration = 2200) {
@@ -2236,19 +2449,44 @@
 
   async function confirmNewLot() {
     const newLot = normalizeLot_(document.getElementById('modalLotNo').value);
-    const newTargetMax = Number(document.getElementById('modalLotTarget').value) || 0;
+    const enteredTarget = Number(document.getElementById('modalLotTarget').value) || 0;
     const lineVal = document.getElementById('line').value;
     const ctx = pendingSwitchContext;
     const switchAfterSlot = ctx?.slotLabel || '';
     const switchMode = 'CURRENT';
 
-    if (!newLot || newTargetMax <= 0) {
-      alert("กรุณากรอก LOT ใหม่ และ TG Original ให้ครบถ้วน");
+    const localUsedLots = activeLots.map(normalizeLot_).filter(Boolean);
+    const isExistingLot = localUsedLots.includes(newLot);
+    const resolvedTarget = isExistingLot
+      ? (Number(currentLotTGMap[newLot]) || 0)
+      : enteredTarget;
+
+    if (!newLot) {
+      alert("กรุณากรอก LOT ที่ต้องการสลับ");
+      return;
+    }
+
+    if (normalizeLot_(currentActiveLot) === newLot) {
+      alert(`LOT ${newLot} เป็น LOT ที่กำลังผลิตอยู่แล้ว`);
+      return;
+    }
+
+    if (!isExistingLot && localUsedLots.length >= 3) {
+      alert("วันนี้มีครบ 3 LOT แล้ว สามารถกลับ LOT เดิมได้ แต่เพิ่ม LOT ใหม่ลำดับที่ 4 ไม่ได้");
+      return;
+    }
+
+    if (resolvedTarget <= 0) {
+      alert(
+        isExistingLot
+          ? `ไม่พบ TG Original เดิมของ LOT ${newLot} กรุณารีโหลดข้อมูลแล้วลองใหม่`
+          : "กรุณากรอก TG Original ของ LOT ใหม่ให้ครบถ้วน"
+      );
       return;
     }
 
     if (!lineVal || !ctx || !switchAfterSlot || !ctx.row) {
-      alert("ไม่พบข้อมูลรอบที่ต้องการปิด กรุณาปิดหน้าต่างแล้วกดเปลี่ยนรุ่นใหม่อีกครั้ง");
+      alert("ไม่พบข้อมูลรอบที่ต้องการเปลี่ยนรุ่น กรุณาปิดหน้าต่างแล้วกดเปลี่ยนรุ่นใหม่อีกครั้ง");
       return;
     }
 
@@ -2273,7 +2511,7 @@
     const currentQty = currentQtyText === '' ? null : Number(currentQtyText);
 
     if (!closingLot) {
-      alert("ข้อมูล LOT เดิมไม่ถูกต้อง กรุณากดเปลี่ยนรุ่นใหม่");
+      alert("ข้อมูล LOT ปัจจุบันไม่ถูกต้อง กรุณากดเปลี่ยนรุ่นใหม่");
       return;
     }
 
@@ -2287,35 +2525,27 @@
       return;
     }
 
-    // CURRENT ใช้ได้เฉพาะ Slot ที่ยังไม่เคยบันทึกลงชีท
+    // รอบที่บันทึกยอดแล้วห้ามเปลี่ยน LOT ย้อนหลัง
     const savedCurrent = currentExistingHourly && currentExistingHourly[switchAfterSlot];
     if (
-      switchMode === 'CURRENT' &&
       savedCurrent &&
       savedCurrent.output !== undefined &&
       savedCurrent.output !== ''
     ) {
-      alert(`🔒 รอบ ${switchAfterSlot} บันทึกยอดแล้ว\nไม่สามารถเปลี่ยนรอบนี้เป็น LOT ใหม่ได้`);
+      alert(`🔒 รอบ ${switchAfterSlot} บันทึกยอดแล้ว\nไม่สามารถเปลี่ยน LOT ของรอบนี้ได้`);
       return;
     }
 
-    // NEXT ต้องมียอด เพราะ Backend จะบันทึกรอบที่เลือกเป็นยอดสุดท้ายของ LOT เดิมทันที
-    if (switchMode === 'NEXT' && currentQty === null) {
-      alert(`กรุณากรอกยอดของรอบ ${switchAfterSlot} ก่อนเลือก “เริ่มรอบถัดไป”`);
-      ctx.outputInput?.focus();
+    if (
+      currentLotSwitchHistory.some(
+        item => String(item.slot || '').trim() === switchAfterSlot
+      )
+    ) {
+      alert(`รอบ ${switchAfterSlot} มีการเปลี่ยน LOT แล้ว กรุณารีโหลดข้อมูลก่อน`);
       return;
     }
 
-    const localUsedLots = activeLots.map(normalizeLot_).filter(Boolean);
-    if (localUsedLots.includes(newLot)) {
-      alert(`LOT ${newLot} ถูกใช้ใน LINE นี้วันนี้แล้ว\nกรุณากรอก LOT ใหม่`);
-      return;
-    }
-
-    // ไม่ดึง Backend ซ้ำก่อนเปิด native confirm:
-    // ตอนเปิด popup เรามี state ของ LINE จาก loadLineDetails() อยู่แล้ว
-    // และ Backend จะตรวจความถูกต้องอีกครั้งตอนรับ POST
-    // การ fetch ซ้ำตรงนี้เคยทำให้ปุ่มยืนยันดูเหมือน "กดไม่ไป" เมื่อ request ช้าหรือ fail
+    // AA เป็น source of truth เหมือนเดิม
     const totalWorkingHours = Math.floor(Number(currentHours1) || 0);
     if (totalWorkingHours < 1 || totalWorkingHours > 10) {
       alert("ไม่พบเวลาทำงานรวมจาก AA ระบบจะไม่เดาเป็น 9 ชั่วโมง กรุณารีโหลดข้อมูล");
@@ -2336,34 +2566,29 @@
       return;
     }
 
-    // NEXT: รอบที่เลือกยังเป็น LOT เดิม -> boundary หลังรอบนี้
-    // CURRENT: รอบที่เลือกเป็น LOT ใหม่ -> boundary ก่อนรอบนี้
     const completedWorkingHours = switchIndex;
-
-    if (switchMode === 'CURRENT' && completedWorkingHours < 1) {
-      alert("ไม่สามารถขึ้น LOT ใหม่ที่รอบทำงานแรกของวันได้ เพราะ LOT เดิมจะไม่มีชั่วโมงผลิต");
+    if (completedWorkingHours < 1) {
+      alert("ไม่สามารถสลับ LOT ในรอบทำงานแรกของวันได้ เพราะ LOT ก่อนหน้าจะไม่มีชั่วโมงผลิต");
       return;
     }
 
     const remainingHours = Math.max(0, totalWorkingHours - completedWorkingHours);
     if (remainingHours <= 0) {
-      alert("ไม่มีชั่วโมงเหลือสำหรับ LOT ใหม่ กรุณาตรวจรอบที่เลือก");
+      alert("ไม่มีชั่วโมงเหลือสำหรับ LOT ปลายทาง กรุณาตรวจรอบที่เลือก");
       return;
     }
 
-    const modeText = `LOT ใหม่เริ่ม: รอบนี้ (${switchAfterSlot})`;
-
-    const qtyLine = `รอบ ${switchAfterSlot} จะเปลี่ยนเป็น LOT ใหม่ทั้งรอบ
-`;
+    const lotTypeText = isExistingLot
+      ? 'LOT เดิมของวันนี้ (ใช้ TG Original เดิม)'
+      : 'LOT ใหม่';
 
     const confirmMessage =
       `ยืนยันสลับ LOT?\n\n` +
-      `LOT เดิม: ${closingLot}\n` +
-      `${modeText}\n` +
-      qtyLine + `\n` +
-      `LOT ใหม่: ${newLot}\n` +
-      `TG Original: ${newTargetMax.toLocaleString()} ชิ้น\n` +
-      `ชั่วโมง LOT ใหม่: ${remainingHours} ชม.`;
+      `LOT ปัจจุบัน: ${closingLot}\n` +
+      `LOT ปลายทาง: ${newLot}\n` +
+      `ประเภท: ${lotTypeText}\n` +
+      `เริ่มที่รอบ: ${switchAfterSlot}\n` +
+      `TG Original: ${resolvedTarget.toLocaleString()} ชิ้น`;
 
     if (!confirm(confirmMessage)) return;
 
@@ -2373,7 +2598,7 @@
       confirmBtn.style.opacity = '.6';
     }
 
-    setSwitchLotStatus_(`กำลังบันทึก LOT ${newLot}...`);
+    setSwitchLotStatus_(`กำลังสลับเป็น LOT ${newLot}...`);
 
     const payload = {
       action: "HOURLY_OUTPUT",
@@ -2381,9 +2606,9 @@
       isSwitchLot: true,
       switchMode: switchMode,
       newLotNumber: newLot,
-      newLotTarget: newTargetMax,
-      newLotOriginalTG: newTargetMax,
-      tgOriginalNewLot: newTargetMax,
+      newLotTarget: resolvedTarget,
+      newLotOriginalTG: resolvedTarget,
+      tgOriginalNewLot: resolvedTarget,
       totalWorkingHours: totalWorkingHours,
       switchAfterSlot: switchAfterSlot,
       clickedSlotLabel: switchAfterSlot,
@@ -2391,19 +2616,6 @@
       completedWorkingHours: completedWorkingHours,
       updatedBy: userDisplayName
     };
-
-    // เฉพาะ NEXT: รอบที่เลือกเป็นยอดสุดท้ายของ LOT เดิมและ Backend จะ upsert ลง Hourly_Log
-    if (switchMode === 'NEXT') {
-      payload.closingLotNumber = closingLot;
-      payload.closingTimeSlot = switchAfterSlot;
-      payload.closingSlotQty = currentQty;
-      payload.closingRemark =
-        pendingSwitchRow?.querySelector('.slot-remark-input')?.value || '';
-      payload.completedWorkingHoursLot1 = completedWorkingHours;
-      payload.completedNormalHoursLot1 = completedWorkingHours;
-      payload.hoursUsedLot1 = completedWorkingHours;
-      payload.hoursUsedLot2 = remainingHours;
-    }
 
     try {
       await fetch(SCRIPT_URL, {
@@ -2413,30 +2625,24 @@
         body: JSON.stringify(payload)
       });
 
+      if (!activeLots.some(lot => normalizeLot_(lot) === newLot)) {
+        activeLots.push(newLot);
+      }
+      currentLotTGMap[newLot] = resolvedTarget;
+      currentActiveLot = newLot;
+
       applyLocalLotPlanAfterSwitch_(
         closingLot,
         newLot,
         completedWorkingHours,
-        totalWorkingHours
+        totalWorkingHours,
+        switchAfterSlot
       );
 
-      if (switchMode === 'NEXT') {
-        currentExistingHourly[switchAfterSlot] = {
-          lot: closingLot,
-          output: Number(currentQty)
-        };
-      } else {
-        // CURRENT ยังไม่ถือว่ารอบนี้ถูกบันทึกยอด
-        // User กรอกยอดต่อได้ตามปกติ แล้วกดบันทึก Output ภายหลัง
-        if (currentExistingHourly && currentExistingHourly[switchAfterSlot]) {
-          delete currentExistingHourly[switchAfterSlot];
-        }
+      // CURRENT ยังไม่ถือว่ารอบนี้ถูกบันทึกยอด
+      if (currentExistingHourly && currentExistingHourly[switchAfterSlot]) {
+        delete currentExistingHourly[switchAfterSlot];
       }
-
-      if (!activeLots.some(lot => normalizeLot_(lot) === newLot)) {
-        activeLots.push(newLot);
-      }
-      currentActiveLot = newLot;
 
       generateSmartTimeSlots(currentHours1, currentExistingHourly);
       updateCurrentModelBanner_();
@@ -2444,39 +2650,38 @@
 
       closeNewLotModal();
       showLotSwitchToast_(
-        switchMode === 'CURRENT'
-          ? `✅ LOT ใหม่ ${newLot} เริ่มที่รอบ ${switchAfterSlot} แล้ว`
-          : `✅ LOT ใหม่ ${newLot} เริ่มที่รอบถัดไปแล้ว`,
+        isExistingLot
+          ? `✅ กลับมา LOT ${newLot} ที่รอบ ${switchAfterSlot} แล้ว`
+          : `✅ LOT ใหม่ ${newLot} เริ่มที่รอบ ${switchAfterSlot} แล้ว`,
         'success',
         2400
       );
 
-      // NEXT ตรวจทั้ง LOT + ยอดปิดรอบแบบเดิม
-      // CURRENT ตรวจเฉพาะ state ของ LOT/ชั่วโมง เพราะรอบนี้ยังไม่ได้บันทึกยอด
+      // no-cors อ่าน response POST ไม่ได้ จึงยืนยัน state ด้วย GET
       void (async () => {
-        if (switchMode === 'NEXT') {
-          const verifiedState = await waitForLotSwitchSaved_(
-            lineVal, newLot, newTargetMax,
-            switchAfterSlot, closingLot, Number(currentQty),
-            completedWorkingHours
-          );
-          if (verifiedState) {
-            if (verifiedState.masterMap) masterLotMap = { ...masterLotMap, ...verifiedState.masterMap };
-            return;
-          }
-        } else {
-          for (let attempt = 0; attempt < 10; attempt++) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-            try {
-              const state = await fetchCurrentLineState_(lineVal);
-              const usedLots = getUsedLotsFromState_(state);
-              if (usedLots.includes(newLot)) {
-                if (state.masterMap) masterLotMap = { ...masterLotMap, ...state.masterMap };
-                return;
+        for (let attempt = 0; attempt < 10; attempt++) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          try {
+            const state = await fetchCurrentLineState_(lineVal);
+            const savedCurrentLot = normalizeLot_(state.currentLot);
+            const savedHistory = Array.isArray(state.lotSwitchHistory)
+              ? state.lotSwitchHistory
+              : [];
+
+            const historyOk = savedHistory.some(
+              item =>
+                String(item.slot || '').trim() === switchAfterSlot &&
+                normalizeLot_(item.to) === newLot
+            );
+
+            if (savedCurrentLot === newLot && historyOk) {
+              if (state.masterMap) {
+                masterLotMap = { ...masterLotMap, ...state.masterMap };
               }
-            } catch (err) {
-              console.warn('Verify CURRENT switch attempt failed:', err);
+              return;
             }
+          } catch (err) {
+            console.warn('Verify CURRENT switch attempt failed:', err);
           }
         }
 
@@ -2489,8 +2694,8 @@
 
     } catch (err) {
       console.error("Sync Error:", err);
-      setSwitchLotStatus_("ส่งข้อมูลปิด LOT ไม่สำเร็จ กรุณาลองใหม่", "error");
-      alert("ส่งข้อมูลปิด LOT ไม่สำเร็จ กรุณาลองใหม่");
+      setSwitchLotStatus_("ส่งข้อมูลเปลี่ยน LOT ไม่สำเร็จ กรุณาลองใหม่", "error");
+      alert("ส่งข้อมูลเปลี่ยน LOT ไม่สำเร็จ กรุณาลองใหม่");
     } finally {
       if (confirmBtn) {
         confirmBtn.disabled = false;
