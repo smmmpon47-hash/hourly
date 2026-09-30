@@ -7,8 +7,14 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>บันทึกยอดการผลิต</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- FAST LOAD: ให้หน้าเว็บ/ข้อมูลเริ่มก่อน LIFF และ Web Font -->
+  <link rel="preconnect" href="https://script.google.com">
+  <link rel="preconnect" href="https://static.line-scdn.net" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <script async src="https://static.line-scdn.net/liff/edge/2/sdk.js" onload="window.__liffSdkLoaded=true; if(window.startLiffInit_) window.startLiffInit_();"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
   <style>
     * { box-sizing: border-box; font-family: 'Sarabun', sans-serif; }
     body {
@@ -968,7 +974,7 @@
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLm1LVkTiwK3PCvPSt3PFA1ifb76KCRsWxC1SkaLdDC-ginxy0RHWstWpHgDytaBmm/exec"; 
   const LIFF_ID = "2011198724-JQ60DTBm";
 
-  const FRONTEND_BUILD_LOT_SWITCH = '20260922_REPEAT_LOT_V1';
+  const FRONTEND_BUILD_LOT_SWITCH = '20260930_REPEAT_LOT_FAST_LOAD_V1';
   const EXPECTED_BACKEND_LOT_SWITCH_VERSION = 'LOT_SLOT_DIRECT_AA_LOCK_20260919_V1';
   const EXPECTED_REPEAT_LOT_VERSION = 'REPEAT_LOT_20260922_V1';
   console.log('Output build:', FRONTEND_BUILD_LOT_SWITCH);
@@ -987,8 +993,6 @@
   let pendingSwitchRow = null;
   let pendingSwitchContext = null;
   let pendingSwitchMode = ''; // NEXT = เริ่มรอบถัดไป, CURRENT = ใช้รอบที่เลือก
-
-  initLiff();
 
   async function initLiff() {
     try {
@@ -1024,16 +1028,39 @@
     { label: "18.30-19.30", endMin: 1170 }
   ];
 
-  document.addEventListener("DOMContentLoaded", () => {
+  // FAST LOAD: HTML ทั้งฟอร์มอยู่ก่อน <script> นี้แล้ว จึงเริ่มดึงข้อมูล LINE ได้ทันที
+  // ไม่ต้องรอ DOMContentLoaded / LIFF / Google Font ให้เสร็จก่อน
+  let __fastBootDone = false;
+
+  window.startLiffInit_ = function() {
+    if (window.__liffInitStarted) return;
+    if (typeof liff === "undefined" || !LIFF_ID) return;
+    window.__liffInitStarted = true;
+    void initLiff();
+  };
+
+  function fastBoot_() {
+    if (__fastBootDone) return;
+    __fastBootDone = true;
+
     displayCurrentDate();
 
     const savedLine = localStorage.getItem("selectedLine");
     if (savedLine) {
       const lineSelect = document.getElementById('line');
-      lineSelect.value = savedLine;
-      loadLineDetails();
+      if (lineSelect) {
+        lineSelect.value = savedLine;
+        // เริ่มยิง Apps Script ทันที ขณะ LIFF / font ยังโหลดขนานกันได้
+        void loadLineDetails();
+      }
     }
-  });
+
+    if (window.__liffSdkLoaded || typeof liff !== "undefined") {
+      window.startLiffInit_();
+    }
+  }
+
+  fastBoot_();
 
 
   function switchProductionTab(tab) {
