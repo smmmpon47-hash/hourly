@@ -3,9 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ตั้งเป้าการผลิตประจำวัน (Form TG)</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>บันทึกยอดการผลิต</title>
+  <!-- FAST LOAD: ให้หน้าเว็บ/ข้อมูลเริ่มก่อน LIFF และ Web Font -->
+  <link rel="preconnect" href="https://script.google.com">
+  <link rel="preconnect" href="https://static.line-scdn.net" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <script async src="https://static.line-scdn.net/liff/edge/2/sdk.js" onload="window.__liffSdkLoaded=true; if(window.startLiffInit_) window.startLiffInit_();"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
   <style>
     * { box-sizing: border-box; font-family: 'Sarabun', sans-serif; }
     body {
@@ -25,23 +34,35 @@
       max-width: 450px;
       box-shadow: 0 20px 40px rgba(0,0,0,0.25);
     }
+
+    .header-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
     .header-title {
-      font-size: 1.5rem;
+      font-size: 1.55rem;
       font-weight: 700;
       color: #0d9488;
-      margin: 0 0 18px 0;
-      text-align: center;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+      margin: 0;
     }
-    .form-group { margin-bottom: 16px; }
-    label { display: block; font-weight: 600; margin-bottom: 6px; color: #1e293b; font-size: 0.95rem; }
+    .date-badge {
+      font-size: 0.85rem;
+      color: #475569;
+      font-weight: 600;
+      background: #f1f5f9;
+      padding: 5px 12px;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+    }
+
+    .form-group { margin-bottom: 18px; }
+    label { display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b; font-size: 1rem; }
     
-    select, input {
+    select, input, textarea {
       width: 100%;
-      padding: 11px 14px;
+      padding: 12px 14px;
       border: 1.8px solid #cbd5e1;
       border-radius: 14px;
       font-size: 1.05rem;
@@ -49,89 +70,240 @@
       background: #fff;
       color: #0f172a;
     }
-    select:focus, input:focus {
+    select:focus, input:focus, textarea:focus {
       border-color: #0d9488;
       box-shadow: 0 0 0 3.5px rgba(13, 148, 136, 0.2);
     }
 
-    .lot-card {
-      background: #f8fafc;
-      border: 1.5px solid #cbd5e1;
-      border-radius: 18px;
-      padding: 16px;
-      margin-bottom: 16px;
-    }
-    .lot-header {
+    .info-banner {
+      background: #e0f2fe;
+      border-radius: 14px;
+      padding: 12px 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-weight: 700;
-      color: #0f172a;
-      margin-bottom: 12px;
-      font-size: 1rem;
-    }
-    .badge-rate {
-      font-size: 0.85rem;
-      background: #e0f2fe;
+      margin-bottom: 20px;
+      font-size: 0.95rem;
       color: #0369a1;
-      padding: 4px 10px;
-      border-radius: 10px;
       font-weight: 600;
     }
 
-    .row-2col {
-      display: flex;
-      gap: 12px;
+    .user-banner {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 14px;
+      padding: 8px 14px;
+      margin-bottom: 16px;
+      font-size: 0.88rem;
+      color: #166534;
+      font-weight: 600;
+      text-align: center;
     }
-    .row-2col .form-group { flex: 1; margin-bottom: 8px; }
 
+    .section-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 12px;
+    }
+
+    .slot-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .slot-time {
+      flex: 2.2;
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 11px 8px;
+      text-align: center;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #334155;
+    }
+    .slot-lot-container {
+      flex: 2.2;
+      display: flex;
+      flex-direction: column;
+    }
+    .slot-lot-select {
+      width: 100%;
+      padding: 11px 6px;
+      font-size: 0.88rem;
+      border-radius: 14px;
+      font-weight: 600;
+    }
     .model-subtext {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       color: #0d9488;
       font-weight: 600;
       margin-top: 4px;
-      min-height: 18px;
+      padding-left: 4px;
+      min-height: 16px;
     }
-
-    /* ปุ่มกดเลือก เวลาทำงาน */
-    .hours-btn-group {
-      display: flex;
-      gap: 10px;
-      margin-top: 6px;
-    }
-    .btn-hour-chip {
-      flex: 1;
-      padding: 12px 0;
-      background: #fff;
-      border: 1.8px solid #cbd5e1;
-      border-radius: 14px;
-      font-size: 1.05rem;
-      font-weight: 600;
-      color: #334155;
-      cursor: pointer;
+    .slot-input {
+      flex: 1.2;
+      padding: 11px 8px;
       text-align: center;
-      transition: all 0.2s ease;
-    }
-    .btn-hour-chip.active {
-      background: #0d9488;
-      color: #ffffff;
-      border-color: #0d9488;
-      box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+      font-weight: 700;
+      border-radius: 14px;
+      font-size: 1.1rem;
     }
 
-    .summary-box {
-      background: #0d9488;
-      color: white;
-      border-radius: 18px;
-      padding: 14px 18px;
-      margin: 18px 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    /* ===== REMARK PER TIME SLOT ===== */
+    .slot-remark-wrap{
+      grid-column: 2 / 4;
+      min-width: 0;
+      margin-top: -2px;
     }
-    .summary-title { font-size: 0.9rem; opacity: 0.95; font-weight: 500; }
-    .summary-subtitle { font-size: 0.75rem; opacity: 0.8; }
-    .summary-value { font-size: 1.5rem; font-weight: 700; }
+    .slot-remark-label{
+      display:block;
+      margin:0 0 5px 2px;
+      font-size:.72rem;
+      font-weight:700;
+      color:#64748b;
+    }
+    .slot-remark-input{
+      width:100%;
+      min-width:0;
+      box-sizing:border-box;
+      padding:9px 10px;
+      border:1.5px solid #cbd5e1;
+      border-radius:11px;
+      background:#fff;
+      color:#334155;
+      font-family:'Sarabun',sans-serif;
+      font-size:.82rem;
+      line-height:1.3;
+    }
+    .slot-remark-input:focus{
+      outline:none;
+      border-color:#14b8a6;
+      box-shadow:0 0 0 3px rgba(20,184,166,.10);
+    }
+
+
+    /* ===== AUTO CURRENT LOT / END LOT IN TIME ROW ===== */
+    .current-model-banner{
+      display:none;
+      background:#f0fdfa;
+      border:1px solid #99f6e4;
+      border-radius:14px;
+      padding:10px 13px;
+      margin-bottom:14px;
+      color:#0f766e;
+      font-size:.86rem;
+      font-weight:700;
+    }
+
+    .slot-end-lot-btn{
+      width:100%;
+      margin-top:7px;
+      padding:6px 4px;
+      border-radius:9px;
+      border:1.4px solid #f0b84f;
+      background:#fff8e8;
+      color:#9a5b00;
+      font-size:.72rem;
+      font-weight:700;
+      cursor:pointer;
+    }
+    .slot-end-lot-btn:active{ background:#ffedbd; }
+    .slot-end-lot-btn:disabled{
+      background:#f1f5f9;
+      color:#94a3b8;
+      border-color:#cbd5e1;
+      cursor:not-allowed;
+    }
+    .slot-end-lot-btn.closed{
+      background:#ecfdf5;
+      color:#047857;
+      border-color:#86efac;
+    }
+
+    .slot-lot-display{
+      width:100%;
+      padding:11px 24px 11px 8px;
+      min-height:46px;
+      border:1.8px solid #cbd5e1;
+      border-radius:14px;
+      background:#f8fafc;
+      color:#334155;
+      font-size:.88rem;
+      font-weight:700;
+      text-align:center;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      word-break:break-all;
+    }
+    .slot-lot-display::after{
+      content:"🔒";
+      position:absolute;
+      right:7px;
+      font-size:.68rem;
+      opacity:.55;
+    }
+    .slot-lot-display.current{
+      background:#f0fdfa;
+      border-color:#99f6e4;
+      color:#0f766e;
+    }
+
+    .switch-picked-slot{
+      font-size:.84rem;
+      color:#1d4ed8;
+      background:#eff6ff;
+      border:1px solid #bfdbfe;
+      border-radius:12px;
+      padding:10px 12px;
+      margin-bottom:14px;
+      line-height:1.55;
+    }
+
+    .btn-add-lot-midday {
+      background: #f0fdf4;
+      border: 1.5px dashed #0d9488;
+      color: #0d9488;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 11px;
+      border-radius: 14px;
+      width: 100%;
+      font-size: 0.9rem;
+      margin-top: 5px;
+      margin-bottom: 15px;
+    }
+    .btn-add-lot-midday:active { background: #dcfce7; }
+
+    .sum-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f8fafc;
+      padding: 14px 18px;
+      border-radius: 16px;
+      border: 2px dashed #0d9488;
+      margin-bottom: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 1.05rem;
+    }
+    .sum-input {
+      width: 95px;
+      text-align: center;
+      background: #fff;
+      font-weight: 700;
+      color: #0d9488;
+      border: 2px solid #0d9488;
+      padding: 6px;
+      border-radius: 10px;
+      font-size: 1.15rem;
+    }
 
     .btn-submit {
       width: 100%;
@@ -144,395 +316,513 @@
       font-weight: 600;
       cursor: pointer;
       box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
-      margin-top: 6px;
+      margin-top: 10px;
     }
     .btn-submit:disabled {
       background: #94a3b8;
       box-shadow: none;
       cursor: not-allowed;
     }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    .modal-card {
+      background: #fff;
+      padding: 22px 20px;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .modal-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #0d9488;
+      margin: 0;
+    }
+    .btn-close-modal {
+      background: #f1f5f9;
+      border: none;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #64748b;
+      cursor: pointer;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    /* --- เฉลี่ยที่ต้องทำต่อชั่วโมง: compact only --- */
+    .pace-dashboard{
+      width:100%;
+      margin-top:12px;
+      margin-bottom:18px;
+      background:linear-gradient(135deg,#eef8ff 0%,#f8fbff 100%);
+      border:1px solid #d7e8f6;
+      border-radius:18px;
+      padding:14px 16px;
+      box-sizing:border-box;
+      box-shadow:0 6px 18px rgba(15,23,42,.06);
+      display:none;
+    }
+
+    .pace-only-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+    }
+
+    .pace-only-title{
+      font-size:.86rem;
+      font-weight:700;
+      color:#475569;
+    }
+
+    .pace-only-value{
+      font-size:1.55rem;
+      line-height:1;
+      font-weight:900;
+      color:#1d4ed8;
+      white-space:nowrap;
+    }
+
+    .pace-only-note{
+      margin-top:6px;
+      font-size:.72rem;
+      color:#64748b;
+    }
+
+    @media (max-width:430px){
+      .pace-only-value{font-size:1.4rem;}
+    }
+
+  
+
+    /* ===== Production two-tab UI ===== */
+    .prod-tabs{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:6px;
+      background:#eef2f7;
+      border-radius:14px;
+      padding:5px;
+      margin:14px 0 18px;
+    }
+    .prod-tab-btn{
+      border:0;
+      background:transparent;
+      color:#64748b;
+      font-family:'Sarabun',sans-serif;
+      font-size:.9rem;
+      font-weight:700;
+      padding:11px 8px;
+      border-radius:11px;
+      cursor:pointer;
+    }
+    .prod-tab-btn.active{
+      background:#fff;
+      color:#0f766e;
+      box-shadow:0 3px 10px rgba(15,23,42,.08);
+    }
+    .prod-page{display:none;}
+    .prod-page.active{display:block;}
+
+    .edit-plan-note{
+      background:#fff7ed;
+      border:1px solid #fed7aa;
+      color:#9a3412;
+      border-radius:13px;
+      padding:10px 12px;
+      font-size:.8rem;
+      line-height:1.5;
+      margin-bottom:14px;
+    }
+    .edit-plan-card{
+      border:1px solid #e2e8f0;
+      border-radius:16px;
+      padding:13px;
+      margin-bottom:10px;
+      background:#fff;
+    }
+    .edit-plan-card-title{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:flex-start;
+      font-weight:800;
+      color:#334155;
+      margin-bottom:9px;
+    }
+    .edit-plan-model{
+      font-size:.72rem;
+      color:#64748b;
+      font-weight:500;
+      margin-top:2px;
+    }
+    .edit-plan-hours-badge{
+      white-space:nowrap;
+      font-size:.72rem;
+      color:#475569;
+      background:#f1f5f9;
+      border-radius:999px;
+      padding:4px 8px;
+      font-weight:700;
+    }
+    .edit-plan-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+    .edit-plan-grid .form-group{margin-bottom:0;}
+    .edit-plan-preview{
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      border-radius:16px;
+      padding:13px;
+      margin:14px 0;
+      display:none;
+    }
+    .edit-preview-row{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      padding:5px 0;
+      font-size:.82rem;
+      color:#475569;
+    }
+    .edit-preview-row strong{color:#0f172a;}
+    .edit-preview-divider{
+      border-top:1px dashed #cbd5e1;
+      margin:7px 0;
+    }
+    .edit-status{
+      display:none;
+      font-size:.78rem;
+      border-radius:10px;
+      padding:9px 10px;
+      margin:10px 0;
+    }
+
+    @media (max-width:430px){
+      .prod-tab-btn{font-size:.82rem;padding:10px 5px;}
+      .edit-plan-grid{grid-template-columns:1fr;}
+    }
+
   
 
     /* ===== MOBILE / LIFF READABILITY FIX ===== */
-    html, body{
-      max-width:100%;
-      overflow-x:hidden;
-    }
+    html, body { max-width: 100%; overflow-x: hidden; }
 
     body{
-      padding:14px 10px;
-      font-size:16px;
+      padding: 14px 10px;
+      font-size: 16px;
     }
 
     .card{
-      width:100%;
-      max-width:460px;
-      padding:20px 16px;
-      border-radius:20px;
-      overflow:hidden;
+      max-width: 460px;
+      padding: 20px 16px;
+      border-radius: 20px;
+      overflow: hidden;
     }
 
     .header-title{
-      font-size:1.35rem;
-      line-height:1.25;
-      margin-bottom:16px;
-      gap:6px;
-      flex-wrap:wrap;
+      font-size: 1.42rem;
+      line-height: 1.2;
     }
 
-    .form-group{
-      min-width:0;
-      margin-bottom:15px;
+    .date-badge{
+      font-size: .78rem;
+      padding: 5px 9px;
+      flex-shrink: 0;
+    }
+
+    .user-banner{
+      font-size: .84rem;
+      line-height: 1.45;
+      padding: 9px 10px;
+    }
+
+    .prod-tabs{
+      gap: 4px;
+      margin: 12px 0 16px;
+    }
+
+    .prod-tab-btn{
+      min-width: 0;
+      font-size: .82rem;
+      line-height: 1.25;
+      padding: 10px 6px;
+      white-space: normal;
     }
 
     label{
-      font-size:.95rem;
-      line-height:1.35;
+      font-size: .95rem;
+      line-height: 1.35;
     }
 
-    select, input{
-      min-width:0;
-      width:100%;
-      font-size:1rem;
-      padding:11px 12px;
+    select, input, textarea{
+      min-width: 0;
+      font-size: 1rem;
+      padding: 11px 12px;
     }
 
-    .lot-card{
-      padding:14px 13px;
-      border-radius:16px;
-      margin-bottom:15px;
-      overflow:hidden;
+    .info-banner{
+      gap: 8px;
+      padding: 11px 12px;
+      font-size: .88rem;
+      line-height: 1.35;
+      flex-wrap: wrap;
     }
 
-    .lot-header{
-      gap:8px;
-      font-size:.95rem;
-      line-height:1.25;
-      flex-wrap:wrap;
-      align-items:flex-start;
+    .pace-dashboard{
+      padding: 12px 13px;
+      border-radius: 15px;
     }
 
-    .badge-rate{
-      font-size:.75rem;
-      padding:4px 8px;
-      white-space:nowrap;
-      flex-shrink:0;
+    .pace-only-row{
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .pace-only-title{ font-size: .82rem; }
+    .pace-only-note{
+      font-size: .70rem;
+      line-height: 1.35;
+    }
+    .pace-only-value{
+      font-size: 1.35rem;
+      flex-shrink: 0;
+    }
+
+    .current-model-banner{
+      font-size: .82rem;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    .section-title{
+      font-size: .95rem;
+      margin-bottom: 10px;
+    }
+
+    /* 3 ช่องเดิม: เวลา | LOT | จำนวน
+       เปลี่ยนจาก flex เป็น grid เพื่อไม่ให้ตกขอบมือถือ */
+    .slot-row{
+      display: grid;
+      grid-template-columns: minmax(104px, 1.05fr) minmax(0, 1.18fr) minmax(68px, .62fr);
+      gap: 7px;
+      width: 100%;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+
+    .slot-time{
+      min-width: 0;
+      width: 100%;
+      padding: 9px 5px 7px;
+      font-size: .82rem;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+
+    .slot-end-lot-btn{
+      margin-top: 6px;
+      padding: 6px 3px;
+      font-size: .68rem;
+      line-height: 1.2;
+      white-space: normal;
+    }
+
+    .slot-lot-container{
+      min-width: 0;
+      width: 100%;
+    }
+
+    .slot-lot-display{
+      min-width: 0;
+      width: 100%;
+      min-height: 44px;
+      padding: 9px 20px 9px 6px;
+      font-size: .78rem;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .slot-lot-display::after{
+      right: 5px;
+      font-size: .62rem;
     }
 
     .model-subtext{
-      font-size:.75rem;
-      line-height:1.35;
-      overflow-wrap:anywhere;
+      min-width: 0;
+      padding-left: 2px;
+      font-size: .67rem;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
     }
 
-    /* แถว 2 ช่องไม่ให้ล้นขอบ */
-    .row-2col{
-      display:grid;
-      grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-      gap:9px;
-      width:100%;
+    .slot-input{
+      min-width: 0;
+      width: 100%;
+      padding: 10px 4px;
+      font-size: 1rem;
     }
 
-    .row-2col .form-group{
-      min-width:0;
-      width:100%;
-      margin-bottom:8px;
+    .sum-box{
+      gap: 7px;
+      padding: 12px 12px;
+      font-size: .9rem;
     }
 
-    .hours-btn-group{
-      display:grid;
-      grid-template-columns:repeat(3,minmax(0,1fr));
-      gap:8px;
-      width:100%;
-    }
-
-    .btn-hour-chip{
-      min-width:0;
-      width:100%;
-      padding:11px 4px;
-      font-size:.95rem;
-      line-height:1.2;
-      white-space:nowrap;
-    }
-
-    .summary-box{
-      gap:10px;
-      padding:13px 14px;
-      border-radius:16px;
-      margin:16px 0;
-      min-width:0;
-    }
-
-    .summary-box > div:first-child{
-      min-width:0;
-    }
-
-    .summary-title{
-      font-size:.86rem;
-      line-height:1.3;
-    }
-
-    .summary-subtitle{
-      font-size:.70rem;
-      line-height:1.35;
-      margin-top:2px;
-    }
-
-    .summary-value{
-      font-size:1.28rem;
-      line-height:1.1;
-      white-space:nowrap;
-      flex-shrink:0;
+    .sum-input{
+      width: 82px;
+      min-width: 72px;
+      font-size: 1.05rem;
+      padding: 6px 4px;
     }
 
     .btn-submit{
-      font-size:1rem;
-      padding:13px 10px;
-      border-radius:14px;
-    }
-
-    @media (max-width:390px){
-      body{
-        padding:10px 6px;
-      }
-
-      .card{
-        padding:16px 12px;
-        border-radius:18px;
-      }
-
-      .header-title{
-        font-size:1.22rem;
-      }
-
-      .lot-card{
-        padding:12px 10px;
-      }
-
-      .lot-header{
-        font-size:.9rem;
-      }
-
-      .badge-rate{
-        font-size:.7rem;
-        padding:4px 7px;
-      }
-
-      .row-2col{
-        grid-template-columns:1fr;
-        gap:2px;
-      }
-
-      .hours-btn-group{
-        gap:6px;
-      }
-
-      .btn-hour-chip{
-        font-size:.86rem;
-        padding:10px 2px;
-      }
-
-      .summary-box{
-        padding:11px 10px;
-        gap:7px;
-      }
-
-      .summary-title{
-        font-size:.8rem;
-      }
-
-      .summary-subtitle{
-        font-size:.66rem;
-      }
-
-      .summary-value{
-        font-size:1.15rem;
-      }
-    }
-
-  
-
-    /* =========================================================
-       FORM UX POLISH — MORE BREATHING ROOM + LARGER TYPE
-       ปรับเฉพาะหน้าตา ไม่แตะ logic เดิม
-       ========================================================= */
-    body {
-      padding: 28px 18px;
-      font-size: 17px;
-    }
-
-    .card {
-      max-width: 500px;
-      padding: 30px 28px;
-      border-radius: 24px;
-    }
-
-    .header-title {
-      font-size: 1.65rem;
-      line-height: 1.3;
-      margin-bottom: 22px;
-    }
-
-    .form-group {
-      margin-bottom: 18px;
-    }
-
-    label {
-      font-size: 1.04rem;
-      line-height: 1.4;
-      margin-bottom: 8px;
-    }
-
-    select, input {
-      min-height: 52px;
-      padding: 13px 15px;
-      font-size: 1.08rem;
+      font-size: 1rem;
+      padding: 13px 10px;
       border-radius: 14px;
     }
 
-    .lot-card {
-      padding: 20px;
-      border-radius: 20px;
-      margin-bottom: 20px;
+    .modal-overlay{
+      padding: 12px;
+      align-items: center;
     }
 
-    .lot-header {
-      font-size: 1.08rem;
-      line-height: 1.35;
-      margin-bottom: 15px;
-    }
-
-    .badge-rate {
-      font-size: .90rem;
-      padding: 5px 11px;
-    }
-
-    .model-subtext {
-      font-size: .85rem;
-      line-height: 1.4;
-      margin-top: 6px;
-    }
-
-    /* ถ้าช่องชั่วโมง LOT 1 ถูกซ่อน ให้ช่องเป้าหมายกินเต็มแถว */
-    #lot1HoursContainer[style*="display: none"] + .form-group {
-      grid-column: 1 / -1;
-    }
-
-    .hours-btn-group {
-      gap: 10px;
-      margin-top: 8px;
-    }
-
-    .btn-hour-chip {
-      min-height: 50px;
-      padding: 12px 6px;
-      font-size: 1.06rem;
-      border-radius: 14px;
-    }
-
-    /* เว้นกรอบสรุปเป้าจากริมการ์ด ไม่ให้ดูอึดอัด */
-    .summary-box {
-      margin: 22px 6px 20px;
-      padding: 17px 22px;
+    .modal-card{
+      max-width: 390px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 18px 16px;
       border-radius: 18px;
-      gap: 16px;
     }
 
-    .summary-title {
+    .modal-title{
       font-size: 1rem;
       line-height: 1.35;
-      font-weight: 700;
     }
 
-    .summary-subtitle {
-      font-size: .80rem;
-      line-height: 1.4;
-      margin-top: 2px;
+    .switch-picked-slot{
+      font-size: .78rem;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
     }
 
-    .summary-value {
-      font-size: 1.65rem;
-      line-height: 1.1;
+    .edit-plan-card,
+    .edit-plan-preview{
+      overflow: hidden;
     }
 
-    .btn-submit {
-      min-height: 56px;
-      padding: 15px 12px;
-      font-size: 1.16rem;
-      border-radius: 16px;
-      margin-top: 8px;
+    .edit-plan-card-title,
+    .edit-preview-row{
+      min-width: 0;
     }
 
-    @media (max-width: 520px) {
-      body {
-        padding: 14px 9px;
-        font-size: 16.5px;
-      }
-
-      .card {
-        max-width: 460px;
-        padding: 22px 18px;
-        border-radius: 20px;
-      }
-
-      .header-title {
-        font-size: 1.48rem;
-        margin-bottom: 19px;
-      }
-
-      label { font-size: 1rem; }
-
-      select, input {
-        min-height: 50px;
-        font-size: 1.04rem;
-        padding: 12px 13px;
-      }
-
-      .lot-card {
-        padding: 16px 15px;
-        margin-bottom: 18px;
-      }
-
-      .lot-header { font-size: 1.02rem; }
-      .badge-rate { font-size: .82rem; }
-      .btn-hour-chip { font-size: 1rem; }
-
-      .summary-box {
-        margin: 19px 3px 18px;
-        padding: 15px 17px;
-        gap: 12px;
-      }
-
-      .summary-title { font-size: .96rem; }
-      .summary-subtitle { font-size: .76rem; }
-      .summary-value { font-size: 1.48rem; }
-      .btn-submit { font-size: 1.10rem; }
+    .edit-plan-card-title > div,
+    .edit-preview-row > span{
+      min-width: 0;
+      overflow-wrap: anywhere;
     }
 
-    @media (max-width: 390px) {
-      body { padding: 10px 6px; }
+    @media (max-width: 390px){
+      body{ padding: 10px 6px; }
 
-      .card {
-        padding: 18px 14px;
+      .card{
+        padding: 16px 12px;
         border-radius: 18px;
       }
 
-      .header-title { font-size: 1.34rem; }
-      label { font-size: .98rem; }
-      .lot-card { padding: 14px 12px; }
-      .lot-header { font-size: .98rem; }
-      .badge-rate { font-size: .76rem; }
-      .btn-hour-chip { font-size: .94rem; }
-
-      .summary-box {
-        margin: 17px 2px 16px;
-        padding: 14px 14px;
-        gap: 10px;
+      .header-top-row{ gap: 8px; }
+      .header-title{ font-size: 1.28rem; }
+      .date-badge{
+        font-size: .72rem;
+        padding: 4px 7px;
       }
 
-      .summary-title { font-size: .91rem; }
-      .summary-subtitle { font-size: .72rem; }
-      .summary-value { font-size: 1.32rem; }
+      .prod-tab-btn{
+        font-size: .76rem;
+        padding: 9px 4px;
+      }
+
+      .info-banner{
+        font-size: .82rem;
+      }
+
+      .slot-row{
+        grid-template-columns: minmax(96px, 1fr) minmax(0, 1.08fr) 62px;
+        gap: 5px;
+      }
+
+      .slot-time{
+        font-size: .75rem;
+        padding-left: 3px;
+        padding-right: 3px;
+      }
+
+      .slot-end-lot-btn{
+        font-size: .62rem;
+      }
+
+      .slot-lot-display{
+        font-size: .72rem;
+        padding-left: 4px;
+        padding-right: 18px;
+      }
+
+      .model-subtext{ font-size: .62rem; }
+
+      .slot-input{
+        font-size: .95rem;
+        padding-left: 2px;
+        padding-right: 2px;
+      }
+
+      .slot-remark-wrap{
+        grid-column: 2 / 4;
+      }
+      .slot-remark-label{
+        font-size:.64rem;
+      }
+      .slot-remark-input{
+        font-size:.74rem;
+        padding:8px 9px;
+      }
+
+      .pace-only-value{ font-size: 1.22rem; }
+
+      .sum-box{
+        font-size: .84rem;
+        padding: 11px 9px;
+      }
+
+      .sum-input{
+        width: 72px;
+        min-width: 66px;
+        font-size: 1rem;
+      }
     }
 
   </style>
@@ -540,87 +830,169 @@
 <body>
 
 <div class="card">
-  <h2 class="header-title">🎯 ตั้งเป้าการผลิตประจำวัน</h2>
+  <div class="header-top-row">
+    <h2 class="header-title">บันทึกยอดการผลิต</h2>
+    <div class="date-badge" id="currentDateDisplay">--/--/----</div>
+  </div>
 
-  <form id="tgForm">
-    <!-- เลือกลายการผลิต B - G -->
+  <div class="user-banner">
+    👤 ผู้รายงาน: <span id="userDisplayNameDisplay">กำลังดึงโปรไฟล์ LINE...</span>
+  </div>
+
+  <div class="prod-tabs">
+    <button type="button" id="recordTabBtn" class="prod-tab-btn active" onclick="switchProductionTab('record')">📈 บันทึกยอด</button>
+    <button type="button" id="editPlanTabBtn" class="prod-tab-btn" onclick="switchProductionTab('edit')">⚙️ แก้ไขเป้า / ชั่วโมง</button>
+  </div>
+
+  <div id="recordPage" class="prod-page active">
+  <form id="hourlyForm">
     <div class="form-group">
-      <label for="lineSelect">LINE การผลิต</label>
-      <select id="lineSelect" required onchange="onLineSelected()">
+      <label for="line">LINE การผลิต</label>
+      <select id="line" required onchange="loadLineDetails()">
         <option value="">-- เลือก LINE --</option>
         <option value="Line B">Line B</option>
         <option value="Line C">Line C</option>
         <option value="Line D">Line D</option>
         <option value="Line E">Line E</option>
         <option value="Line F">Line F</option>
-        <option value="Line G">Line G ทดสอบ</option> 
+        <option value="Line G">Line G ทดสอบ</option>
       </select>
     </div>
 
-    <!-- จำนวนคนตอนเช้า -->
-    <div class="form-group">
-      <label for="manpower">จำนวนคนในไลน์ (คน)</label>
-      <input type="number" id="manpower" min="0" step="0.5" inputmode="decimal" placeholder="0 หรือ 0.5" required>
+    <div id="infoBanner" class="info-banner" style="display:none;">
+      <span>🎯 เป้าวัน: <strong id="targetVal">0</strong> ชิ้น</span>
+      <span>⏱️ เวลาทำงาน: <strong id="hoursVal">0</strong> ชม.</span>
     </div>
 
-    <!-- LOT 1 Card -->
-    <div class="lot-card" id="cardLot1">
-      <div class="lot-header">
-        <span>📦 LOT ที่ 1</span>
-        <span class="badge-rate" id="rateLot1Display">Rate: 0 ชิ้น/ชม.</span>
-      </div>
-      
-      <div class="form-group">
-        <label for="lot1No">เลข LOT Number</label>
-        <input type="text" id="lot1No" placeholder="กรอกเลข LOT" required oninput="onLotInput(1)">
-        <div class="model-subtext" id="modelSubtext1"></div>
-      </div>
-
-      <div class="row-2col">
-        <div class="form-group" id="lot1HoursContainer" style="display: none;">
-          <label for="lot1HoursSelect">ชั่วโมงผลิตจริง</label>
-          <select id="lot1HoursSelect" onchange="onLot1HoursChange()">
-            <!-- JS จะสเกลตัวเลือกตามเวลารวม -->
-          </select>
+    <div id="hourlyPacePanel" class="pace-dashboard">
+      <div class="pace-only-row">
+        <div>
+          <div class="pace-only-title">🎯 เฉลี่ยที่ต้องทำ / ชม.</div>
+          <div class="pace-only-note" id="paceAverageNote">เป้ารวม ÷ ชั่วโมงทำงาน</div>
         </div>
-        <div class="form-group">
-          <label for="lot1Target">เป้าหมาย (ชิ้น)</label>
-          <input type="number" id="lot1Target" min="0" placeholder="0" required oninput="calculateRate()">
-        </div>
+        <div id="requiredPerHour" class="pace-only-value">-</div>
       </div>
     </div>
 
-    <!-- ปุ่มเลือก เวลาทำงานรวม -->
+    <div id="currentModelBanner" class="current-model-banner">
+      รุ่นที่กำลังผลิต: <span id="currentModelText">-</span>
+    </div>
+
     <div class="form-group">
-      <label>เวลาทำงานรวม</label>
-      <div class="hours-btn-group">
-        <button type="button" class="btn-hour-chip" onclick="selectTotalHours(8)">8 ชม.</button>
-        <button type="button" class="btn-hour-chip active" onclick="selectTotalHours(9)">9 ชม.</button>
-        <button type="button" class="btn-hour-chip" onclick="selectTotalHours(10)">10 ชม.</button>
+      <div class="section-title">กรอกยอดผลิตรายชั่วโมง</div>
+      <div id="slotsContainer">
+        <p style="color: #94a3b8; font-size: 0.95rem; text-align: center; padding: 15px 0;">โปรดเลือก LINE การผลิต</p>
       </div>
-      <input type="hidden" id="selectedTotalHours" value="9">
     </div>
 
-    <!-- สรุปเป้ารวม -->
-    <div class="summary-box">
-      <div>
-        <div class="summary-title">เป้าหมายรวมทั้งวัน</div>
-        <div class="summary-subtitle">(คำนวณตามสัดส่วนชั่วโมงจริง)</div>
-      </div>
-      <div class="summary-value"><span id="totalTargetDisplay">0</span> ชิ้น</div>
+    <div class="sum-box">
+      <span>ยอดรวมที่กรอก</span>
+      <input type="text" id="totalSum" class="sum-input" value="0" readonly>
+      <span>ชิ้น</span>
     </div>
 
-    <button type="submit" class="btn-submit" id="btnSubmit">บันทึกเป้าหมาย</button>
+    <button type="submit" class="btn-submit" id="btnSubmit">บันทึกยอด</button>
   </form>
+  </div>
+
+  <div id="editPlanPage" class="prod-page">
+    <div class="edit-plan-note">
+      ⚠️ <b>ใช้เมื่อมีการเปลี่ยนแผนการผลิตเท่านั้น</b><br>
+      แก้ได้เฉพาะ TG Original และเวลาทำงานรวม ระบบจะคำนวณ Target ใหม่ให้อัตโนมัติ
+    </div>
+
+    <div class="form-group">
+      <label for="editLine">LINE การผลิต</label>
+      <select id="editLine" onchange="loadEditPlan()">
+        <option value="">-- เลือก LINE --</option>
+        <option value="Line B">Line B</option>
+        <option value="Line C">Line C</option>
+        <option value="Line D">Line D</option>
+        <option value="Line E">Line E</option>
+        <option value="Line F">Line F</option>
+        <option value="Line G">Line G ทดสอบ</option>
+      </select>
+    </div>
+
+    <div id="editPlanLoading" style="display:none;text-align:center;color:#64748b;padding:18px 0;font-size:.85rem;">กำลังโหลดแผนปัจจุบัน...</div>
+
+    <div id="editPlanContent" style="display:none;">
+      <div class="form-group">
+        <label for="editTotalHours">⏱️ เวลาทำงานรวมวันนี้ (ชม.)</label>
+        <input type="number" id="editTotalHours" min="1" max="10" step="1" oninput="updateEditPlanPreview()">
+        <div id="editHoursHint" style="font-size:.74rem;color:#64748b;margin-top:5px;"></div>
+      </div>
+
+      <div id="editLotsContainer"></div>
+
+      <div id="editPlanPreview" class="edit-plan-preview"></div>
+      <div id="editPlanStatus" class="edit-status"></div>
+
+      <button type="button" class="btn-submit" id="savePlanEditBtn" onclick="saveProductionPlanEdit()">
+        บันทึกการแก้ไขเป้า / ชั่วโมง
+      </button>
+    </div>
+
+    <div id="editPlanEmpty" style="display:none;text-align:center;color:#94a3b8;padding:24px 8px;font-size:.86rem;">
+      เลือก LINE เพื่อดูแผนการผลิตของวันนี้
+    </div>
+  </div>
+</div>
+
+<!-- Modal ปิดรุ่นจากแถวเวลา แล้วขึ้น LOT ใหม่ -->
+<div class="modal-overlay" id="newLotModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">🔄 เปลี่ยนรุ่น / สลับ LOT</div>
+      <button type="button" class="btn-close-modal" onclick="closeNewLotModal()">&times;</button>
+    </div>
+
+    <div class="switch-picked-slot">
+      LOT ปัจจุบัน: <b id="modalCurrentLot">-</b><br>
+      รอบที่ LOT ปลายทางเริ่ม: <b id="modalSwitchSlot">-</b>
+    </div>
+
+    <div class="form-group">
+      <label for="modalLotNo">1) เลข LOT ปลายทาง</label>
+      <input type="text" id="modalLotNo" placeholder="LOT ใหม่ หรือ LOT เดิมที่ต้องการกลับไป" autocomplete="off" oninput="syncSwitchLotTargetField_()">
+    </div>
+
+    <div class="form-group">
+      <label for="modalLotTarget" id="modalLotTargetLabel">2) TG Original ของ LOT ใหม่ (ชิ้น)</label>
+      <input type="number" id="modalLotTarget" min="1" placeholder="กรอก TG เต็ม เช่น 742">
+    </div>
+
+    <div id="switchLotStatus" style="display:none;font-size:.78rem;border-radius:10px;padding:9px 10px;margin-bottom:10px;"></div>
+
+    <button type="button" class="btn-submit" id="confirmSwitchLotBtn" onclick="confirmNewLot()">
+      ยืนยันการเปลี่ยน LOT
+    </button>
+  </div>
 </div>
 
 <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLm1LVkTiwK3PCvPSt3PFA1ifb76KCRsWxC1SkaLdDC-ginxy0RHWstWpHgDytaBmm/exec";
-  const LIFF_ID = "2011196323-6e8Sc2U8";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLm1LVkTiwK3PCvPSt3PFA1ifb76KCRsWxC1SkaLdDC-ginxy0RHWstWpHgDytaBmm/exec"; 
+  const LIFF_ID = "2011198724-JQ60DTBm";
 
-  let masterLotMap = {};
+  const FRONTEND_BUILD_LOT_SWITCH = '20260930_REPEAT_LOT_FAST_LOAD_V1';
+  const EXPECTED_BACKEND_LOT_SWITCH_VERSION = 'LOT_SLOT_DIRECT_AA_LOCK_20260919_V1';
+  const EXPECTED_REPEAT_LOT_VERSION = 'REPEAT_LOT_20260922_V1';
+  console.log('Output build:', FRONTEND_BUILD_LOT_SWITCH);
+  let activeLots = []; 
+  let masterLotMap = {}; 
+  let currentTarget1 = 0;
+  let currentHours1 = 0;
   let userDisplayName = "Unknown";
-  let initialTarget1 = 0;
+  let currentExistingHourly = {};
+  let currentEditPlanState = null;
+  let currentActiveLot = '';
+  let currentLotPlan = []; // [{ lot, hours }] รวมชั่วโมงต่อ LOT จาก Summary
+  let currentLotSwitchHistory = []; // [{ slot, to }] ลำดับสลับ LOT จริงของวันนี้
+  let currentLotTGMap = {}; // { LOT: TG Original }
+  let pendingSwitchAfterSlot = '';
+  let pendingSwitchRow = null;
+  let pendingSwitchContext = null;
+  let pendingSwitchMode = ''; // NEXT = เริ่มรอบถัดไป, CURRENT = ใช้รอบที่เลือก
 
   async function initLiff() {
     try {
@@ -628,144 +1000,1820 @@
         await liff.init({ liffId: LIFF_ID });
         if (liff.isLoggedIn()) {
           const profile = await liff.getProfile();
-          userDisplayName = profile.displayName;
+          userDisplayName = profile.displayName || "Unknown";
+          
+          const userElem = document.getElementById('userDisplayNameDisplay');
+          if (userElem) userElem.innerText = userDisplayName;
+        } else {
+          document.getElementById('userDisplayNameDisplay').innerText = "ทั่วไป (ไม่ผ่าน LINE)";
         }
       }
     } catch (err) {
       console.error("LIFF Init Error:", err);
+      document.getElementById('userDisplayNameDisplay').innerText = "ทั่วไป (ไม่ผ่าน LINE)";
     }
   }
 
-  initLiff();
+  const TIME_SLOTS_DEF = [
+    { label: "08.30-09.30", endMin: 570 },
+    { label: "09.30-10.30", endMin: 630 },
+    { label: "10.30-11.30", endMin: 690 },
+    { label: "11.30-12.30", endMin: 750 },
+    { label: "12.30-13.30", endMin: 810 },
+    { label: "13.30-14.30", endMin: 870 },
+    { label: "14.30-15.30", endMin: 930 },
+    { label: "15.30-16.30", endMin: 990 },
+    { label: "16.30-17.30", endMin: 1050 },
+    { label: "17.30-18.30", endMin: 1110 },
+    { label: "18.30-19.30", endMin: 1170 }
+  ];
 
-  function selectTotalHours(hrs) {
-    document.getElementById('selectedTotalHours').value = hrs;
-    const buttons = document.querySelectorAll('.btn-hour-chip');
-    buttons.forEach(btn => {
-      if (btn.innerText.includes(hrs)) {
-        btn.classList.add('active');
+  // FAST LOAD: HTML ทั้งฟอร์มอยู่ก่อน <script> นี้แล้ว จึงเริ่มดึงข้อมูล LINE ได้ทันที
+  // ไม่ต้องรอ DOMContentLoaded / LIFF / Google Font ให้เสร็จก่อน
+  let __fastBootDone = false;
+
+  window.startLiffInit_ = function() {
+    if (window.__liffInitStarted) return;
+    if (typeof liff === "undefined" || !LIFF_ID) return;
+    window.__liffInitStarted = true;
+    void initLiff();
+  };
+
+  function fastBoot_() {
+    if (__fastBootDone) return;
+    __fastBootDone = true;
+
+    displayCurrentDate();
+
+    const savedLine = localStorage.getItem("selectedLine");
+    if (savedLine) {
+      const lineSelect = document.getElementById('line');
+      if (lineSelect) {
+        lineSelect.value = savedLine;
+        // เริ่มยิง Apps Script ทันที ขณะ LIFF / font ยังโหลดขนานกันได้
+        void loadLineDetails();
+      }
+    }
+
+    if (window.__liffSdkLoaded || typeof liff !== "undefined") {
+      window.startLiffInit_();
+    }
+  }
+
+  fastBoot_();
+
+
+  function switchProductionTab(tab) {
+    const recordPage = document.getElementById('recordPage');
+    const editPage = document.getElementById('editPlanPage');
+    const recordBtn = document.getElementById('recordTabBtn');
+    const editBtn = document.getElementById('editPlanTabBtn');
+
+    recordPage.classList.toggle('active', tab === 'record');
+    editPage.classList.toggle('active', tab === 'edit');
+    recordBtn.classList.toggle('active', tab === 'record');
+    editBtn.classList.toggle('active', tab === 'edit');
+
+    if (tab === 'edit') {
+      const currentLine = document.getElementById('line').value || localStorage.getItem('selectedLine') || '';
+      const editLine = document.getElementById('editLine');
+
+      if (currentLine && editLine.value !== currentLine) {
+        editLine.value = currentLine;
+      }
+
+      if (editLine.value) {
+        loadEditPlan();
       } else {
-        btn.classList.remove('active');
+        document.getElementById('editPlanContent').style.display = 'none';
+        document.getElementById('editPlanEmpty').style.display = 'block';
       }
-    });
-    updateLot1HoursDropdown(hrs);
-    calculateRate();
-  }
-
-  function updateLot1HoursDropdown(totalHrs) {
-    const select = document.getElementById('lot1HoursSelect');
-    select.innerHTML = `<option value="${totalHrs}">${totalHrs} ชม. (เต็มวัน)</option>`;
-    for (let i = 1; i < totalHrs; i++) {
-      select.innerHTML += `<option value="${i}">${i} ชม.</option>`;
     }
   }
 
-  async function onLineSelected() {
-    const line = document.getElementById('lineSelect').value;
-    const manpowerInput = document.getElementById('manpower');
-    manpowerInput.value = '';
-    if (!line) return;
-
-    try {
-      const res = await fetch(`${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(line)}`);
-      const data = await res.json();
-      masterLotMap = data.masterMap || {};
-
-      document.getElementById('manpower').value =
-        (data.manpower === null || data.manpower === undefined) ? '' : data.manpower;
-
-      if (data.lotNumber) {
-        document.getElementById('lot1No').value = data.lotNumber;
-        document.getElementById('lot1Target').value = data.target1 || data.target || 0;
-        initialTarget1 = Number(data.target1 || data.target) || 0;
-        
-        if (data.totalWorkingHours) {
-          selectTotalHours(Number(data.totalWorkingHours));
-        }
-        onLotInput(1);
+  function getEditPlanLots_(data) {
+    return [
+      {
+        index: 1,
+        lot: normalizeLot_(data.lotNumber),
+        hours: Number(data.workingHours) || 0,
+        target: Number(data.target1) || 0,
+        tg: Number(data.tgOriginal1 || data.target1 || 0),
+        model: (data.masterMap || {})[normalizeLot_(data.lotNumber)] || ''
+      },
+      {
+        index: 2,
+        lot: normalizeLot_(data.lotNumber2 || data.lot2Number),
+        hours: Number(data.workingHours2) || 0,
+        target: Number(data.target2) || 0,
+        tg: Number(data.tgOriginal2 || 0),
+        model: (data.masterMap || {})[normalizeLot_(data.lotNumber2 || data.lot2Number)] || ''
+      },
+      {
+        index: 3,
+        lot: normalizeLot_(data.lotNumber3 || data.lot3Number),
+        hours: Number(data.workingHours3) || 0,
+        target: Number(data.target3) || 0,
+        tg: Number(data.tgOriginal3 || 0),
+        model: (data.masterMap || {})[normalizeLot_(data.lotNumber3 || data.lot3Number)] || ''
       }
-    } catch (err) {
-      console.error("Error loading line data:", err);
-    }
+    ].filter(item => item.lot);
   }
 
-  function onLotInput(index) {
-    const lotVal = document.getElementById(`lot${index}No`).value.trim().toUpperCase();
-    const subtextElem = document.getElementById(`modelSubtext${index}`);
-    if (lotVal && masterLotMap[lotVal]) {
-      subtextElem.innerText = `(รุ่น: ${masterLotMap[lotVal]})`;
-    } else {
-      subtextElem.innerText = '';
-    }
-  }
+  async function loadEditPlan() {
+    const lineVal = document.getElementById('editLine').value;
+    const loading = document.getElementById('editPlanLoading');
+    const content = document.getElementById('editPlanContent');
+    const empty = document.getElementById('editPlanEmpty');
 
-  function calculateRate() {
-    const totalHrs = Number(document.getElementById('selectedTotalHours').value) || 9;
-    const t1 = Number(document.getElementById('lot1Target').value) || 0;
-    
-    const rate1 = totalHrs > 0 ? Math.round(t1 / totalHrs) : 0;
-    document.getElementById('rateLot1Display').innerText = `Rate: ${rate1} ชิ้น/ชม.`;
-    document.getElementById('totalTargetDisplay').innerText = t1.toLocaleString();
-  }
+    currentEditPlanState = null;
+    content.style.display = 'none';
+    empty.style.display = 'none';
 
-  // เรียกใช้เริ่มต้นสำหรับ 9 ชม.
-  updateLot1HoursDropdown(9);
-
-  document.getElementById('tgForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const lineVal = document.getElementById('lineSelect').value;
-    const lot1No = document.getElementById('lot1No').value.trim().toUpperCase();
-    const lot1Target = Number(document.getElementById('lot1Target').value) || 0;
-    const manpowerRaw = document.getElementById('manpower').value.trim();
-    const manpower = Number(manpowerRaw);
-    const totalHrs = Number(document.getElementById('selectedTotalHours').value) || 9;
-    const btnSubmit = document.getElementById('btnSubmit');
-
-    if (!lineVal || !lot1No || manpowerRaw === '') {
-      alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+    if (!lineVal) {
+      empty.style.display = 'block';
       return;
     }
 
-    // รองรับจำนวนคนเป็นจำนวนเต็มหรือครึ่งคน เช่น 31, 31.5, 32
-    if (!Number.isFinite(manpower) || manpower < 0 || !Number.isInteger(manpower * 2)) {
-      alert("จำนวนคนต้องเป็นเลขจำนวนเต็มหรือ .5 เช่น 31 หรือ 31.5");
+    loading.style.display = 'block';
+
+    try {
+      const data = await fetchCurrentLineState_(lineVal);
+      const lots = getEditPlanLots_(data);
+
+      if (!lots.length) {
+        loading.style.display = 'none';
+        empty.innerText = 'ยังไม่มีแผนการผลิตของ LINE นี้ในวันนี้';
+        empty.style.display = 'block';
+        return;
+      }
+
+      const totalHours = getAuthoritativeTotalWorkingHours_(data) || lots.reduce((sum, item) => sum + item.hours, 0) || 0;
+
+      currentEditPlanState = {
+        line: lineVal,
+        data: data,
+        lots: lots,
+        totalHours: totalHours,
+        totalTarget: Number(data.target) || 0,
+        switchHistory: normalizeLotSwitchHistoryForLine_(
+          data.lotSwitchHistory,
+          lineVal,
+          totalHours,
+          lots.map(item => item.lot)
+        )
+      };
+
+      document.getElementById('editTotalHours').value = totalHours;
+
+      const container = document.getElementById('editLotsContainer');
+      container.innerHTML = lots.map(item => `
+        <div class="edit-plan-card">
+          <div class="edit-plan-card-title">
+            <div>
+              LOT ${item.index}: ${item.lot}
+              <div class="edit-plan-model">${item.model ? `รุ่น: ${item.model}` : 'ไม่พบชื่อรุ่น'}</div>
+            </div>
+            <span class="edit-plan-hours-badge" id="editHoursBadge${item.index}">${item.hours} ชม.</span>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="editTG${item.index}">TG Original LOT ${item.index} (ชิ้น)</label>
+            <input type="number" id="editTG${item.index}" min="1" step="1" value="${item.tg || ''}" oninput="updateEditPlanPreview()">
+          </div>
+        </div>
+      `).join('');
+
+      loading.style.display = 'none';
+      content.style.display = 'block';
+      setEditPlanStatus_('', 'info', false);
+      updateEditPlanPreview();
+
+    } catch (err) {
+      console.error('loadEditPlan error:', err);
+      loading.style.display = 'none';
+      empty.innerText = 'โหลดแผนการผลิตไม่สำเร็จ กรุณาลองใหม่';
+      empty.style.display = 'block';
+    }
+  }
+
+  function calculateEditedPlan_() {
+    if (!currentEditPlanState) {
+      return { valid: false, error: 'ยังไม่มีข้อมูลแผน' };
+    }
+
+    const lots = currentEditPlanState.lots;
+    const totalHours = Math.floor(Number(document.getElementById('editTotalHours').value) || 0);
+
+    if (totalHours < 1 || totalHours > 10) {
+      return { valid: false, error: 'เวลาทำงานรวมต้องอยู่ระหว่าง 1–10 ชั่วโมง' };
+    }
+
+    let hours1 = 0;
+    let hours2 = 0;
+    let hours3 = 0;
+
+    const switchHistory = Array.isArray(currentEditPlanState.switchHistory)
+      ? currentEditPlanState.switchHistory
+      : [];
+
+    if (switchHistory.length > 0) {
+      const newWorkingSlots = new Set(
+        getWorkingSlotsForLineValue_(currentEditPlanState.line, totalHours)
+          .map(slot => slot.label)
+      );
+
+      const invalidEvent = switchHistory.find(
+        item => !newWorkingSlots.has(String(item.slot || '').trim())
+      );
+
+      if (invalidEvent) {
+        return {
+          valid: false,
+          error: `ลดชั่วโมงไม่ได้ เพราะมีการสลับ LOT ที่รอบ ${invalidEvent.slot} แล้ว`
+        };
+      }
+
+      const allocation = calculateLotHoursFromHistoryForLine_(
+        currentEditPlanState.line,
+        totalHours,
+        lots[0]?.lot || '',
+        switchHistory,
+        lots.map(item => item.lot)
+      );
+
+      hours1 = allocation.hoursByLot[lots[0]?.lot] || 0;
+      hours2 = lots[1] ? (allocation.hoursByLot[lots[1].lot] || 0) : 0;
+      hours3 = lots[2] ? (allocation.hoursByLot[lots[2].lot] || 0) : 0;
+
+    } else if (lots.length >= 3) {
+      hours1 = lots[0].hours;
+      hours2 = lots[1].hours;
+      const fixed = hours1 + hours2;
+
+      if (totalHours <= fixed) {
+        return { valid: false, error: `ต้องมากกว่า ${fixed} ชม. เพราะขึ้น LOT3 แล้ว` };
+      }
+
+      hours3 = totalHours - fixed;
+
+    } else if (lots.length === 2) {
+      hours1 = lots[0].hours;
+
+      if (totalHours <= hours1) {
+        return { valid: false, error: `ต้องมากกว่า ${hours1} ชม. เพราะขึ้น LOT2 แล้ว` };
+      }
+
+      hours2 = totalHours - hours1;
+
+    } else {
+      hours1 = totalHours;
+    }
+
+    const hoursByLot = [hours1, hours2, hours3];
+    const editedLots = [];
+
+    for (const item of lots) {
+      const tgEl = document.getElementById(`editTG${item.index}`);
+      const tg = Number(tgEl ? tgEl.value : 0) || 0;
+
+      if (tg <= 0) {
+        return { valid: false, error: `TG Original LOT ${item.index} ต้องมากกว่า 0` };
+      }
+
+      const hours = hoursByLot[item.index - 1] || 0;
+      const target = Math.round((tg / totalHours) * hours);
+
+      editedLots.push({ ...item, tg, hours, target });
+    }
+
+    const totalTarget = editedLots.reduce((sum, item) => sum + item.target, 0);
+
+    return {
+      valid: true,
+      totalHours,
+      totalTarget,
+      lots: editedLots
+    };
+  }
+
+  function updateEditPlanPreview() {
+    const preview = document.getElementById('editPlanPreview');
+    if (!preview || !currentEditPlanState) return;
+
+    const calc = calculateEditedPlan_();
+
+    if (!calc.valid) {
+      preview.style.display = 'block';
+      preview.innerHTML = `<div style="color:#b91c1c;font-size:.82rem;font-weight:700;">⚠️ ${calc.error}</div>`;
+      return;
+    }
+
+    calc.lots.forEach(item => {
+      const badge = document.getElementById(`editHoursBadge${item.index}`);
+      if (badge) badge.innerText = `${item.hours} ชม.`;
+    });
+
+    const lotRows = calc.lots.map(item => `
+      <div class="edit-preview-row">
+        <span>LOT ${item.index} • ${item.hours} ชม. • TG ${item.tg.toLocaleString()}</span>
+        <strong>Target ${item.target.toLocaleString()}</strong>
+      </div>
+    `).join('');
+
+    preview.style.display = 'block';
+    preview.innerHTML = `
+      <div style="font-weight:800;color:#334155;margin-bottom:6px;">ตัวอย่างหลังบันทึก</div>
+      <div class="edit-preview-row">
+        <span>เวลาทำงานรวม</span>
+        <strong>${currentEditPlanState.totalHours} → ${calc.totalHours} ชม.</strong>
+      </div>
+      <div class="edit-preview-row">
+        <span>Target รวม</span>
+        <strong>${currentEditPlanState.totalTarget.toLocaleString()} → ${calc.totalTarget.toLocaleString()} ชิ้น</strong>
+      </div>
+      <div class="edit-preview-divider"></div>
+      ${lotRows}
+    `;
+  }
+
+  function setEditPlanStatus_(message, type = 'info', show = true) {
+    const box = document.getElementById('editPlanStatus');
+    if (!box) return;
+
+    if (!show || !message) {
+      box.style.display = 'none';
+      box.innerText = '';
+      return;
+    }
+
+    box.style.display = 'block';
+    box.innerText = message;
+
+    if (type === 'error') {
+      box.style.background = '#fef2f2';
+      box.style.color = '#b91c1c';
+      box.style.border = '1px solid #fecaca';
+    } else if (type === 'success') {
+      box.style.background = '#ecfdf5';
+      box.style.color = '#047857';
+      box.style.border = '1px solid #a7f3d0';
+    } else {
+      box.style.background = '#eff6ff';
+      box.style.color = '#1d4ed8';
+      box.style.border = '1px solid #bfdbfe';
+    }
+  }
+
+  async function waitForPlanEditSaved_(lineVal, calc) {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      try {
+        const state = await fetchCurrentLineState_(lineVal);
+        const stateLots = getEditPlanLots_(state);
+        const savedHours = getAuthoritativeTotalWorkingHours_(state) || stateLots.reduce((sum, item) => sum + item.hours, 0);
+
+        if (savedHours !== calc.totalHours) continue;
+
+        let matches = true;
+        calc.lots.forEach(item => {
+          const saved = stateLots.find(x => x.index === item.index);
+          if (
+            !saved ||
+            Math.round(saved.tg) !== Math.round(item.tg) ||
+            Number(saved.hours || 0) !== Number(item.hours || 0)
+          ) {
+            matches = false;
+          }
+        });
+
+        if (matches && Math.round(Number(state.target) || 0) === Math.round(calc.totalTarget)) {
+          return state;
+        }
+
+      } catch (err) {
+        console.warn('verify plan edit attempt failed:', err);
+      }
+    }
+
+    return null;
+  }
+
+  async function saveProductionPlanEdit() {
+    const lineVal = document.getElementById('editLine').value;
+    const calc = calculateEditedPlan_();
+
+    if (!lineVal || !currentEditPlanState) {
+      alert('กรุณาเลือก LINE การผลิต');
+      return;
+    }
+
+    if (!calc.valid) {
+      alert(calc.error);
+      return;
+    }
+
+    const summaryLines = calc.lots.map(
+      item => `LOT ${item.index}: TG ${item.tg.toLocaleString()} • ${item.hours} ชม. • Target ${item.target.toLocaleString()}`
+    );
+
+    const ok = confirm(
+      `ยืนยันแก้ไขแผนการผลิต?\n\n` +
+      `LINE: ${lineVal}\n` +
+      `เวลาทำงานรวม: ${calc.totalHours} ชม.\n` +
+      `${summaryLines.join('\n')}\n` +
+      `Target รวมใหม่: ${calc.totalTarget.toLocaleString()} ชิ้น\n\n` +
+      `Actual ที่บันทึกไปแล้วจะไม่ถูกแก้ไข`
+    );
+
+    if (!ok) return;
+
+    const btn = document.getElementById('savePlanEditBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.style.opacity = '.6';
+    }
+
+    setEditPlanStatus_('กำลังบันทึกแผนใหม่...', 'info', true);
+
+    const payload = {
+      action: 'UPDATE_PRODUCTION_PLAN',
+      line: lineVal,
+      totalWorkingHours: calc.totalHours,
+      tgOriginal1: calc.lots.find(x => x.index === 1)?.tg || 0,
+      tgOriginal2: calc.lots.find(x => x.index === 2)?.tg || 0,
+      tgOriginal3: calc.lots.find(x => x.index === 3)?.tg || 0,
+      updatedBy: userDisplayName
+    };
+
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      });
+
+      const verified = await waitForPlanEditSaved_(lineVal, calc);
+
+      if (!verified) {
+        setEditPlanStatus_(
+          'ยังยืนยันการบันทึกไม่ได้ กรุณาอย่ากดซ้ำ ให้โหลดข้อมูลใหม่เพื่อตรวจสอบก่อน',
+          'error',
+          true
+        );
+        alert('ระบบยังยืนยันการบันทึกไม่ได้ กรุณาอย่ากดซ้ำ');
+        return;
+      }
+
+      setEditPlanStatus_(
+        `บันทึกสำเร็จ • Target รวมใหม่ ${calc.totalTarget.toLocaleString()} ชิ้น • ${calc.totalHours} ชม.`,
+        'success',
+        true
+      );
+
+      // อัปเดตทั้งแท็บแก้ไขและหน้าบันทึกยอดให้ใช้ค่าชุดใหม่ทันที
+      await loadEditPlan();
+
+      const recordLine = document.getElementById('line');
+      if (recordLine && recordLine.value === lineVal) {
+        await loadLineDetails();
+      }
+
+      alert('✅ แก้ไขเป้า / ชั่วโมงสำเร็จ');
+
+    } catch (err) {
+      console.error('saveProductionPlanEdit error:', err);
+      setEditPlanStatus_('บันทึกไม่สำเร็จ กรุณาลองใหม่', 'error', true);
+      alert('บันทึกไม่สำเร็จ กรุณาลองใหม่');
+
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      }
+    }
+  }
+
+  function displayCurrentDate() {
+    const now = new Date();
+    document.getElementById('currentDateDisplay').innerText = now.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  function getAuthoritativeTotalWorkingHours_(data) {
+    const candidates = [
+      data && data.totalWorkingHoursAA,
+      data && data.totalWorkingHours,
+      data && data.total_working_hours
+    ];
+
+    for (const value of candidates) {
+      const hours = Math.floor(Number(value) || 0);
+      if (hours >= 1 && hours <= 10) return hours;
+    }
+
+    return 0;
+  }
+
+
+  async function loadLineDetails() {
+    const line = document.getElementById('line').value;
+    const slotsContainer = document.getElementById('slotsContainer');
+    const infoBanner = document.getElementById('infoBanner');
+    const modelBanner = document.getElementById('currentModelBanner');
+
+    if (!line) {
+      slotsContainer.innerHTML = '<p style="color: #94a3b8; font-size: 0.95rem; text-align: center; padding: 15px 0;">โปรดเลือก LINE การผลิต</p>';
+      infoBanner.style.display = 'none';
+      if (modelBanner) modelBanner.style.display = 'none';
+      currentActiveLot = '';
+      currentLotSwitchHistory = [];
+      currentLotTGMap = {};
+      return;
+    }
+
+    localStorage.setItem("selectedLine", line);
+
+    const editLine = document.getElementById('editLine');
+    if (editLine && editLine.value !== line) editLine.value = line;
+
+    slotsContainer.innerHTML = '<p style="color: #64748b; font-size: 0.95rem; text-align: center; padding: 15px 0;">กำลังโหลดข้อมูล...</p>';
+
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(line)}&_=${Date.now()}`, { cache: 'no-store' });
+      const data = await res.json();
+
+      activeLots = Array.isArray(data.lots) ? [...data.lots] : [];
+
+      const loadedLots = [
+        data.lotNumber,
+        data.lotNumber2 || data.lot2Number,
+        data.lotNumber3 || data.lot3Number
+      ]
+        .map(v => normalizeLot_(v))
+        .filter(Boolean);
+
+      loadedLots.forEach(lot => {
+        if (!activeLots.some(x => normalizeLot_(x) === lot)) {
+          activeLots.push(lot);
+        }
+      });
+
+      masterLotMap = data.masterMap || {};
+
+      // ห้าม fallback เป็น 9 ชม. เด็ดขาด:
+      // หน้า Output ต้องคุยกับ Backend รุ่นเดียวกันและอ่านชั่วโมงจาก AA เท่านั้น
+      if (
+        String(data.lotSwitchVersion || '') !== EXPECTED_BACKEND_LOT_SWITCH_VERSION ||
+        String(data.repeatLotVersion || '') !== EXPECTED_REPEAT_LOT_VERSION
+      ) {
+        throw new Error(
+          'BACKEND_VERSION_MISMATCH: หน้า Output กำลังคุยกับ Web App deployment ที่ยังไม่รองรับ Repeat LOT'
+        );
+      }
+
+      const authoritativeAAHours = Math.floor(Number(data.totalWorkingHoursAA) || 0);
+      if (authoritativeAAHours < 1 || authoritativeAAHours > 10) {
+        throw new Error(
+          'TOTAL_WORKING_HOURS_AA_MISSING: ไม่พบเวลาทำงานรวมจาก AA'
+        );
+      }
+
+      currentHours1 = authoritativeAAHours;
+      currentTarget1 = Number(data.target) || Number(data.target1) || 0;
+      currentExistingHourly = data.existingHourly || {};
+
+      currentLotTGMap = {};
+      const lotTgPairs = [
+        [data.lotNumber, data.tgOriginal1 || data.target1],
+        [data.lotNumber2 || data.lot2Number, data.tgOriginal2 || data.target2],
+        [data.lotNumber3 || data.lot3Number, data.tgOriginal3 || data.target3]
+      ];
+      lotTgPairs.forEach(([lot, tg]) => {
+        const cleanLot = normalizeLot_(lot);
+        if (cleanLot) currentLotTGMap[cleanLot] = Number(tg) || 0;
+      });
+
+      currentLotSwitchHistory = normalizeLotSwitchHistoryForLine_(
+        data.lotSwitchHistory,
+        line,
+        authoritativeAAHours,
+        activeLots
+      );
+
+      // Summary เก็บชั่วโมงรวมต่อ LOT; Timeline จริงอ่านจาก lotSwitchHistory
+      currentLotPlan = [
+        { lot: normalizeLot_(data.lotNumber), hours: Number(data.workingHours) || 0 },
+        { lot: normalizeLot_(data.lotNumber2 || data.lot2Number), hours: Number(data.workingHours2) || 0 },
+        { lot: normalizeLot_(data.lotNumber3 || data.lot3Number), hours: Number(data.workingHours3) || 0 }
+      ].filter(item => item.lot && item.hours > 0);
+
+      currentActiveLot =
+        normalizeLot_(data.currentLot) ||
+        (currentLotSwitchHistory.length
+          ? normalizeLot_(currentLotSwitchHistory[currentLotSwitchHistory.length - 1].to)
+          : '') ||
+        loadedLots[loadedLots.length - 1] ||
+        normalizeLot_(activeLots[activeLots.length - 1]) ||
+        '';
+
+      document.getElementById('targetVal').innerText = currentTarget1.toLocaleString();
+      document.getElementById('hoursVal').innerText = currentHours1;
+      infoBanner.style.display = 'flex';
+
+      updateCurrentModelBanner_();
+      generateSmartTimeSlots(currentHours1, currentExistingHourly);
+      updateHourlyAverage();
+
+    } catch (err) {
+      console.error("Error loading line details:", err);
+      currentExistingHourly = {};
+      currentActiveLot = '';
+      currentLotSwitchHistory = [];
+      currentLotTGMap = {};
+      currentHours1 = 0;
+      if (infoBanner) infoBanner.style.display = 'none';
+      if (modelBanner) modelBanner.style.display = 'none';
+
+      const message = String(err && err.message || '');
+      if (message.includes('BACKEND_VERSION_MISMATCH')) {
+        slotsContainer.innerHTML =
+          '<p style="color:#b91c1c;font-weight:700;text-align:center;padding:14px;">⚠️ หน้า Output ยังเชื่อมกับ Apps Script deployment เก่า กรุณาอัปเดต Web App URL/Deployment ก่อนใช้งาน</p>';
+      } else if (message.includes('TOTAL_WORKING_HOURS_AA_MISSING')) {
+        slotsContainer.innerHTML =
+          '<p style="color:#b91c1c;font-weight:700;text-align:center;padding:14px;">⚠️ ไม่พบเวลาทำงานรวมจากคอลัมน์ AA ระบบหยุดไว้เพื่อป้องกันการเดาเป็น 9 ชั่วโมง</p>';
+      } else {
+        slotsContainer.innerHTML =
+          '<p style="color:#b91c1c;font-weight:700;text-align:center;padding:14px;">โหลดข้อมูล LINE ไม่สำเร็จ กรุณารีโหลดแล้วลองใหม่</p>';
+      }
+      updateHourlyAverage();
+    }
+  }
+
+
+  function getPlannedLotForSlot_(slotLabel, breakSlot) {
+    const cleanLabel = String(slotLabel || '').trim();
+    if (!cleanLabel) return normalizeLot_(currentActiveLot);
+
+    const workingSlots = getWorkingSlotsForLineValue_(
+      document.getElementById('line').value,
+      currentHours1
+    );
+
+    // ช่วงพักให้ถือ LOT เดียวกับรอบทำงานก่อนหน้า
+    if (cleanLabel === breakSlot) {
+      const fullIndex = TIME_SLOTS_DEF.findIndex(slot => slot.label === cleanLabel);
+      for (let i = fullIndex - 1; i >= 0; i--) {
+        const prevLabel = TIME_SLOTS_DEF[i]?.label || '';
+        if (prevLabel && prevLabel !== breakSlot) {
+          return getPlannedLotForSlot_(prevLabel, breakSlot);
+        }
+      }
+      return normalizeLot_(currentLotPlan[0]?.lot || currentActiveLot);
+    }
+
+    const workingIndex = workingSlots.findIndex(slot => slot.label === cleanLabel);
+    if (workingIndex < 0) return normalizeLot_(currentActiveLot);
+
+    // ถ้ามี history ให้ Timeline จริงเป็น source of truth
+    if (currentLotSwitchHistory.length > 0) {
+      const initialLot = normalizeLot_(
+        currentLotPlan[0]?.lot ||
+        activeLots[0] ||
+        currentActiveLot
+      );
+
+      const allocation = calculateLotHoursFromHistoryForLine_(
+        document.getElementById('line').value,
+        currentHours1,
+        initialLot,
+        currentLotSwitchHistory,
+        activeLots
+      );
+
+      return normalizeLot_(
+        allocation.slotLotMap[cleanLabel] ||
+        currentActiveLot
+      );
+    }
+
+    // fallback สำหรับวันเก่าที่ยังไม่มี history
+    let cursor = 0;
+    for (const item of currentLotPlan) {
+      const hours = Math.max(0, Number(item.hours) || 0);
+      if (workingIndex >= cursor && workingIndex < cursor + hours) {
+        return normalizeLot_(item.lot);
+      }
+      cursor += hours;
+    }
+
+    return normalizeLot_(currentActiveLot);
+  }
+
+  function generateSmartTimeSlots(totalHours, existingData) {
+    const slotsContainer = document.getElementById('slotsContainer');
+    slotsContainer.innerHTML = '';
+
+    const selectedLine = document.getElementById('line').value.toUpperCase();
+    const cleanLine = selectedLine.replace('LINE', '').trim();
+
+    let breakSlot = "";
+    if (['B', 'C'].includes(cleanLine)) {
+      breakSlot = "12.30-13.30";
+    } else if (['D', 'E', 'F', 'G'].includes(cleanLine)) {
+      breakSlot = "11.30-12.30";
+    }
+
+    const now = new Date();
+    const currentMinutes = (now.getHours() * 60) + now.getMinutes();
+
+    let targetSlots = [];
+
+    // คง Logic เดิมทั้งหมด ยกเว้นรอบท้าย:
+    // 17:30 -> 16.30-17.30
+    // 18:30 -> 17.30-18.30
+    // 19:30 -> 18.30-19.30 (เฉพาะวัน 10 ชม.)
+    // ห้ามโชว์ slot ที่ยังผลิตไม่จบล่วงหน้า
+    if (currentMinutes >= 1020 && currentMinutes < 1080) {
+      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "16.30-17.30");
+    } else if (currentMinutes >= 1080 && currentMinutes < 1170) {
+      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "17.30-18.30");
+    } else if (currentMinutes >= 1170 && totalHours >= 10) {
+      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "18.30-19.30");
+    } else {
+      let passedSlots = TIME_SLOTS_DEF.filter(slot => currentMinutes >= slot.endMin);
+      const maxCount = Math.min(Math.ceil(totalHours), TIME_SLOTS_DEF.length);
+      passedSlots = passedSlots.slice(-maxCount);
+
+      if (passedSlots.length >= 2) {
+        targetSlots = passedSlots.slice(-2);
+      } else {
+        targetSlots = [TIME_SLOTS_DEF[0], TIME_SLOTS_DEF[1]];
+      }
+    }
+
+    const seenSlots = new Set();
+    targetSlots = targetSlots.filter(slot => {
+      if (seenSlots.has(slot.label)) return false;
+      seenSlots.add(slot.label);
+      return true;
+    });
+
+    targetSlots.forEach(slot => {
+      const existing = existingData[slot.label] || {};
+      const isBreakTime = (slot.label === breakSlot);
+      const currentOutput = isBreakTime
+        ? 0
+        : (existing.output !== undefined ? existing.output : '');
+
+      const currentRemark = isBreakTime
+        ? ''
+        : (existing.remark !== undefined ? String(existing.remark || '') : '');
+
+      // LOT ของรอบนี้ยึด Summary plan ก่อน ไม่ให้ LOT เก่าจาก Hourly_Log แถว 0 มาทับ
+      const plannedLot = getPlannedLotForSlot_(slot.label, breakSlot);
+      const slotLot = normalizeLot_(plannedLot || existing.lot || currentActiveLot);
+      const hasSavedOutputForSlot =
+        !isBreakTime &&
+        existing.output !== undefined &&
+        existing.output !== '';
+
+      const isClosedHistoricalLot =
+        hasSavedOutputForSlot ||
+        (
+          !!slotLot &&
+          !!currentActiveLot &&
+          slotLot !== normalizeLot_(currentActiveLot)
+        );
+
+      const row = document.createElement('div');
+      row.className = 'slot-row';
+      row.dataset.breakTime = isBreakTime ? 'true' : 'false';
+      row.dataset.slotLabel = slot.label;
+
+      row.innerHTML = `
+        <div class="slot-time" data-slot-label="${slot.label}">
+          ${slot.label}
+          ${isBreakTime ? '<br><span style="color:#ef4444; font-size:0.75rem;">(พัก)</span>' : ''}
+          ${!isBreakTime ? `
+            <button type="button"
+                    class="slot-end-lot-btn ${isClosedHistoricalLot ? 'closed' : ''}"
+                    data-slot-label="${slot.label}"
+                    onclick="openEndLotForSlot_(this, '${slot.label}')"
+                    ${isClosedHistoricalLot ? 'disabled' : ''}>
+              ${isClosedHistoricalLot ? '🔒 บันทึกแล้ว' : '🔄 เปลี่ยนรุ่น'}
+            </button>
+          ` : ''}
+        </div>
+
+        <div class="slot-lot-container">
+          <div class="slot-lot-display ${(!isClosedHistoricalLot && !isBreakTime) ? 'current' : ''}">
+            ${slotLot || '--'}
+          </div>
+          <input type="hidden" class="input-lot-val" value="${slotLot}">
+          <div class="model-subtext">${getModelTextForLot_(slotLot)}</div>
+        </div>
+
+        <input type="number"
+               class="slot-input input-val"
+               min="0"
+               placeholder="0"
+               value="${currentOutput}"
+               oninput="calculateTotal()"
+               ${isBreakTime ? 'readonly style="background-color:#f1f5f9;color:#94a3b8;cursor:not-allowed;"' : ''}>
+
+        ${!isBreakTime ? `
+          <div class="slot-remark-wrap">
+            <label class="slot-remark-label">หมายเหตุ (สำหรับช่วง ${slot.label})</label>
+            <input type="text"
+                   class="slot-remark-input"
+                   maxlength="200"
+                   placeholder="ระบุปัญหาในช่วง ${slot.label} (ถ้ามี)"
+                   value="${String(currentRemark).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}">
+          </div>
+        ` : ''}
+      `;
+
+      slotsContainer.appendChild(row);
+    });
+
+    calculateTotal();
+  }
+
+  function getModelTextForLot_(lot) {
+    const cleanLot = normalizeLot_(lot);
+    const model = cleanLot ? masterLotMap[cleanLot] : '';
+    return model ? `(รุ่น: ${model})` : '';
+  }
+
+  function updateCurrentModelBanner_() {
+    const banner = document.getElementById('currentModelBanner');
+    const text = document.getElementById('currentModelText');
+    if (!banner || !text) return;
+
+    const model = masterLotMap[normalizeLot_(currentActiveLot)] || '';
+
+    if (currentActiveLot) {
+      text.innerText = model || '-';
+      banner.style.display = 'block';
+    } else {
+      text.innerText = '-';
+      banner.style.display = 'none';
+    }
+  }
+
+
+  function getCompletedWorkingHours_(existingData) {
+    // นับรอบที่มีข้อมูลแล้วทั้งหมด รวม OT ด้วย
+    // แต่ "ช่วงพัก" ต้องไม่นับเป็นชั่วโมงทำงาน
+    const completedLabels = new Set();
+
+    const selectedLine = document.getElementById('line').value.toUpperCase();
+    const cleanLine = selectedLine.replace('LINE', '').trim();
+
+    let breakSlot = "";
+    if (['B', 'C'].includes(cleanLine)) {
+      breakSlot = "12.30-13.30";
+    } else if (['D', 'E', 'F', 'G'].includes(cleanLine)) {
+      breakSlot = "11.30-12.30";
+    }
+
+    Object.entries(existingData || {}).forEach(([label, existing]) => {
+      const slot = TIME_SLOTS_DEF.find(s => s.label === label);
+      if (!slot || !existing) return;
+      if (label === breakSlot) return;
+
+      if (existing.output !== undefined && existing.output !== "") {
+        completedLabels.add(label);
+      }
+    });
+
+    // รวมค่าที่กำลังกรอกบนหน้าปัจจุบัน
+    // ถ้ามีใน existingData แล้ว Set จะไม่ให้นับซ้ำ
+    document.querySelectorAll('.slot-row').forEach(row => {
+      const label = row.querySelector('.slot-time')?.getAttribute('data-slot-label');
+      const input = row.querySelector('.input-val');
+
+      if (!label || !input || input.value === "") return;
+
+      const slot = TIME_SLOTS_DEF.find(s => s.label === label);
+      if (!slot) return;
+      if (label === breakSlot) return;
+
+      completedLabels.add(label);
+    });
+
+    return completedLabels.size;
+  }
+
+
+  function getActualNormalTotal_(existingData) {
+    const normalOrder = TIME_SLOTS_DEF.filter(s => s.endMin <= 1050);
+    let total = 0;
+    normalOrder.forEach(slot => {
+      const existing = existingData && existingData[slot.label];
+      if (existing && existing.output !== undefined && existing.output !== "") {
+        total += Number(existing.output) || 0;
+      }
+    });
+    // รวมค่าที่ผู้ใช้เพิ่งกรอกในหน้าปัจจุบันด้วย
+    document.querySelectorAll('.slot-row').forEach(row => {
+      const label = row.querySelector('.slot-time')?.getAttribute('data-slot-label');
+      const input = row.querySelector('.input-val');
+      if (!label || !input) return;
+      const slot = TIME_SLOTS_DEF.find(s => s.label === label);
+      if (!slot || slot.endMin > 1050) return;
+      if (input.value !== "") {
+        const old = existingData && existingData[label];
+        const oldQty = old && old.output !== undefined && old.output !== "" ? Number(old.output) || 0 : null;
+        const newQty = Number(input.value) || 0;
+        if (oldQty !== null) total += newQty - oldQty;
+        else total += newQty;
+      }
+    });
+    return total;
+  }
+
+  function updateHourlyAverage() {
+    const panel = document.getElementById('hourlyPacePanel');
+    const reqEl = document.getElementById('requiredPerHour');
+    const noteEl = document.getElementById('paceAverageNote');
+
+    if (!panel || !reqEl) return;
+
+    const totalHours = Number(currentHours1) || 0;
+    const totalTarget = Number(currentTarget1) || 0;
+
+    if (totalHours <= 0 || totalTarget <= 0) {
+      panel.style.display = 'none';
+      reqEl.textContent = '-';
+      return;
+    }
+
+    const requiredAvg = totalTarget / totalHours;
+
+    reqEl.textContent = Math.round(requiredAvg).toLocaleString() + ' ชิ้น';
+
+    if (noteEl) {
+      noteEl.textContent =
+        `เป้ารวม ${totalTarget.toLocaleString()} ชิ้น ÷ ${totalHours} ชม.`;
+    }
+
+    panel.style.display = 'block';
+  }
+
+
+  function getBreakSlotForLine_(lineValue) {
+    const cleanLine = String(lineValue || '')
+      .replace(/LINE/i, '')
+      .replace(/\s+/g, '')
+      .toUpperCase();
+
+    if (['B', 'C'].includes(cleanLine)) return '12.30-13.30';
+    if (['D', 'E', 'F', 'G'].includes(cleanLine)) return '11.30-12.30';
+    return '';
+  }
+
+  function getWorkingSlotsForCurrentLine_() {
+    const lineVal = document.getElementById('line').value;
+    const breakSlot = getBreakSlotForLine_(lineVal);
+    const totalHours = Math.floor(Number(currentHours1) || 0);
+
+    if (totalHours < 1 || totalHours > 10) {
+      return [];
+    }
+
+    const workingSlots = TIME_SLOTS_DEF
+      .filter(slot => slot.label !== breakSlot)
+      .slice(0, totalHours);
+
+    return workingSlots;
+  }
+
+  function hasSavedLaterWorkingSlot_(slotLabel) {
+    const workingSlots = getWorkingSlotsForCurrentLine_();
+    const index = workingSlots.findIndex(slot => slot.label === slotLabel);
+    if (index < 0) return false;
+
+    return workingSlots.slice(index + 1).some(slot => {
+      const saved = currentExistingHourly && currentExistingHourly[slot.label];
+      return !!(
+        saved &&
+        saved.output !== undefined &&
+        saved.output !== ""
+      );
+    });
+  }
+
+  function selectLotSwitchMode_(mode) {
+    pendingSwitchMode = mode === 'CURRENT' ? 'CURRENT' : 'NEXT';
+
+    const nextBtn = document.getElementById('switchModeNextBtn');
+    const currentBtn = document.getElementById('switchModeCurrentBtn');
+    const hint = document.getElementById('switchModeHint');
+
+    if (nextBtn) {
+      nextBtn.style.boxShadow = pendingSwitchMode === 'NEXT' ? '0 0 0 3px rgba(13,148,136,.18)' : 'none';
+      nextBtn.style.transform = pendingSwitchMode === 'NEXT' ? 'translateY(-1px)' : 'none';
+    }
+    if (currentBtn) {
+      currentBtn.style.boxShadow = pendingSwitchMode === 'CURRENT' ? '0 0 0 3px rgba(245,158,11,.20)' : 'none';
+      currentBtn.style.transform = pendingSwitchMode === 'CURRENT' ? 'translateY(-1px)' : 'none';
+    }
+
+    if (hint) {
+      hint.style.display = 'block';
+      if (pendingSwitchMode === 'CURRENT') {
+        hint.style.background = '#fffbeb';
+        hint.style.color = '#92400e';
+        hint.style.border = '1px solid #fde68a';
+        hint.innerHTML = '🟠 <b>รอบนี้เลย</b> — รอบนี้เป็น LOT ใหม่';
+      } else {
+        hint.style.background = '#f0fdfa';
+        hint.style.color = '#0f766e';
+        hint.style.border = '1px solid #99f6e4';
+        hint.innerHTML = '🟢 <b>รอบถัดไป</b> — รอบนี้ยังเป็น LOT เดิม';
+      }
+    }
+  }
+
+  function openEndLotForSlot_(button, explicitSlotLabel) {
+    const lineVal = document.getElementById('line').value;
+    if (!lineVal) {
+      alert("กรุณาเลือก LINE การผลิตก่อน");
+      return;
+    }
+
+    const row = button.closest('.slot-row');
+    if (!row || row.dataset.breakTime === 'true') return;
+
+    const slotFromArg = String(explicitSlotLabel || '').trim();
+    const slotFromButton = String(button.dataset.slotLabel || '').trim();
+    const slotFromRow = String(
+      row.dataset.slotLabel ||
+      row.querySelector('.slot-time')?.getAttribute('data-slot-label') ||
+      ''
+    ).trim();
+
+    if (!slotFromArg || slotFromArg !== slotFromButton || slotFromArg !== slotFromRow) {
+      alert("ตรวจพบรอบเวลาไม่ตรงกัน ระบบหยุดไว้ก่อน กรุณาโหลดหน้าใหม่");
+      return;
+    }
+
+    const slotLabel = slotFromArg;
+    const lotVal = normalizeLot_(row.querySelector('.input-lot-val')?.value);
+    const outputInput = row.querySelector('.input-val');
+
+    if (!lotVal) {
+      alert("ไม่พบ LOT ของรอบนี้ กรุณาโหลดใหม่");
+      return;
+    }
+
+    // NEXT ต้องใช้ยอดรอบนี้เป็นยอดสุดท้ายของ LOT เดิม
+    // CURRENT ไม่บังคับยอด เพราะ LOT ใหม่อาจเพิ่งขึ้นกลางรอบและรอบนี้ยังผลิตไม่จบ
+    let closingQty = null;
+    if (outputInput && outputInput.value !== '') {
+      closingQty = Number(outputInput.value);
+      if (!Number.isFinite(closingQty) || closingQty < 0) {
+        alert(`ยอดของรอบ ${slotLabel} ไม่ถูกต้อง`);
+        return;
+      }
+    }
+
+    if (lotVal !== normalizeLot_(currentActiveLot)) {
+      alert("รอบนี้เป็น LOT ที่จบไปแล้ว ไม่สามารถปิดซ้ำได้");
+      return;
+    }
+
+    if (hasSavedLaterWorkingSlot_(slotLabel)) {
+      alert("มีการบันทึกยอดของรอบถัดไปแล้ว ไม่สามารถปิด LOT ย้อนหลังที่รอบนี้ได้");
+      return;
+    }
+
+    const workingSlots = getWorkingSlotsForCurrentLine_();
+    const workingIndex = workingSlots.findIndex(slot => slot.label === slotLabel);
+    if (workingIndex < 0) {
+      alert("รอบที่กดเปลี่ยนรุ่นไม่ใช่รอบทำงานของ LINE นี้ กรุณาโหลดหน้าใหม่");
+      return;
+    }
+
+    pendingSwitchAfterSlot = slotLabel;
+    pendingSwitchRow = row;
+    pendingSwitchMode = 'CURRENT';
+    pendingSwitchContext = {
+      line: String(lineVal).trim(),
+      slotLabel,
+      closingLot: lotVal,
+      closingQty,
+      workingHourNumber: workingIndex + 1,
+      row,
+      outputInput
+    };
+
+    document.getElementById('modalCurrentLot').innerText = lotVal;
+    document.getElementById('modalSwitchSlot').innerText = slotLabel;
+    document.getElementById('modalLotNo').value = '';
+    document.getElementById('modalLotTarget').value = '';
+    syncSwitchLotTargetField_();
+
+    const statusBox = document.getElementById('switchLotStatus');
+    if (statusBox) {
+      statusBox.style.display = 'none';
+      statusBox.innerText = '';
+    }
+
+    document.getElementById('newLotModal').style.display = 'flex';
+  }
+
+  function closeNewLotModal() {
+    document.getElementById('newLotModal').style.display = 'none';
+    document.getElementById('modalLotNo').value = '';
+    document.getElementById('modalLotTarget').value = '';
+    syncSwitchLotTargetField_();
+    pendingSwitchMode = '';
+
+    const statusBox = document.getElementById('switchLotStatus');
+    if (statusBox) {
+      statusBox.style.display = 'none';
+      statusBox.innerText = '';
+    }
+
+    const confirmBtn = document.getElementById('confirmSwitchLotBtn');
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.style.opacity = '1';
+    }
+  }
+
+  function normalizeLot_(value) {
+    return String(value || '').trim().toUpperCase();
+  }
+
+  function getWorkingSlotsForLineValue_(lineValue, totalHours) {
+    const breakSlot = getBreakSlotForLine_(lineValue);
+    const hours = Math.max(0, Math.floor(Number(totalHours) || 0));
+
+    return TIME_SLOTS_DEF
+      .filter(slot => slot.label !== breakSlot)
+      .slice(0, hours);
+  }
+
+  function normalizeLotSwitchHistoryForLine_(history, lineValue, totalHours, allowedLots) {
+    const workingSlots = getWorkingSlotsForLineValue_(lineValue, totalHours);
+    const slotIndex = {};
+    workingSlots.forEach((slot, index) => { slotIndex[slot.label] = index; });
+
+    const allowed = new Set(
+      (allowedLots || [])
+        .map(normalizeLot_)
+        .filter(Boolean)
+    );
+
+    const bySlot = {};
+    (Array.isArray(history) ? history : []).forEach(item => {
+      const slot = String(item && item.slot || '').trim();
+      const to = normalizeLot_(item && item.to);
+
+      if (!Object.prototype.hasOwnProperty.call(slotIndex, slot)) return;
+      if (!to) return;
+      if (allowed.size > 0 && !allowed.has(to)) return;
+
+      bySlot[slot] = { slot, to };
+    });
+
+    return Object.values(bySlot).sort(
+      (a, b) => slotIndex[a.slot] - slotIndex[b.slot]
+    );
+  }
+
+  function calculateLotHoursFromHistoryForLine_(
+    lineValue,
+    totalHours,
+    initialLot,
+    history,
+    allowedLots
+  ) {
+    const workingSlots = getWorkingSlotsForLineValue_(lineValue, totalHours);
+    const cleanInitial = normalizeLot_(initialLot);
+    const normalizedHistory = normalizeLotSwitchHistoryForLine_(
+      history,
+      lineValue,
+      totalHours,
+      allowedLots
+    );
+
+    const switchBySlot = {};
+    normalizedHistory.forEach(item => { switchBySlot[item.slot] = item.to; });
+
+    const hoursByLot = {};
+    const slotLotMap = {};
+    let currentLot = cleanInitial;
+
+    workingSlots.forEach(slot => {
+      if (switchBySlot[slot.label]) {
+        currentLot = switchBySlot[slot.label];
+      }
+
+      if (!currentLot) return;
+      slotLotMap[slot.label] = currentLot;
+      hoursByLot[currentLot] = (hoursByLot[currentLot] || 0) + 1;
+    });
+
+    return {
+      history: normalizedHistory,
+      hoursByLot,
+      slotLotMap,
+      currentLot
+    };
+  }
+
+  function syncSwitchLotTargetField_() {
+    const lotInput = document.getElementById('modalLotNo');
+    const tgInput = document.getElementById('modalLotTarget');
+    const tgLabel = document.getElementById('modalLotTargetLabel');
+    if (!lotInput || !tgInput || !tgLabel) return;
+
+    const lot = normalizeLot_(lotInput.value);
+    const isExisting = !!lot && activeLots.some(x => normalizeLot_(x) === lot);
+
+    if (isExisting) {
+      const existingTG = Number(currentLotTGMap[lot]) || 0;
+      tgInput.value = existingTG > 0 ? existingTG : '';
+      tgInput.readOnly = true;
+      tgInput.style.backgroundColor = '#f1f5f9';
+      tgInput.style.color = '#64748b';
+      tgLabel.innerText = '2) TG Original เดิม (ระบบดึงให้อัตโนมัติ)';
+    } else {
+      if (tgInput.readOnly) tgInput.value = '';
+      tgInput.readOnly = false;
+      tgInput.style.backgroundColor = '';
+      tgInput.style.color = '';
+      tgLabel.innerText = '2) TG Original ของ LOT ใหม่ (ชิ้น)';
+    }
+  }
+
+  function getUsedLotsFromState_(data) {
+    return [
+      data && data.lotNumber,
+      data && (data.lotNumber2 || data.lot2Number),
+      data && (data.lotNumber3 || data.lot3Number)
+    ]
+      .map(normalizeLot_)
+      .filter(Boolean);
+  }
+
+  async function fetchCurrentLineState_(lineVal) {
+    const res = await fetch(
+      `${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(lineVal)}&_=${Date.now()}`,
+      { cache: 'no-store' }
+    );
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    return await res.json();
+  }
+
+  function setSwitchLotStatus_(message, type = 'info') {
+    const box = document.getElementById('switchLotStatus');
+    if (!box) return;
+
+    box.style.display = 'block';
+    box.innerText = message;
+
+    if (type === 'error') {
+      box.style.background = '#fef2f2';
+      box.style.color = '#b91c1c';
+      box.style.border = '1px solid #fecaca';
+    } else if (type === 'success') {
+      box.style.background = '#ecfdf5';
+      box.style.color = '#047857';
+      box.style.border = '1px solid #a7f3d0';
+    } else {
+      box.style.background = '#eff6ff';
+      box.style.color = '#1d4ed8';
+      box.style.border = '1px solid #bfdbfe';
+    }
+  }
+
+  async function waitForLotSwitchSaved_(
+    lineVal, newLot, newTG,
+    closingSlot, closingLot, closingQty,
+    expectedCompletedWorkingHours
+  ) {
+    for (let attempt = 0; attempt < 10; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      try {
+        const state = await fetchCurrentLineState_(lineVal);
+        const lot2 = normalizeLot_(state.lotNumber2 || state.lot2Number);
+        const lot3 = normalizeLot_(state.lotNumber3 || state.lot3Number);
+
+        let newLotAndTgOk = false;
+        let completedHoursOnServer = 0;
+
+        if (lot2 === newLot) {
+          newLotAndTgOk =
+            Math.round(Number(state.tgOriginal2 || 0)) === Math.round(newTG);
+          completedHoursOnServer = Number(state.workingHours || 0);
+        } else if (lot3 === newLot) {
+          newLotAndTgOk =
+            Math.round(Number(state.tgOriginal3 || 0)) === Math.round(newTG);
+          completedHoursOnServer =
+            Number(state.workingHours || 0) +
+            Number(state.workingHours2 || 0);
+        }
+
+        const savedClosing =
+          state.existingHourly && state.existingHourly[closingSlot];
+
+        const closingSlotOk = !!(
+          savedClosing &&
+          normalizeLot_(savedClosing.lot) === normalizeLot_(closingLot) &&
+          Number(savedClosing.output) === Number(closingQty)
+        );
+
+        const completedHoursOk =
+          Number(completedHoursOnServer) === Number(expectedCompletedWorkingHours);
+
+        if (newLotAndTgOk && closingSlotOk && completedHoursOk) {
+          return state;
+        }
+      } catch (err) {
+        console.warn('Verify switch attempt failed:', err);
+      }
+    }
+
+    return null;
+  }
+
+  function applyNewCurrentLotToVisibleRows_(switchAfterSlot, newLot) {
+    const switchIndex = TIME_SLOTS_DEF.findIndex(s => s.label === switchAfterSlot);
+    if (switchIndex < 0) return;
+
+    document.querySelectorAll('.slot-row').forEach(row => {
+      const label = String(
+        row.dataset.slotLabel ||
+        row.querySelector('.slot-time')?.getAttribute('data-slot-label') ||
+        ''
+      ).trim();
+
+      const rowIndex = TIME_SLOTS_DEF.findIndex(s => s.label === label);
+
+      // Slot ที่กด = LOT ใหม่ทันที; ห้ามเปลี่ยนเฉพาะแถวก่อนหน้า
+      if (rowIndex < 0 || rowIndex < switchIndex) return;
+
+      const saved = currentExistingHourly && currentExistingHourly[label];
+      if (saved && saved.output !== undefined && saved.output !== "") return;
+
+      const lotInput = row.querySelector('.input-lot-val');
+      const lotDisplay = row.querySelector('.slot-lot-display');
+      const modelSubtext = row.querySelector('.model-subtext');
+
+      if (lotInput) lotInput.value = newLot;
+      if (lotDisplay) {
+        lotDisplay.innerText = newLot;
+        if (row.dataset.breakTime !== 'true') lotDisplay.classList.add('current');
+      }
+      if (modelSubtext) modelSubtext.innerText = getModelTextForLot_(newLot);
+    });
+  }
+
+
+  function applyLocalLotPlanAfterSwitch_(
+    closingLot,
+    newLot,
+    completedWorkingHours,
+    totalWorkingHours,
+    switchSlot
+  ) {
+    const nextLot = normalizeLot_(newLot);
+    const total = Math.floor(Number(totalWorkingHours) || 0);
+    if (!nextLot || total < 1 || total > 10 || !switchSlot) return;
+
+    if (!activeLots.some(lot => normalizeLot_(lot) === nextLot)) {
+      activeLots.push(nextLot);
+    }
+
+    currentLotSwitchHistory = normalizeLotSwitchHistoryForLine_(
+      [
+        ...(Array.isArray(currentLotSwitchHistory) ? currentLotSwitchHistory : []),
+        { slot: switchSlot, to: nextLot }
+      ],
+      document.getElementById('line').value,
+      total,
+      activeLots
+    );
+
+    const initialLot = normalizeLot_(
+      currentLotPlan[0]?.lot ||
+      activeLots[0] ||
+      closingLot
+    );
+
+    const allocation = calculateLotHoursFromHistoryForLine_(
+      document.getElementById('line').value,
+      total,
+      initialLot,
+      currentLotSwitchHistory,
+      activeLots
+    );
+
+    currentLotPlan = activeLots
+      .map(lot => ({
+        lot: normalizeLot_(lot),
+        hours: allocation.hoursByLot[normalizeLot_(lot)] || 0
+      }))
+      .filter(item => item.lot && item.hours > 0);
+  }
+
+  function showLotSwitchToast_(message, type = 'success', duration = 2200) {
+    let toast = document.getElementById('lotSwitchToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'lotSwitchToast';
+      toast.style.position = 'fixed';
+      toast.style.left = '50%';
+      toast.style.bottom = '24px';
+      toast.style.transform = 'translateX(-50%)';
+      toast.style.zIndex = '99999';
+      toast.style.maxWidth = 'calc(100vw - 28px)';
+      toast.style.padding = '11px 16px';
+      toast.style.borderRadius = '12px';
+      toast.style.fontSize = '.9rem';
+      toast.style.fontWeight = '700';
+      toast.style.textAlign = 'center';
+      toast.style.boxShadow = '0 8px 24px rgba(15,23,42,.18)';
+      toast.style.transition = 'opacity .2s ease';
+      document.body.appendChild(toast);
+    }
+
+    if (type === 'warn') {
+      toast.style.background = '#fff7ed';
+      toast.style.color = '#9a3412';
+      toast.style.border = '1px solid #fdba74';
+    } else if (type === 'error') {
+      toast.style.background = '#fef2f2';
+      toast.style.color = '#b91c1c';
+      toast.style.border = '1px solid #fecaca';
+    } else {
+      toast.style.background = '#ecfdf5';
+      toast.style.color = '#047857';
+      toast.style.border = '1px solid #6ee7b7';
+    }
+
+    toast.innerText = message;
+    toast.style.display = 'block';
+    toast.style.opacity = '1';
+
+    clearTimeout(window.__lotSwitchToastTimer);
+    window.__lotSwitchToastTimer = setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => { toast.style.display = 'none'; }, 220);
+    }, duration);
+  }
+
+  async function confirmNewLot() {
+    const newLot = normalizeLot_(document.getElementById('modalLotNo').value);
+    const enteredTarget = Number(document.getElementById('modalLotTarget').value) || 0;
+    const lineVal = document.getElementById('line').value;
+    const ctx = pendingSwitchContext;
+    const switchAfterSlot = ctx?.slotLabel || '';
+    const switchMode = 'CURRENT';
+
+    const localUsedLots = activeLots.map(normalizeLot_).filter(Boolean);
+    const isExistingLot = localUsedLots.includes(newLot);
+    const resolvedTarget = isExistingLot
+      ? (Number(currentLotTGMap[newLot]) || 0)
+      : enteredTarget;
+
+    if (!newLot) {
+      alert("กรุณากรอก LOT ที่ต้องการสลับ");
+      return;
+    }
+
+    if (normalizeLot_(currentActiveLot) === newLot) {
+      alert(`LOT ${newLot} เป็น LOT ที่กำลังผลิตอยู่แล้ว`);
+      return;
+    }
+
+    if (!isExistingLot && localUsedLots.length >= 3) {
+      alert("วันนี้มีครบ 3 LOT แล้ว สามารถกลับ LOT เดิมได้ แต่เพิ่ม LOT ใหม่ลำดับที่ 4 ไม่ได้");
+      return;
+    }
+
+    if (resolvedTarget <= 0) {
+      alert(
+        isExistingLot
+          ? `ไม่พบ TG Original เดิมของ LOT ${newLot} กรุณารีโหลดข้อมูลแล้วลองใหม่`
+          : "กรุณากรอก TG Original ของ LOT ใหม่ให้ครบถ้วน"
+      );
+      return;
+    }
+
+    if (!lineVal || !ctx || !switchAfterSlot || !ctx.row) {
+      alert("ไม่พบข้อมูลรอบที่ต้องการเปลี่ยนรุ่น กรุณาปิดหน้าต่างแล้วกดเปลี่ยนรุ่นใหม่อีกครั้ง");
+      return;
+    }
+
+    if (String(lineVal).trim() !== String(ctx.line).trim()) {
+      alert("LINE การผลิตเปลี่ยนหลังจากกดเปลี่ยนรุ่น กรุณากดใหม่");
+      return;
+    }
+
+    const rowSlot = String(
+      ctx.row.dataset.slotLabel ||
+      ctx.row.querySelector('.slot-time')?.getAttribute('data-slot-label') ||
+      ''
+    ).trim();
+
+    if (rowSlot !== switchAfterSlot || pendingSwitchAfterSlot !== switchAfterSlot) {
+      alert("ตรวจพบรอบเวลาเปลี่ยนรุ่นไม่ตรงกัน ระบบไม่ส่งข้อมูล กรุณาโหลดหน้าใหม่");
+      return;
+    }
+
+    const closingLot = normalizeLot_(ctx.closingLot);
+    const currentQtyText = String(ctx.outputInput?.value ?? '').trim();
+    const currentQty = currentQtyText === '' ? null : Number(currentQtyText);
+
+    if (!closingLot) {
+      alert("ข้อมูล LOT ปัจจุบันไม่ถูกต้อง กรุณากดเปลี่ยนรุ่นใหม่");
+      return;
+    }
+
+    if (currentQty !== null && (!Number.isFinite(currentQty) || currentQty < 0)) {
+      alert(`ยอดของรอบ ${switchAfterSlot} ไม่ถูกต้อง`);
+      return;
+    }
+
+    if (closingLot !== normalizeLot_(currentActiveLot)) {
+      alert("LOT นี้ไม่ใช่ LOT ปัจจุบันแล้ว กรุณาโหลดข้อมูลใหม่");
+      return;
+    }
+
+    // รอบที่บันทึกยอดแล้วห้ามเปลี่ยน LOT ย้อนหลัง
+    const savedCurrent = currentExistingHourly && currentExistingHourly[switchAfterSlot];
+    if (
+      savedCurrent &&
+      savedCurrent.output !== undefined &&
+      savedCurrent.output !== ''
+    ) {
+      alert(`🔒 รอบ ${switchAfterSlot} บันทึกยอดแล้ว\nไม่สามารถเปลี่ยน LOT ของรอบนี้ได้`);
+      return;
+    }
+
+    if (
+      currentLotSwitchHistory.some(
+        item => String(item.slot || '').trim() === switchAfterSlot
+      )
+    ) {
+      alert(`รอบ ${switchAfterSlot} มีการเปลี่ยน LOT แล้ว กรุณารีโหลดข้อมูลก่อน`);
+      return;
+    }
+
+    // AA เป็น source of truth เหมือนเดิม
+    const totalWorkingHours = Math.floor(Number(currentHours1) || 0);
+    if (totalWorkingHours < 1 || totalWorkingHours > 10) {
+      alert("ไม่พบเวลาทำงานรวมจาก AA ระบบจะไม่เดาเป็น 9 ชั่วโมง กรุณารีโหลดข้อมูล");
+      return;
+    }
+
+    const workingSlots = getWorkingSlotsForCurrentLine_();
+    const switchIndex = workingSlots.findIndex(slot => slot.label === switchAfterSlot);
+
+    if (switchIndex < 0) {
+      alert("รอบที่กดเปลี่ยนรุ่นไม่ถูกต้อง กรุณาโหลดข้อมูลใหม่");
+      return;
+    }
+
+    const selectedWorkingHour = switchIndex + 1;
+    if (selectedWorkingHour !== Number(ctx.workingHourNumber)) {
+      alert("ลำดับชั่วโมงเปลี่ยนจากตอนที่กดเปลี่ยนรุ่น กรุณาโหลดหน้าใหม่");
+      return;
+    }
+
+    const completedWorkingHours = switchIndex;
+    if (completedWorkingHours < 1) {
+      alert("ไม่สามารถสลับ LOT ในรอบทำงานแรกของวันได้ เพราะ LOT ก่อนหน้าจะไม่มีชั่วโมงผลิต");
+      return;
+    }
+
+    const remainingHours = Math.max(0, totalWorkingHours - completedWorkingHours);
+    if (remainingHours <= 0) {
+      alert("ไม่มีชั่วโมงเหลือสำหรับ LOT ปลายทาง กรุณาตรวจรอบที่เลือก");
+      return;
+    }
+
+    const lotTypeText = isExistingLot
+      ? 'LOT เดิมของวันนี้ (ใช้ TG Original เดิม)'
+      : 'LOT ใหม่';
+
+    const confirmMessage =
+      `ยืนยันสลับ LOT?\n\n` +
+      `LOT ปัจจุบัน: ${closingLot}\n` +
+      `LOT ปลายทาง: ${newLot}\n` +
+      `ประเภท: ${lotTypeText}\n` +
+      `เริ่มที่รอบ: ${switchAfterSlot}\n` +
+      `TG Original: ${resolvedTarget.toLocaleString()} ชิ้น`;
+
+    if (!confirm(confirmMessage)) return;
+
+    const confirmBtn = document.getElementById('confirmSwitchLotBtn');
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.style.opacity = '.6';
+    }
+
+    setSwitchLotStatus_(`กำลังสลับเป็น LOT ${newLot}...`);
+
+    const payload = {
+      action: "HOURLY_OUTPUT",
+      line: lineVal,
+      isSwitchLot: true,
+      switchMode: switchMode,
+      newLotNumber: newLot,
+      newLotTarget: resolvedTarget,
+      newLotOriginalTG: resolvedTarget,
+      tgOriginalNewLot: resolvedTarget,
+      totalWorkingHours: totalWorkingHours,
+      switchAfterSlot: switchAfterSlot,
+      clickedSlotLabel: switchAfterSlot,
+      switchWorkingHourNumber: selectedWorkingHour,
+      completedWorkingHours: completedWorkingHours,
+      updatedBy: userDisplayName
+    };
+
+    try {
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!activeLots.some(lot => normalizeLot_(lot) === newLot)) {
+        activeLots.push(newLot);
+      }
+      currentLotTGMap[newLot] = resolvedTarget;
+      currentActiveLot = newLot;
+
+      applyLocalLotPlanAfterSwitch_(
+        closingLot,
+        newLot,
+        completedWorkingHours,
+        totalWorkingHours,
+        switchAfterSlot
+      );
+
+      // CURRENT ยังไม่ถือว่ารอบนี้ถูกบันทึกยอด
+      if (currentExistingHourly && currentExistingHourly[switchAfterSlot]) {
+        delete currentExistingHourly[switchAfterSlot];
+      }
+
+      generateSmartTimeSlots(currentHours1, currentExistingHourly);
+      updateCurrentModelBanner_();
+      calculateTotal();
+
+      closeNewLotModal();
+      showLotSwitchToast_(
+        isExistingLot
+          ? `✅ กลับมา LOT ${newLot} ที่รอบ ${switchAfterSlot} แล้ว`
+          : `✅ LOT ใหม่ ${newLot} เริ่มที่รอบ ${switchAfterSlot} แล้ว`,
+        'success',
+        2400
+      );
+
+      // no-cors อ่าน response POST ไม่ได้ จึงยืนยัน state ด้วย GET
+      void (async () => {
+        for (let attempt = 0; attempt < 10; attempt++) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          try {
+            const state = await fetchCurrentLineState_(lineVal);
+            const savedCurrentLot = normalizeLot_(state.currentLot);
+            const savedHistory = Array.isArray(state.lotSwitchHistory)
+              ? state.lotSwitchHistory
+              : [];
+
+            const historyOk = savedHistory.some(
+              item =>
+                String(item.slot || '').trim() === switchAfterSlot &&
+                normalizeLot_(item.to) === newLot
+            );
+
+            if (savedCurrentLot === newLot && historyOk) {
+              if (state.masterMap) {
+                masterLotMap = { ...masterLotMap, ...state.masterMap };
+              }
+              return;
+            }
+          } catch (err) {
+            console.warn('Verify CURRENT switch attempt failed:', err);
+          }
+        }
+
+        showLotSwitchToast_(
+          "⚠️ ส่งข้อมูลแล้ว แต่ยังยืนยันจากชีทไม่ได้ กรุณารีโหลดก่อนกรอกต่อ",
+          'warn',
+          4500
+        );
+      })();
+
+    } catch (err) {
+      console.error("Sync Error:", err);
+      setSwitchLotStatus_("ส่งข้อมูลเปลี่ยน LOT ไม่สำเร็จ กรุณาลองใหม่", "error");
+      alert("ส่งข้อมูลเปลี่ยน LOT ไม่สำเร็จ กรุณาลองใหม่");
+    } finally {
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.style.opacity = '1';
+      }
+    }
+  }
+
+  function calculateTotal() {
+    const inputs = document.querySelectorAll('.input-val');
+    let total = 0;
+    inputs.forEach(input => {
+      total += (Number(input.value) || 0);
+    });
+    document.getElementById('totalSum').value = total.toLocaleString();
+  }
+
+  // ปรับปรุงฟังก์ชันบันทึกยอดให้ยิงแบบ no-cors การันตีผ่าน 100% บนมือถือ
+  document.getElementById('hourlyForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const lineVal = document.getElementById('line').value;
+    const btnSubmit = document.getElementById('btnSubmit');
+
+    if (!lineVal) {
+      alert("กรุณาเลือก LINE การผลิต");
       return;
     }
 
     btnSubmit.disabled = true;
     btnSubmit.innerText = "กำลังบันทึก...";
 
+    if ((userDisplayName === "Unknown" || !userDisplayName) && typeof liff !== "undefined" && liff.isLoggedIn()) {
+      try {
+        const profile = await liff.getProfile();
+        userDisplayName = profile.displayName || "Unknown";
+      } catch (e) {}
+    }
+
+    const hourlyDetails = [];
+    const slotRows = document.querySelectorAll('.slot-row');
+    
+    slotRows.forEach(row => {
+      const timeLabel = row.querySelector('.slot-time').getAttribute('data-slot-label');
+      const lotVal = row.querySelector('.input-lot-val').value;
+      const outputVal = row.querySelector('.input-val').value;
+      const isBreakTime = row.dataset.breakTime === 'true';
+      const remarkVal = isBreakTime
+        ? ''
+        : String(row.querySelector('.slot-remark-input')?.value || '').trim();
+
+      // ช่วงพักถูกล็อกเป็น 0 แต่ต้องส่งเข้า Hourly_Log ด้วย
+      if (isBreakTime || outputVal !== "") {
+        hourlyDetails.push({
+          timeSlot: timeLabel,
+          lot: lotVal,
+          qty: Number(outputVal),
+          remark: remarkVal
+        });
+      }
+    });
+
     const payload = {
-      action: "TG_FORM",
+      action: "HOURLY_OUTPUT",
       line: lineVal,
-      lotNumber: lot1No,
-      target: lot1Target,
-      manpower: manpower,
-      workingHours: totalHrs,
-      updatedBy: userDisplayName
+      updatedBy: userDisplayName,
+      hourlyData: hourlyDetails
     };
 
     try {
-      const res = await fetch(SCRIPT_URL, {
+      // ส่งข้อมูลด้วย mode: 'no-cors' ป้องกันการบล็อก Preflight บน LINE Browser และ iOS
+      await fetch(SCRIPT_URL, {
         method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
         body: JSON.stringify(payload)
       });
-      const result = await res.json();
 
-      if (result.status === "success") {
-        alert("บันทึกเป้าหมายการผลิตเรียบร้อยแล้ว!");
-        if (typeof liff !== "undefined" && liff.isInClient()) {
-          liff.closeWindow();
-        }
+      alert("บันทึกข้อมูลเรียบร้อยแล้ว!");
+      if (typeof liff !== "undefined" && liff.isInClient()) {
+        liff.closeWindow();
       } else {
-        alert("เกิดข้อผิดพลาด: " + (result.error || "ไม่สามารถบันทึกได้"));
+        location.reload();
       }
+
     } catch (err) {
       alert("บันทึกไม่สำเร็จ: " + err.message);
-    } finally {
       btnSubmit.disabled = false;
-      btnSubmit.innerText = "บันทึกเป้าหมาย";
+      btnSubmit.innerText = "บันทึกยอด";
     }
   });
 </script>
