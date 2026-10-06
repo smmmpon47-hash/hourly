@@ -305,6 +305,30 @@
       font-size: 1.15rem;
     }
 
+    /* ===== LOAD IN: แสดงเฉพาะรอบทำงานสุดท้ายตาม AA ===== */
+    .load-in-final {
+      display: none;
+      background: #f5f3ff;
+      border: 1.5px solid #c4b5fd;
+      border-radius: 16px;
+      padding: 13px 14px;
+      margin: 4px 0 18px;
+    }
+    .load-in-final label {
+      color: #5b21b6;
+      margin-bottom: 7px;
+    }
+    .load-in-final input {
+      border-color: #c4b5fd;
+      font-weight: 700;
+    }
+    .load-in-final-note {
+      margin-top: 6px;
+      font-size: .74rem;
+      line-height: 1.45;
+      color: #6d28d9;
+    }
+
     .btn-submit {
       width: 100%;
       padding: 15px;
@@ -885,6 +909,14 @@
       </div>
     </div>
 
+    <div id="loadInFinalWrap" class="load-in-final">
+      <label for="loadInToday">📥 งานเข้าโหลดวันนี้ (ตัว)</label>
+      <input type="number" id="loadInToday" min="0" step="1" inputmode="numeric" placeholder="กรอกยอดเข้าโหลดรวมของ LINE วันนี้">
+      <div id="loadInFinalNote" class="load-in-final-note">
+        แสดงเฉพาะรอบทำงานสุดท้ายตามเวลาทำงานรวม (AA) • ถ้าเพิ่ม OT ภายหลัง ระบบจะย้ายไปให้กรอก/แก้ที่รอบสุดท้ายใหม่
+      </div>
+    </div>
+
     <div class="sum-box">
       <span>ยอดรวมที่กรอก</span>
       <input type="text" id="totalSum" class="sum-input" value="0" readonly>
@@ -993,6 +1025,8 @@
   let pendingSwitchRow = null;
   let pendingSwitchContext = null;
   let pendingSwitchMode = ''; // NEXT = เริ่มรอบถัดไป, CURRENT = ใช้รอบที่เลือก
+  let currentLoadInToday = null;
+  let currentFinalWorkingSlot = '';
 
   async function initLiff() {
     try {
@@ -1529,6 +1563,10 @@
       currentActiveLot = '';
       currentLotSwitchHistory = [];
       currentLotTGMap = {};
+      currentLoadInToday = null;
+      currentFinalWorkingSlot = '';
+      const loadInWrap = document.getElementById('loadInFinalWrap');
+      if (loadInWrap) loadInWrap.style.display = 'none';
       return;
     }
 
@@ -1582,6 +1620,10 @@
       currentHours1 = authoritativeAAHours;
       currentTarget1 = Number(data.target) || Number(data.target1) || 0;
       currentExistingHourly = data.existingHourly || {};
+      currentLoadInToday =
+        (data.loadInToday === null || data.loadInToday === undefined || data.loadInToday === '')
+          ? null
+          : Number(data.loadInToday);
 
       currentLotTGMap = {};
       const lotTgPairs = [
@@ -1632,6 +1674,10 @@
       currentLotSwitchHistory = [];
       currentLotTGMap = {};
       currentHours1 = 0;
+      currentLoadInToday = null;
+      currentFinalWorkingSlot = '';
+      const loadInWrap = document.getElementById('loadInFinalWrap');
+      if (loadInWrap) loadInWrap.style.display = 'none';
       if (infoBanner) infoBanner.style.display = 'none';
       if (modelBanner) modelBanner.style.display = 'none';
 
@@ -1837,6 +1883,7 @@
       slotsContainer.appendChild(row);
     });
 
+    updateLoadInFinalField_(targetSlots);
     calculateTotal();
   }
 
@@ -1988,6 +2035,42 @@
       .slice(0, totalHours);
 
     return workingSlots;
+  }
+
+  function updateLoadInFinalField_(visibleSlots) {
+    const wrap = document.getElementById('loadInFinalWrap');
+    const input = document.getElementById('loadInToday');
+    const note = document.getElementById('loadInFinalNote');
+    if (!wrap || !input) return;
+
+    wrap.style.display = 'none';
+    currentFinalWorkingSlot = '';
+
+    const workingSlots = getWorkingSlotsForCurrentLine_();
+    const finalSlot = workingSlots.length ? workingSlots[workingSlots.length - 1] : null;
+    if (!finalSlot) return;
+
+    const now = new Date();
+    const currentMinutes = (now.getHours() * 60) + now.getMinutes();
+    const finalEnded = currentMinutes >= Number(finalSlot.endMin || 0);
+    const finalVisible = (visibleSlots || []).some(
+      slot => String(slot && slot.label || '') === finalSlot.label
+    );
+
+    if (!finalEnded || !finalVisible) return;
+
+    currentFinalWorkingSlot = finalSlot.label;
+    wrap.style.display = 'block';
+
+    // เติมค่าที่เคยบันทึกไว้ แต่ไม่ทับค่าที่ผู้ใช้กำลังแก้อยู่บนหน้า
+    if (String(input.value || '').trim() === '' && currentLoadInToday !== null) {
+      input.value = currentLoadInToday;
+    }
+
+    if (note) {
+      note.textContent =
+        `รอบสุดท้ายวันนี้ตาม AA คือ ${finalSlot.label} • กรอกยอดเข้าโหลดรวมของ LINE วันนี้`;
+    }
   }
 
   function hasSavedLaterWorkingSlot_(slotLabel) {
@@ -2752,6 +2835,33 @@
       return;
     }
 
+    let loadInToday = null;
+    let loadInSlot = '';
+    const loadInWrap = document.getElementById('loadInFinalWrap');
+    const loadInInput = document.getElementById('loadInToday');
+    const isLoadInRequiredNow =
+      !!loadInWrap &&
+      loadInWrap.style.display !== 'none' &&
+      !!currentFinalWorkingSlot;
+
+    if (isLoadInRequiredNow) {
+      const rawLoadIn = String(loadInInput ? loadInInput.value : '').trim();
+      if (rawLoadIn === '') {
+        alert("กรุณากรอกงานเข้าโหลดวันนี้ก่อนบันทึกรอบสุดท้าย");
+        if (loadInInput) loadInInput.focus();
+        return;
+      }
+
+      loadInToday = Number(rawLoadIn);
+      if (!Number.isFinite(loadInToday) || loadInToday < 0 || !Number.isInteger(loadInToday)) {
+        alert("งานเข้าโหลดวันนี้ต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป");
+        if (loadInInput) loadInInput.focus();
+        return;
+      }
+
+      loadInSlot = currentFinalWorkingSlot;
+    }
+
     btnSubmit.disabled = true;
     btnSubmit.innerText = "กำลังบันทึก...";
 
@@ -2791,6 +2901,11 @@
       updatedBy: userDisplayName,
       hourlyData: hourlyDetails
     };
+
+    if (loadInToday !== null) {
+      payload.loadInToday = loadInToday;
+      payload.loadInSlot = loadInSlot;
+    }
 
     try {
       // ส่งข้อมูลด้วย mode: 'no-cors' ป้องกันการบล็อก Preflight บน LINE Browser และ iOS
