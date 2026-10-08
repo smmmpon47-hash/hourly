@@ -9,6 +9,7 @@
   <title>บันทึกยอดการผลิต</title>
   <!-- FAST LOAD: ให้หน้าเว็บ/ข้อมูลเริ่มก่อน LIFF และ Web Font -->
   <link rel="preconnect" href="https://script.google.com">
+  <link rel="preconnect" href="https://script.googleusercontent.com">
   <link rel="preconnect" href="https://static.line-scdn.net" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1027,6 +1028,7 @@
   let pendingSwitchMode = ''; // NEXT = เริ่มรอบถัดไป, CURRENT = ใช้รอบที่เลือก
   let currentLoadInToday = null;
   let currentFinalWorkingSlot = '';
+  let __lineLoadController = null;
 
   async function initLiff() {
     try {
@@ -1578,7 +1580,14 @@
     slotsContainer.innerHTML = '<p style="color: #64748b; font-size: 0.95rem; text-align: center; padding: 15px 0;">กำลังโหลดข้อมูล...</p>';
 
     try {
-      const res = await fetch(`${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(line)}&_=${Date.now()}`, { cache: 'no-store' });
+      // เปลี่ยน LINE แล้วไม่ต้องรอ request เก่าจบ
+      if (__lineLoadController) __lineLoadController.abort();
+      __lineLoadController = new AbortController();
+
+      const res = await fetch(
+        `${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(line)}&_=${Date.now()}`,
+        { cache: 'no-store', signal: __lineLoadController.signal }
+      );
       const data = await res.json();
 
       activeLots = Array.isArray(data.lots) ? [...data.lots] : [];
@@ -1668,6 +1677,7 @@
       updateHourlyAverage();
 
     } catch (err) {
+      if (err && err.name === "AbortError") return;
       console.error("Error loading line details:", err);
       currentExistingHourly = {};
       currentActiveLot = '';
