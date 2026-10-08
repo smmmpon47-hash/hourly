@@ -2824,6 +2824,44 @@
     }
   }
 
+
+  function startSaveProgress_(button, doneText) {
+    if (!button) return { finish: () => {}, stop: () => {} };
+
+    let percent = 4;
+    let finished = false;
+    const label = doneText || "กำลังบันทึก";
+
+    button.innerText = `${label}... ${percent}%`;
+
+    const timer = setInterval(() => {
+      if (finished) return;
+
+      // ขยับเร็วช่วงแรก แล้วค่อยช้าลง และรอ server ที่ 94%
+      const step =
+        percent < 35 ? 7 :
+        percent < 65 ? 4 :
+        percent < 82 ? 2 :
+        1;
+
+      percent = Math.min(94, percent + step);
+      button.innerText = `${label}... ${percent}%`;
+    }, 220);
+
+    return {
+      finish() {
+        finished = true;
+        clearInterval(timer);
+        percent = 100;
+        button.innerText = `${label}... 100%`;
+      },
+      stop() {
+        finished = true;
+        clearInterval(timer);
+      }
+    };
+  }
+
   function calculateTotal() {
     const inputs = document.querySelectorAll('.input-val');
     let total = 0;
@@ -2873,7 +2911,7 @@
     }
 
     btnSubmit.disabled = true;
-    btnSubmit.innerText = "กำลังบันทึก...";
+    const saveProgress = startSaveProgress_(btnSubmit, "กำลังบันทึก");
 
     if ((userDisplayName === "Unknown" || !userDisplayName) && typeof liff !== "undefined" && liff.isLoggedIn()) {
       try {
@@ -2928,6 +2966,8 @@
         body: JSON.stringify(payload)
       });
 
+      saveProgress.finish();
+      await new Promise(resolve => setTimeout(resolve, 140));
       alert("บันทึกข้อมูลเรียบร้อยแล้ว!");
       if (typeof liff !== "undefined" && liff.isInClient()) {
         liff.closeWindow();
@@ -2936,6 +2976,7 @@
       }
 
     } catch (err) {
+      saveProgress.stop();
       alert("บันทึกไม่สำเร็จ: " + err.message);
       btnSubmit.disabled = false;
       btnSubmit.innerText = "บันทึกยอด";
