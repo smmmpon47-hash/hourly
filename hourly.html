@@ -2047,6 +2047,15 @@
     return workingSlots;
   }
 
+  const NO_LOAD_IN_LINES = ['E', 'F'];
+
+  function isNoLoadInLine_() {
+    const lineEl = document.getElementById('line');
+    const code = String(lineEl ? lineEl.value : '')
+      .toUpperCase().replace('LINE', '').replace(/\s+/g, '');
+    return NO_LOAD_IN_LINES.includes(code);
+  }
+
   function updateLoadInFinalField_(visibleSlots) {
     const wrap = document.getElementById('loadInFinalWrap');
     const input = document.getElementById('loadInToday');
@@ -2055,6 +2064,9 @@
 
     wrap.style.display = 'none';
     currentFinalWorkingSlot = '';
+
+    // LINE E / F ไม่มีงานเข้าโหลด → ไม่แสดงช่องกรอก และไม่บังคับกรอกตอนบันทึกรอบสุดท้าย
+    if (isNoLoadInLine_()) return;
 
     const workingSlots = getWorkingSlotsForCurrentLine_();
     const finalSlot = workingSlots.length ? workingSlots[workingSlots.length - 1] : null;
