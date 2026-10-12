@@ -160,6 +160,30 @@
       min-width: 0;
       margin-top: -2px;
     }
+    /* ออเดอร์คงเหลือของ LOT (Qty ใน Master_LOT) — อยู่ใต้คอลัมน์ LOT แนวเดียวกับหมายเหตุ */
+    .slot-order-text{
+      grid-column: 2 / 4;
+      min-width: 0;
+      margin-top: -4px;
+      font-size: .72rem;
+      font-weight: 700;
+      color: #64748b;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
+    .slot-order-text:empty{ display:none; }
+    .slot-order-text.warn{ color:#b45309; }
+    .slot-order-text.error{ color:#dc2626; }
+    .slot-input.order-over{
+      border-color:#dc2626 !important;
+      background:#fef2f2 !important;
+      color:#b91c1c !important;
+    }
+    .slot-input.order-full{
+      background:#f1f5f9 !important;
+      color:#94a3b8 !important;
+      cursor:not-allowed;
+    }
     .slot-remark-label{
       display:block;
       margin:0 0 5px 2px;
@@ -1017,6 +1041,8 @@
   let currentHours1 = 0;
   let userDisplayName = "Unknown";
   let currentExistingHourly = {};
+  let lotOrderInfo = {};          // ออเดอร์ตาม Master_LOT: { LOT: { qty, produced } }
+  let lotOrderFetchSeq = 0;
   let currentEditPlanState = null;
   let currentActiveLot = '';
   let currentLotPlan = []; // [{ lot, hours }] รวมชั่วโมงต่อ LOT จาก Summary
@@ -1878,6 +1904,8 @@
                oninput="calculateTotal()"
                ${isBreakTime ? 'readonly style="background-color:#f1f5f9;color:#94a3b8;cursor:not-allowed;"' : ''}>
 
+        ${!isBreakTime ? `<div class="slot-order-text"></div>` : ''}
+
         ${!isBreakTime ? `
           <div class="slot-remark-wrap">
             <label class="slot-remark-label">หมายเหตุ (สำหรับช่วง ${slot.label})</label>
@@ -1895,6 +1923,7 @@
 
     updateLoadInFinalField_(targetSlots);
     calculateTotal();
+    refreshLotOrderInfo_();
   }
 
   function getModelTextForLot_(lot) {
@@ -2483,6 +2512,8 @@
       }
       if (modelSubtext) modelSubtext.innerText = getModelTextForLot_(newLot);
     });
+
+    refreshLotOrderInfo_();
   }
 
 
@@ -2881,6 +2912,133 @@
       total += (Number(input.value) || 0);
     });
     document.getElementById('totalSum').value = total.toLocaleString();
+    updateOrderLimits_();
+  }
+
+  /* ================= ออเดอร์คงเหลือ / ล็อกยอดตาม Qty (Master_LOT) =================
+     - Qty = Master_LOT คอลัมน์ C, ยอดสะสม = Hourly_Log ของ LOT นั้น ทุกไลน์ ทุกวัน
+     - ดึงจาก ?searchLot= ที่มีอยู่แล้วใน Apps Script (อ่านอย่างเดียว ไม่แก้ Backend)
+     - รอบที่บันทึกแล้วและแสดงอยู่ในฟอร์ม หักยอดเดิมออกก่อน (แก้ลงได้เสมอ ไม่นับซ้ำ)
+     - หลายรอบ LOT เดียวกัน ไล่ตามเวลา รอบที่มาก่อนได้ยอดก่อน • ล็อกตรงเป๊ะ ไม่มีเผื่อ
+     - Qty ว่าง/0 หรือดึงข้อมูลไม่ได้ → ไม่ล็อก ไม่แสดงบรรทัดคงเหลือ */
+  async function fetchLotOrder_(lot) {
+    const res = await fetch(
+      `${SCRIPT_URL}?searchLot=${encodeURIComponent(lot)}&_=${Date.now()}`,
+      { cache: 'no-store' }
+    );
+    const data = await res.json();
+    if (!data || data.error) return null;
+    return {
+      qty: Number(data.po_target) || 0,
+      produced: Number(data.cumulative_actual) || 0
+    };
+  }
+
+  async function refreshLotOrderInfo_() {
+    const seq = ++lotOrderFetchSeq;
+    const lots = Array.from(new Set(
+      Array.from(document.querySelectorAll('.slot-row'))
+        .filter(row => row.dataset.breakTime !== 'true')
+        .map(row => normalizeLot_(row.querySelector('.input-lot-val')?.value))
+        .filter(Boolean)
+    ));
+
+    updateOrderLimits_();
+    if (!lots.length) return;
+
+    // ดึงใหม่ทุกครั้งที่สร้างแถว เพื่อให้ยอดสะสมล่าสุดจากทุกไลน์
+    const results = await Promise.all(lots.map(lot =>
+      fetchLotOrder_(lot).then(info => [lot, info]).catch(() => [lot, null])
+    ));
+    if (seq !== lotOrderFetchSeq) return; // มีการโหลดใหม่ระหว่างรอ
+
+    const next = {};
+    results.forEach(([lot, info]) => { if (info) next[lot] = info; });
+    lotOrderInfo = next;
+    updateOrderLimits_();
+  }
+
+  function unlockOrderInput_(input) {
+    if (input.dataset.orderLocked === '1') {
+      input.disabled = false;
+      input.placeholder = '0';
+      delete input.dataset.orderLocked;
+    }
+  }
+
+  // คืนค่า error แรก (ถ้ามี) ไว้ใช้ตอนกดบันทึก
+  function updateOrderLimits_() {
+    const rows = Array.from(document.querySelectorAll('.slot-row'))
+      .filter(row => row.dataset.breakTime !== 'true');
+
+    // ยอดของรอบที่บันทึกแล้วและแสดงอยู่ ถูกนับในยอดสะสมแล้ว → หักออกก่อน
+    const savedVisibleByLot = {};
+    const items = rows.map(row => {
+      const label = String(row.dataset.slotLabel || '').trim();
+      const lot = normalizeLot_(row.querySelector('.input-lot-val')?.value);
+      const input = row.querySelector('.input-val');
+      const saved = currentExistingHourly && currentExistingHourly[label];
+      if (saved && saved.output !== undefined && saved.output !== '') {
+        const savedLot = normalizeLot_(saved.lot);
+        if (savedLot) savedVisibleByLot[savedLot] = (savedVisibleByLot[savedLot] || 0) + (Number(saved.output) || 0);
+      }
+      const hasValue = !!(input && String(input.value).trim() !== '');
+      return { row, label, lot, input, hasValue, value: hasValue ? (Number(input.value) || 0) : 0 };
+    });
+
+    let firstError = '';
+    const usedBeforeByLot = {};
+
+    items.forEach(item => {
+      const textEl = item.row.querySelector('.slot-order-text');
+      if (!item.input || !textEl) return;
+
+      const usedBefore = usedBeforeByLot[item.lot] || 0;
+      usedBeforeByLot[item.lot] = usedBefore + item.value;
+
+      item.input.classList.remove('order-over', 'order-full');
+      const order = item.lot ? lotOrderInfo[item.lot] : null;
+
+      if (!order || !(order.qty > 0)) {
+        unlockOrderInput_(item.input);
+        textEl.textContent = '';
+        textEl.className = 'slot-order-text';
+        return;
+      }
+
+      const qty = order.qty;
+      const base = Math.max(0, order.produced - (savedVisibleByLot[item.lot] || 0));
+      const rowMax = Math.max(0, qty - base - usedBefore);
+
+      if (rowMax <= 0 && !item.hasValue) {
+        item.input.disabled = true;
+        item.input.dataset.orderLocked = '1';
+        item.input.placeholder = '-';
+        item.input.classList.add('order-full');
+        textEl.textContent = `🔒 ไม่สามารถกรอกได้ เนื่องจาก LOT ${item.lot} ครบออเดอร์แล้ว (${qty.toLocaleString()} ตัว) • กด "เปลี่ยนรุ่น" เพื่อขึ้น LOT ใหม่`;
+        textEl.className = 'slot-order-text error';
+        return;
+      }
+
+      unlockOrderInput_(item.input);
+
+      if (item.value > rowMax) {
+        item.input.classList.add('order-over');
+        const msg = rowMax > 0
+          ? `LOT ${item.lot} เหลืออีก ${rowMax.toLocaleString()} ตัว กรอกได้ไม่เกิน ${rowMax.toLocaleString()} ตัว`
+          : `LOT ${item.lot} ครบออเดอร์แล้ว (${qty.toLocaleString()} ตัว) กรอกได้ไม่เกิน 0 ตัว`;
+        textEl.textContent = '⛔ ' + msg;
+        textEl.className = 'slot-order-text error';
+        if (!firstError) firstError = `รอบ ${item.label}: ${msg}`;
+        return;
+      }
+
+      const left = rowMax - item.value;
+      textEl.textContent = `📦 ออเดอร์คงเหลือ ${left.toLocaleString()} / ${qty.toLocaleString()} ตัว`;
+      textEl.className = 'slot-order-text' + (left <= 0 ? ' warn' : '');
+    });
+
+    return firstError;
   }
 
   // ปรับปรุงฟังก์ชันบันทึกยอดให้ยิงแบบ no-cors การันตีผ่าน 100% บนมือถือ
@@ -2892,6 +3050,13 @@
 
     if (!lineVal) {
       alert("กรุณาเลือก LINE การผลิต");
+      return;
+    }
+
+    // ห้ามบันทึกเกินยอดออเดอร์ (Qty ใน Master_LOT)
+    const orderError = updateOrderLimits_();
+    if (orderError) {
+      alert("⛔ กรอกยอดเกินออเดอร์\n" + orderError);
       return;
     }
 
