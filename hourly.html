@@ -469,7 +469,7 @@
     /* ===== Production two-tab UI ===== */
     .prod-tabs{
       display:grid;
-      grid-template-columns:1fr 1fr;
+      grid-template-columns:1fr 1fr 1fr;
       gap:6px;
       background:#eef2f7;
       border-radius:14px;
@@ -494,6 +494,26 @@
     }
     .prod-page{display:none;}
     .prod-page.active{display:block;}
+
+    /* ===== แท็บ "ทั้งวัน": ดู/แก้ยอดทุกช่วงเวลา ===== */
+    .day-edit-note{ background:#eff6ff !important; border-color:#bfdbfe !important; }
+    .day-date-chips{ display:flex; gap:8px; margin:0 0 14px; flex-wrap:wrap; }
+    .day-date-chip{
+      flex:1 1 0; min-width:0; border:1.5px solid #cbd5e1; background:#fff; color:#475569;
+      font-family:'Sarabun',sans-serif; font-weight:700; font-size:.86rem;
+      padding:9px 8px; border-radius:11px; cursor:pointer;
+    }
+    .day-date-chip.active{ border-color:#0f766e; background:#f0fdfa; color:#0f766e; }
+    .day-row{
+      display:grid;
+      grid-template-columns: minmax(96px, 1fr) minmax(0, 1.08fr) 68px;
+      gap:6px; width:100%; align-items:start; margin-bottom:12px;
+    }
+    .day-row .slot-input:disabled{ background:#f1f5f9; color:#94a3b8; cursor:not-allowed; }
+    .day-row-note{ grid-column: 2 / 4; min-width:0; margin-top:-4px; font-size:.72rem; font-weight:700; color:#64748b; line-height:1.3; }
+    .day-row-note.warn{ color:#b45309; }
+    .day-row-note.lock{ color:#94a3b8; }
+    .day-row.is-changed .slot-input{ border-color:#0f766e !important; background:#f0fdfa; }
 
     .edit-plan-note{
       background:#fff7ed;
@@ -890,6 +910,7 @@
 
   <div class="prod-tabs">
     <button type="button" id="recordTabBtn" class="prod-tab-btn active" onclick="switchProductionTab('record')">📈 บันทึกยอด</button>
+    <button type="button" id="dayEditTabBtn" class="prod-tab-btn" onclick="switchProductionTab('day')">🗓️ ทั้งวัน</button>
     <button type="button" id="editPlanTabBtn" class="prod-tab-btn" onclick="switchProductionTab('edit')">⚙️ แก้ไขเป้า / ชั่วโมง</button>
   </div>
 
@@ -950,6 +971,41 @@
 
     <button type="submit" class="btn-submit" id="btnSubmit">บันทึกยอด</button>
   </form>
+  </div>
+
+  <div id="dayEditPage" class="prod-page">
+    <div class="edit-plan-note day-edit-note">
+      🗓️ <b>ดู / แก้ยอดทั้งวัน</b><br>
+      แก้ยอดที่พิมพ์ผิด หรือกรอกรอบที่ลืม ได้ทุกช่วงที่จบเวลาแล้ว • ย้อนได้ถึงวันทำงานก่อนหน้า 1 วัน • ช่วงพักล็อกเป็น 0
+    </div>
+
+    <div class="form-group">
+      <label for="dayEditLine">LINE การผลิต</label>
+      <select id="dayEditLine" onchange="loadDayEdit()">
+        <option value="">-- เลือก LINE --</option>
+        <option value="Line B">Line B</option>
+        <option value="Line C">Line C</option>
+        <option value="Line D">Line D</option>
+        <option value="Line E">Line E</option>
+        <option value="Line F">Line F</option>
+        <option value="Line G">Line G ทดสอบ</option>
+      </select>
+    </div>
+
+    <div id="dayEditDates" class="day-date-chips"></div>
+    <div id="dayEditStatus" class="edit-status"></div>
+    <div id="dayEditRows">
+      <p style="color:#94a3b8;font-size:.9rem;text-align:center;padding:15px 0;">โปรดเลือก LINE การผลิต</p>
+    </div>
+
+    <div id="dayEditFooter" style="display:none;">
+      <div class="sum-box">
+        <span>ยอดรวมทั้งวัน</span>
+        <input type="text" id="dayEditTotal" class="sum-input" value="0" readonly>
+        <span>ชิ้น</span>
+      </div>
+      <button type="button" class="btn-submit" id="dayEditSaveBtn" onclick="saveDayEdit()">บันทึกการแก้ไข</button>
+    </div>
   </div>
 
   <div id="editPlanPage" class="prod-page">
@@ -1042,6 +1098,12 @@
   let userDisplayName = "Unknown";
   let currentExistingHourly = {};
   let lotOrderInfo = {};          // ออเดอร์ตาม Master_LOT: { LOT: { qty, produced } }
+  let dayEditData = null;         // แท็บทั้งวัน: ข้อมูลจาก getHourlyEditDay
+  let dayEditDate = '';
+  let dayEditExisting = {};       // { slot: { output, lot, remark, ... } } ของวันที่เลือก
+  let dayLotOrderInfo = {};
+  let dayEditLoadSeq = 0;
+  let dayEditTouchedToday = false;
   let lotOrderFetchSeq = 0;
   let currentEditPlanState = null;
   let currentActiveLot = '';
@@ -1128,13 +1190,30 @@
   function switchProductionTab(tab) {
     const recordPage = document.getElementById('recordPage');
     const editPage = document.getElementById('editPlanPage');
+    const dayPage = document.getElementById('dayEditPage');
     const recordBtn = document.getElementById('recordTabBtn');
     const editBtn = document.getElementById('editPlanTabBtn');
+    const dayBtn = document.getElementById('dayEditTabBtn');
 
     recordPage.classList.toggle('active', tab === 'record');
     editPage.classList.toggle('active', tab === 'edit');
+    dayPage.classList.toggle('active', tab === 'day');
     recordBtn.classList.toggle('active', tab === 'record');
     editBtn.classList.toggle('active', tab === 'edit');
+    dayBtn.classList.toggle('active', tab === 'day');
+
+    if (tab === 'day') {
+      const currentLine = document.getElementById('line').value || localStorage.getItem('selectedLine') || '';
+      const dayLine = document.getElementById('dayEditLine');
+      if (currentLine && dayLine.value !== currentLine) dayLine.value = currentLine;
+      if (dayLine.value) loadDayEdit(dayEditDate || '');
+    }
+
+    // แก้ยอดวันนี้จากแท็บทั้งวันแล้ว → กลับมาหน้าบันทึกยอด ให้โหลดยอดล่าสุด
+    if (tab === 'record' && dayEditTouchedToday) {
+      dayEditTouchedToday = false;
+      if (document.getElementById('line').value) loadLineDetails();
+    }
 
     if (tab === 'edit') {
       const currentLine = document.getElementById('line').value || localStorage.getItem('selectedLine') || '';
@@ -3030,8 +3109,14 @@
   }
 
   // คืนค่า error แรก (ถ้ามี) ไว้ใช้ตอนกดบันทึก
-  function updateOrderLimits_() {
-    const rows = Array.from(document.querySelectorAll('.slot-row'))
+  function updateOrderLimits_(opts) {
+    const o = opts || {};
+    const rowSelector = o.rowSelector || '#slotsContainer .slot-row';
+    const inputSelector = o.inputSelector || '.input-val';
+    const existingMap = o.existing || currentExistingHourly;
+    const orderInfoMap = o.orderInfo || lotOrderInfo;
+    const fullHint = o.fullHint || 'กด "เปลี่ยนรุ่น" เพื่อขึ้น LOT ใหม่';
+    const rows = Array.from(document.querySelectorAll(rowSelector))
       .filter(row => row.dataset.breakTime !== 'true');
 
     // ยอดของรอบที่บันทึกแล้วและแสดงอยู่ ถูกนับในยอดสะสมแล้ว → หักออกก่อน
@@ -3039,8 +3124,8 @@
     const items = rows.map(row => {
       const label = String(row.dataset.slotLabel || '').trim();
       const lot = normalizeLot_(row.querySelector('.input-lot-val')?.value);
-      const input = row.querySelector('.input-val');
-      const saved = currentExistingHourly && currentExistingHourly[label];
+      const input = row.querySelector(inputSelector);
+      const saved = existingMap && existingMap[label];
       if (saved && saved.output !== undefined && saved.output !== '') {
         const savedLot = normalizeLot_(saved.lot);
         if (savedLot) savedVisibleByLot[savedLot] = (savedVisibleByLot[savedLot] || 0) + (Number(saved.output) || 0);
@@ -3056,11 +3141,18 @@
       const textEl = item.row.querySelector('.slot-order-text');
       if (!item.input || !textEl) return;
 
+      // แท็บทั้งวัน: รอบที่ยังไม่ถึงเวลา ล็อกด้วยเวลาอยู่แล้ว ไม่ต้องคิดออเดอร์
+      if (item.row.dataset.timeLocked === '1') {
+        textEl.textContent = '';
+        textEl.className = 'slot-order-text';
+        return;
+      }
+
       const usedBefore = usedBeforeByLot[item.lot] || 0;
       usedBeforeByLot[item.lot] = usedBefore + item.value;
 
       item.input.classList.remove('order-over', 'order-full');
-      const order = item.lot ? lotOrderInfo[item.lot] : null;
+      const order = item.lot ? orderInfoMap[item.lot] : null;
 
       if (!order || !(order.qty > 0)) {
         unlockOrderInput_(item.input);
@@ -3078,7 +3170,7 @@
         item.input.dataset.orderLocked = '1';
         item.input.placeholder = '-';
         item.input.classList.add('order-full');
-        textEl.textContent = `🔒 ไม่สามารถกรอกได้ เนื่องจาก LOT ${item.lot} ครบออเดอร์แล้ว (${qty.toLocaleString()} ตัว) • กด "เปลี่ยนรุ่น" เพื่อขึ้น LOT ใหม่`;
+        textEl.textContent = `🔒 ไม่สามารถกรอกได้ เนื่องจาก LOT ${item.lot} ครบออเดอร์แล้ว (${qty.toLocaleString()} ตัว) • ${fullHint}`;
         textEl.className = 'slot-order-text error';
         return;
       }
@@ -3102,6 +3194,307 @@
     });
 
     return firstError;
+  }
+
+  /* ================= แท็บ "ทั้งวัน" =================
+     - แสดงทุกช่วงเวลาของวันตาม AA (+ ช่วงพัก ล็อกเป็น 0)
+     - รอบที่จบแล้ว: แก้ยอดที่เคยกรอก หรือกรอกรอบที่ลืมได้
+     - รอบที่ยังไม่ถึงเวลา: แสดงแต่ล็อกไว้
+     - เลือกได้ "วันนี้" และ "วันทำงานก่อนหน้า 1 วัน" (Backend ตรวจซ้ำ)
+     - บันทึกผ่าน HOURLY_OUTPUT เดิม + workDate, แล้วโหลดกลับมาตรวจว่าเข้าจริง */
+  function escDay_(v) {
+    return String(v === undefined || v === null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function dayLabel_(dateStr) {
+    const p = String(dateStr || '').split('-');
+    return p.length === 3 ? `${p[2]}/${p[1]}` : dateStr;
+  }
+
+  function setDayEditStatus_(text, kind) {
+    const el = document.getElementById('dayEditStatus');
+    if (!el) return;
+    el.textContent = text || '';
+    el.style.color = kind === 'error' ? '#dc2626' : (kind === 'ok' ? '#0f766e' : '#64748b');
+  }
+
+  async function fetchDayEdit_(line, date) {
+    const url = `${SCRIPT_URL}?action=getHourlyEditDay&line=${encodeURIComponent(line)}` +
+      (date ? `&date=${encodeURIComponent(date)}` : '') + `&_=${Date.now()}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    return res.json();
+  }
+
+  async function loadDayEdit(date) {
+    const line = document.getElementById('dayEditLine').value;
+    const rowsEl = document.getElementById('dayEditRows');
+    const footer = document.getElementById('dayEditFooter');
+
+    if (!line) {
+      rowsEl.innerHTML = '<p style="color:#94a3b8;font-size:.9rem;text-align:center;padding:15px 0;">โปรดเลือก LINE การผลิต</p>';
+      footer.style.display = 'none';
+      document.getElementById('dayEditDates').innerHTML = '';
+      setDayEditStatus_('');
+      return;
+    }
+
+    const seq = ++dayEditLoadSeq;
+    setDayEditStatus_('กำลังโหลดข้อมูลทั้งวัน...');
+    footer.style.display = 'none';
+
+    try {
+      let data = await fetchDayEdit_(line, typeof date === 'string' ? date : '');
+      if (seq !== dayEditLoadSeq) return;
+
+      if (!data || !data.version) {
+        rowsEl.innerHTML = '';
+        setDayEditStatus_('⚠️ Apps Script ยังไม่ได้อัปเดตให้รองรับแท็บทั้งวัน', 'error');
+        return;
+      }
+
+      // วันที่ที่เลือกไว้ใช้ไม่ได้แล้ว (เช่น ข้ามวัน) → กลับไปวันนี้
+      if (data.error && Array.isArray(data.editableDates) && data.editableDates.length) {
+        data = await fetchDayEdit_(line, data.editableDates[0]);
+        if (seq !== dayEditLoadSeq) return;
+      }
+      if (data.error) {
+        rowsEl.innerHTML = '';
+        setDayEditStatus_('⚠️ ' + data.error, 'error');
+        return;
+      }
+
+      dayEditData = data;
+      dayEditDate = data.date;
+      dayEditExisting = {};
+      (data.slots || []).forEach(s => { if (s.saved) dayEditExisting[s.slot] = s.saved; });
+
+      renderDayEditDates_(data.editableDates || [data.date], data.date);
+      renderDayEditRows_(data);
+      setDayEditStatus_('');
+      refreshDayLotOrder_();
+    } catch (err) {
+      if (seq !== dayEditLoadSeq) return;
+      console.error('Day edit load error:', err);
+      setDayEditStatus_('⚠️ โหลดข้อมูลไม่สำเร็จ ลองเลือก LINE ใหม่อีกครั้ง', 'error');
+    }
+  }
+
+  function renderDayEditDates_(dates, active) {
+    const wrap = document.getElementById('dayEditDates');
+    wrap.innerHTML = dates.map((d, i) => `
+      <button type="button" class="day-date-chip ${d === active ? 'active' : ''}"
+              onclick="loadDayEdit('${escDay_(d)}')">
+        ${i === 0 ? 'วันนี้' : 'วันทำงานก่อนหน้า'} (${dayLabel_(d)})
+      </button>`).join('');
+  }
+
+  function renderDayEditRows_(data) {
+    const rowsEl = document.getElementById('dayEditRows');
+    const footer = document.getElementById('dayEditFooter');
+    const map = data.masterMap || {};
+
+    if (!data.hasPlan || !(data.slots || []).length) {
+      rowsEl.innerHTML = `<p style="color:#94a3b8;font-size:.9rem;text-align:center;padding:15px 0;">ยังไม่มีแผนการผลิต (ฟอร์ม TG) ของ LINE นี้ในวันที่ ${dayLabel_(data.date)}</p>`;
+      footer.style.display = 'none';
+      return;
+    }
+
+    rowsEl.innerHTML = data.slots.map(s => {
+      const lot = normalizeLot_(s.lot);
+      const model = lot && map[lot] ? `(รุ่น: ${escDay_(map[lot])})` : '';
+      const saved = s.saved;
+      const locked = s.isBreak || !s.ended;
+      const value = s.isBreak ? 0 : (saved ? saved.output : '');
+
+      let note = '', noteCls = 'day-row-note';
+      if (s.isBreak) { note = '☕ ช่วงพัก ล็อกเป็น 0'; noteCls += ' lock'; }
+      else if (!s.ended) { note = '🔒 ยังไม่ถึงเวลา กรอกได้เมื่อจบรอบ'; noteCls += ' lock'; }
+      else if (saved) { note = `✓ บันทึกแล้ว${saved.reportedBy ? ' โดย ' + escDay_(saved.reportedBy) : ''}${saved.time ? ' • ' + escDay_(saved.time) : ''}`; }
+      else { note = '⚠️ ยังไม่ได้กรอก'; noteCls += ' warn'; }
+
+      return `
+        <div class="day-row" data-slot-label="${escDay_(s.slot)}"
+             data-break-time="${s.isBreak ? 'true' : 'false'}"
+             data-time-locked="${locked ? '1' : '0'}">
+          <div class="slot-time">${escDay_(s.slot)}${s.isBreak ? '<br><span style="color:#ef4444;font-size:.75rem;">(พัก)</span>' : ''}</div>
+          <div class="slot-lot-container">
+            <div class="slot-lot-display">${escDay_(lot || '--')}</div>
+            <input type="hidden" class="input-lot-val" value="${escDay_(lot)}">
+            <div class="model-subtext">${model}</div>
+          </div>
+          <input type="number" class="slot-input day-input" min="0" step="1" inputmode="numeric"
+                 placeholder="${locked ? '-' : '0'}" value="${value}"
+                 oninput="onDayEditInput_()" ${locked ? 'disabled' : ''}>
+          ${s.isBreak ? '' : '<div class="slot-order-text"></div>'}
+          <div class="${noteCls}">${note}</div>
+        </div>`;
+    }).join('');
+
+    footer.style.display = 'block';
+    onDayEditInput_();
+  }
+
+  async function refreshDayLotOrder_() {
+    const lots = Array.from(new Set(
+      Array.from(document.querySelectorAll('#dayEditRows .day-row'))
+        .filter(r => r.dataset.breakTime !== 'true')
+        .map(r => normalizeLot_(r.querySelector('.input-lot-val')?.value))
+        .filter(Boolean)
+    ));
+    const forDate = dayEditDate;
+    const results = await Promise.all(lots.map(lot =>
+      fetchLotOrder_(lot).then(info => [lot, info]).catch(() => [lot, null])
+    ));
+    if (forDate !== dayEditDate) return;
+    const next = {};
+    results.forEach(([lot, info]) => { if (info) next[lot] = info; });
+    dayLotOrderInfo = next;
+    onDayEditInput_();
+  }
+
+  function updateDayOrderLimits_() {
+    return updateOrderLimits_({
+      rowSelector: '#dayEditRows .day-row',
+      inputSelector: '.day-input',
+      existing: dayEditExisting,
+      orderInfo: dayLotOrderInfo,
+      fullHint: 'ยอดรวมทั้งวันของ LOT นี้เต็มออเดอร์แล้ว'
+    });
+  }
+
+  function onDayEditInput_() {
+    let total = 0;
+    document.querySelectorAll('#dayEditRows .day-row').forEach(row => {
+      const input = row.querySelector('.day-input');
+      const label = row.dataset.slotLabel;
+      const saved = dayEditExisting[label];
+      const raw = String(input.value || '').trim();
+      total += Number(raw) || 0;
+      const changed = row.dataset.timeLocked !== '1' &&
+        raw !== '' && (!saved || Number(saved.output) !== Number(raw));
+      row.classList.toggle('is-changed', changed);
+    });
+    document.getElementById('dayEditTotal').value = total.toLocaleString();
+    updateDayOrderLimits_();
+  }
+
+  function collectDayEditChanges_() {
+    const changes = [];
+    let breakRows = [];
+    const rows = Array.from(document.querySelectorAll('#dayEditRows .day-row'));
+
+    for (const row of rows) {
+      const label = row.dataset.slotLabel;
+      const lot = normalizeLot_(row.querySelector('.input-lot-val')?.value);
+      const saved = dayEditExisting[label];
+      const slotInfo = (dayEditData.slots || []).find(s => s.slot === label) || {};
+
+      if (row.dataset.breakTime === 'true') {
+        if (slotInfo.ended && !saved) breakRows.push({ timeSlot: label, lot: lot, qty: 0, remark: '' });
+        continue;
+      }
+      if (row.dataset.timeLocked === '1') continue;
+
+      const input = row.querySelector('.day-input');
+      const raw = String(input.value || '').trim();
+      if (raw === '') {
+        if (saved) return { error: `ช่วง ${label} เคยบันทึกไว้ ${saved.output} ตัว ถ้าต้องการแก้เป็น 0 ให้ใส่เลข 0` };
+        continue;
+      }
+      const qty = Number(raw);
+      if (!Number.isFinite(qty) || qty < 0 || Math.floor(qty) !== qty) {
+        return { error: `ยอดช่วง ${label} ต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป` };
+      }
+      if (saved && Number(saved.output) === qty) continue;
+
+      changes.push({
+        timeSlot: label,
+        lot: saved && saved.lot ? normalizeLot_(saved.lot) : lot,
+        qty: qty,
+        remark: saved ? String(saved.remark || '') : ''
+      });
+    }
+
+    // ช่วงพักที่ยังไม่มีแถว: ส่ง 0 ไปพร้อมกัน (เหมือนหน้าบันทึกยอด)
+    if (changes.length) changes.push(...breakRows);
+    return { changes: changes };
+  }
+
+  async function saveDayEdit() {
+    if (!dayEditData || !dayEditDate) return;
+    const line = document.getElementById('dayEditLine').value;
+    const btn = document.getElementById('dayEditSaveBtn');
+
+    const orderError = updateDayOrderLimits_();
+    if (orderError) {
+      alert("⛔ กรอกยอดเกินออเดอร์\n" + orderError);
+      return;
+    }
+
+    const result = collectDayEditChanges_();
+    if (result.error) { alert('⚠️ ' + result.error); return; }
+    const changes = result.changes;
+    if (!changes.length) { alert('ยังไม่มีช่องที่เปลี่ยนแปลง'); return; }
+
+    const workSlots = changes.filter(c => !(dayEditData.slots || []).find(s => s.slot === c.timeSlot && s.isBreak));
+    const summary = workSlots.map(c => `${c.timeSlot}: ${c.qty}`).join('\n');
+    if (!confirm(`บันทึก ${workSlots.length} ช่วง ของวันที่ ${dayLabel_(dayEditDate)} (${line})\n\n${summary}`)) return;
+
+    btn.disabled = true;
+    const progress = startSaveProgress_(btn, "กำลังบันทึก");
+    const savedDate = dayEditDate;
+
+    try {
+      if ((userDisplayName === "Unknown" || !userDisplayName) && typeof liff !== "undefined" && liff.isLoggedIn && liff.isLoggedIn()) {
+        try { const profile = await liff.getProfile(); userDisplayName = profile.displayName || "Unknown"; } catch (e) {}
+      }
+
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "HOURLY_OUTPUT",
+          line: line,
+          workDate: savedDate,
+          updatedBy: userDisplayName,
+          hourlyData: changes
+        })
+      });
+
+      // no-cors อ่านผลไม่ได้ → โหลดกลับมาตรวจว่ายอดเข้า Hourly_Log จริง
+      let verified = false;
+      for (let attempt = 0; attempt < 3 && !verified; attempt++) {
+        await new Promise(r => setTimeout(r, 900 + attempt * 900));
+        const check = await fetchDayEdit_(line, savedDate);
+        const map = {};
+        ((check && check.slots) || []).forEach(s => { if (s.saved) map[s.slot] = s.saved; });
+        verified = workSlots.every(c => map[c.timeSlot] && Number(map[c.timeSlot].output) === c.qty);
+      }
+
+      progress.finish();
+      if (savedDate === getTodayStrForDayEdit_()) dayEditTouchedToday = true;
+
+      if (verified) {
+        alert(`✅ บันทึกการแก้ไขเรียบร้อย (${workSlots.length} ช่วง)`);
+      } else {
+        alert('⚠️ ส่งข้อมูลแล้ว แต่ยังตรวจไม่พบยอดใหม่ในระบบ\nกรุณาตรวจอีกครั้ง หรือกดบันทึกซ้ำ');
+      }
+      await loadDayEdit(savedDate);
+    } catch (err) {
+      if (progress && progress.stop) progress.stop();
+      console.error('Day edit save error:', err);
+      alert('❌ บันทึกไม่สำเร็จ กรุณาลองใหม่');
+    } finally {
+      btn.disabled = false;
+      btn.innerText = "บันทึกการแก้ไข";
+    }
+  }
+
+  function getTodayStrForDayEdit_() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
   // ปรับปรุงฟังก์ชันบันทึกยอดให้ยิงแบบ no-cors การันตีผ่าน 100% บนมือถือ
