@@ -495,6 +495,14 @@
     .prod-page{display:none;}
     .prod-page.active{display:block;}
 
+    /* ===== Loading % ระหว่างรอ Apps Script ===== */
+    .load-progress{ padding:18px 6px; text-align:center; }
+    .load-progress-text{ color:#64748b; font-size:.9rem; font-weight:700; margin-bottom:9px; }
+    .load-progress-text b{ color:#0f766e; font-size:1.05rem; }
+    .load-progress-bar{ height:8px; background:#e2e8f0; border-radius:99px; overflow:hidden; }
+    .load-progress-bar > div{ height:100%; background:linear-gradient(90deg,#14b8a6,#0f766e); border-radius:99px; transition:width .25s ease; }
+    .load-progress-sub{ color:#94a3b8; font-size:.72rem; margin-top:7px; }
+
     /* ===== แท็บ "ทั้งวัน": ดู/แก้ยอดทุกช่วงเวลา ===== */
     .day-edit-note{ background:#eff6ff !important; border-color:#bfdbfe !important; }
     .day-date-chips{ display:flex; gap:8px; margin:0 0 14px; flex-wrap:wrap; }
@@ -1657,6 +1665,32 @@
   }
 
 
+  // แถบ % ระหว่างรอ (ขยับเร็วช่วงแรก แล้วค่อยช้าลง รอที่ 92% จนข้อมูลมาจริง)
+  function startLoadProgress_(container, label) {
+    let pct = 3, sub = '', stopped = false;
+    const render = () => {
+      if (stopped || !container) return;
+      container.innerHTML =
+        `<div class="load-progress">` +
+          `<div class="load-progress-text">${label} <b>${pct}%</b></div>` +
+          `<div class="load-progress-bar"><div style="width:${pct}%"></div></div>` +
+          (sub ? `<div class="load-progress-sub">${sub}</div>` : '') +
+        `</div>`;
+    };
+    render();
+    const timer = setInterval(() => {
+      if (stopped || pct >= 92) return;
+      pct = Math.min(92, pct + (pct < 40 ? 4 : (pct < 75 ? 2 : 1)));
+      render();
+    }, 200);
+    return {
+      setSub(text) { sub = text || ''; render(); },
+      stop() { stopped = true; clearInterval(timer); }
+    };
+  }
+
+  let __lineLoadProgress = null;
+
   // เรียก getTodayLine พร้อมลองใหม่ + หมดเวลา 20 วิ ต่อครั้ง
   // เปลี่ยน LINE ระหว่างรอ = ยกเลิกทันที (AbortError ส่งต่อให้ผู้เรียกเหมือนเดิม)
   async function fetchTodayLineWithRetry_(line, outerSignal, onRetry) {
@@ -1724,7 +1758,9 @@
     const editLine = document.getElementById('editLine');
     if (editLine && editLine.value !== line) editLine.value = line;
 
-    slotsContainer.innerHTML = '<p style="color: #64748b; font-size: 0.95rem; text-align: center; padding: 15px 0;">กำลังโหลดข้อมูล...</p>';
+    if (__lineLoadProgress) __lineLoadProgress.stop();
+    const loadProgress = startLoadProgress_(slotsContainer, 'กำลังโหลดข้อมูล');
+    __lineLoadProgress = loadProgress;
 
     try {
       // เปลี่ยน LINE แล้วไม่ต้องรอ request เก่าจบ
@@ -1733,9 +1769,9 @@
 
       // ลองใหม่อัตโนมัติสูงสุด 3 ครั้ง (Google ตอบช้า/ตอบ error ชั่วคราว/เน็ตสะดุด)
       const data = await fetchTodayLineWithRetry_(line, __lineLoadController.signal, (attempt) => {
-        slotsContainer.innerHTML =
-          `<p style="color: #64748b; font-size: 0.95rem; text-align: center; padding: 15px 0;">กำลังโหลดข้อมูล... (ลองใหม่ครั้งที่ ${attempt})</p>`;
+        loadProgress.setSub(`ระบบตอบช้า กำลังลองใหม่ครั้งที่ ${attempt}`);
       });
+      loadProgress.stop();
 
       activeLots = Array.isArray(data.lots) ? [...data.lots] : [];
 
@@ -1824,6 +1860,7 @@
       updateHourlyAverage();
 
     } catch (err) {
+      loadProgress.stop();
       if (err && err.name === "AbortError") return;
       console.error("Error loading line details:", err);
       currentExistingHourly = {};
@@ -3252,9 +3289,14 @@
       : 'กำลังโหลดข้อมูลทั้งวัน...');
     footer.style.display = 'none';
     document.querySelectorAll('#dayEditDates .day-date-chip').forEach(btn => { btn.disabled = true; });
+    if (window.__dayLoadProgress) window.__dayLoadProgress.stop();
+    const dayProgress = startLoadProgress_(rowsEl, requestedDate ? `กำลังโหลดวันที่ ${dayLabel_(requestedDate)}` : 'กำลังโหลดข้อมูลทั้งวัน');
+    window.__dayLoadProgress = dayProgress;
+    setDayEditStatus_('');
 
     try {
       let data = await fetchDayEdit_(line, requestedDate);
+      dayProgress.stop();
       if (seq !== dayEditLoadSeq) return;
 
       if (!data || !data.version) {
@@ -3283,7 +3325,9 @@
       setDayEditStatus_('');
       refreshDayLotOrder_();
     } catch (err) {
+      dayProgress.stop();
       if (seq !== dayEditLoadSeq) return;
+      rowsEl.innerHTML = '';
       console.error('Day edit load error:', err);
       const reason = String(err && err.message || '').slice(0, 100);
       setDayEditStatus_(`⚠️ โหลดข้อมูล${requestedDate ? 'วันที่ ' + dayLabel_(requestedDate) + ' ' : ''}ไม่สำเร็จ${reason ? ' — ' + reason : ''} กดเลือกวันอีกครั้งเพื่อลองใหม่`, 'error');
