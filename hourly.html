@@ -347,6 +347,12 @@
       border-color: #c4b5fd;
       font-weight: 700;
     }
+    .load-in-lot-row{
+      display:grid; grid-template-columns:minmax(0,1fr) 120px; gap:8px; align-items:center; margin-bottom:8px;
+    }
+    .load-in-lot-name{ font-size:.84rem; font-weight:700; color:#4c1d95; line-height:1.25; overflow-wrap:anywhere; }
+    .load-in-lot-name small{ display:block; font-size:.72rem; font-weight:600; color:#7c3aed; }
+    .load-in-lot-total{ text-align:right; font-size:.8rem; font-weight:800; color:#5b21b6; margin-top:2px; }
     .load-in-final-note {
       margin-top: 6px;
       font-size: .74rem;
@@ -964,8 +970,10 @@
     </div>
 
     <div id="loadInFinalWrap" class="load-in-final">
-      <label for="loadInToday">📥 งานเข้าโหลดวันนี้ (ตัว)</label>
-      <input type="number" id="loadInToday" min="0" step="1" inputmode="numeric" placeholder="กรอกยอดเข้าโหลดรวมของ LINE วันนี้">
+      <label>📥 งานเข้าโหลดวันนี้ แยกตาม LOT (ตัว)</label>
+      <div id="loadInLotsBox"></div>
+      <div id="loadInLotTotal" class="load-in-lot-total"></div>
+      <input type="hidden" id="loadInToday">
       <div id="loadInFinalNote" class="load-in-final-note">
         แสดงเฉพาะรอบทำงานสุดท้ายตามเวลาทำงานรวม (AA) • ถ้าเพิ่ม OT ภายหลัง ระบบจะย้ายไปให้กรอก/แก้ที่รอบสุดท้ายใหม่
       </div>
@@ -1123,6 +1131,7 @@
   let pendingSwitchContext = null;
   let pendingSwitchMode = ''; // NEXT = เริ่มรอบถัดไป, CURRENT = ใช้รอบที่เลือก
   let currentLoadInToday = null;
+  let currentLoadInByLot = {};    // { LOT: qty } จาก LoadIn_Daily (แยก LOT)
   let currentFinalWorkingSlot = '';
   let __lineLoadController = null;
 
@@ -1816,6 +1825,7 @@
         (data.loadInToday === null || data.loadInToday === undefined || data.loadInToday === '')
           ? null
           : Number(data.loadInToday);
+      currentLoadInByLot = (data.loadInByLot && typeof data.loadInByLot === 'object') ? data.loadInByLot : {};
 
       currentLotTGMap = {};
       const lotTgPairs = [
@@ -2239,25 +2249,67 @@
     return workingSlots;
   }
 
-  const NO_LOAD_IN_LINES = ['E', 'F'];
+  // งานเข้าโหลดมีเฉพาะ LINE B / C / D (กรอกแยก LOT ครั้งเดียวที่รอบสุดท้าย)
+  const LOAD_IN_LINES = ['B', 'C', 'D'];
 
   function isNoLoadInLine_() {
     const lineEl = document.getElementById('line');
     const code = String(lineEl ? lineEl.value : '')
       .toUpperCase().replace('LINE', '').replace(/\s+/g, '');
-    return NO_LOAD_IN_LINES.includes(code);
+    return !LOAD_IN_LINES.includes(code);
+  }
+
+  // LOT ของวันนี้ (unique ตาม Summary LOT_1/2/3)
+  function getLoadInLotsForToday_() {
+    const lots = [];
+    (activeLots || []).forEach(lot => {
+      const clean = normalizeLot_(lot);
+      if (clean && !lots.includes(clean)) lots.push(clean);
+    });
+    return lots.slice(0, 3);
+  }
+
+  function renderLoadInLotInputs_() {
+    const box = document.getElementById('loadInLotsBox');
+    if (!box) return;
+    const lots = getLoadInLotsForToday_();
+
+    // เก็บค่าที่กำลังพิมพ์อยู่ไว้ ถ้า LOT ชุดเดิม
+    const typed = {};
+    box.querySelectorAll('.load-in-lot-input').forEach(inp => { typed[inp.dataset.lot] = inp.value; });
+    const sameSet = Object.keys(typed).length === lots.length && lots.every(l => Object.prototype.hasOwnProperty.call(typed, l));
+
+    box.innerHTML = lots.map(lot => {
+      let value = '';
+      if (sameSet && typed[lot] !== undefined) value = typed[lot];
+      else if (Object.prototype.hasOwnProperty.call(currentLoadInByLot, lot)) value = currentLoadInByLot[lot];
+      else if (lots.length === 1 && currentLoadInToday !== null && !Object.keys(currentLoadInByLot).length) value = currentLoadInToday;
+      const model = masterLotMap[lot] ? `<small>${String(masterLotMap[lot]).replace(/[<>&"]/g, '')}</small>` : '';
+      return `<div class="load-in-lot-row">
+        <div class="load-in-lot-name">${lot}${model}</div>
+        <input type="number" class="load-in-lot-input" data-lot="${lot}" min="0" step="1" inputmode="numeric"
+               placeholder="0" value="${value}" oninput="updateLoadInLotTotal_()">
+      </div>`;
+    }).join('');
+    updateLoadInLotTotal_();
+  }
+
+  function updateLoadInLotTotal_() {
+    const totalEl = document.getElementById('loadInLotTotal');
+    let total = 0;
+    document.querySelectorAll('#loadInLotsBox .load-in-lot-input').forEach(inp => { total += Number(inp.value) || 0; });
+    if (totalEl) totalEl.textContent = `รวม ${total.toLocaleString()} ตัว`;
   }
 
   function updateLoadInFinalField_(visibleSlots) {
     const wrap = document.getElementById('loadInFinalWrap');
-    const input = document.getElementById('loadInToday');
     const note = document.getElementById('loadInFinalNote');
-    if (!wrap || !input) return;
+    if (!wrap) return;
 
     wrap.style.display = 'none';
     currentFinalWorkingSlot = '';
 
-    // LINE E / F ไม่มีงานเข้าโหลด → ไม่แสดงช่องกรอก และไม่บังคับกรอกตอนบันทึกรอบสุดท้าย
+    // ไม่ใช่ LINE B / C / D → ไม่มีงานเข้าโหลด ไม่แสดงช่องกรอก
     if (isNoLoadInLine_()) return;
 
     const workingSlots = getWorkingSlotsForCurrentLine_();
@@ -2276,14 +2328,12 @@
     currentFinalWorkingSlot = finalSlot.label;
     wrap.style.display = 'block';
 
-    // เติมค่าที่เคยบันทึกไว้ แต่ไม่ทับค่าที่ผู้ใช้กำลังแก้อยู่บนหน้า
-    if (String(input.value || '').trim() === '' && currentLoadInToday !== null) {
-      input.value = currentLoadInToday;
-    }
+    // ช่องละ LOT (เติมค่าที่เคยบันทึก แต่ไม่ทับค่าที่กำลังพิมพ์)
+    renderLoadInLotInputs_();
 
     if (note) {
       note.textContent =
-        `รอบสุดท้ายวันนี้ตาม AA คือ ${finalSlot.label} • กรอกยอดเข้าโหลดรวมของ LINE วันนี้`;
+        `รอบสุดท้ายวันนี้ตาม AA คือ ${finalSlot.label} • กรอกยอดเข้าโหลดของแต่ละ LOT (ไม่มีให้เว้นว่างหรือใส่ 0)`;
     }
   }
 
@@ -3575,29 +3625,31 @@
     }
 
     let loadInToday = null;
+    let loadInByLot = null;
     let loadInSlot = '';
     const loadInWrap = document.getElementById('loadInFinalWrap');
-    const loadInInput = document.getElementById('loadInToday');
     const isLoadInRequiredNow =
       !!loadInWrap &&
       loadInWrap.style.display !== 'none' &&
       !!currentFinalWorkingSlot;
 
     if (isLoadInRequiredNow) {
-      const rawLoadIn = String(loadInInput ? loadInInput.value : '').trim();
-      if (rawLoadIn === '') {
-        alert("กรุณากรอกงานเข้าโหลดวันนี้ก่อนบันทึกรอบสุดท้าย");
-        if (loadInInput) loadInInput.focus();
-        return;
+      // ทุก LOT ของวันนี้ส่งครบ: ช่องว่าง = 0
+      loadInByLot = [];
+      let sum = 0;
+      for (const inp of document.querySelectorAll('#loadInLotsBox .load-in-lot-input')) {
+        const raw = String(inp.value || '').trim();
+        const qty = raw === '' ? 0 : Number(raw);
+        if (!Number.isFinite(qty) || qty < 0 || !Number.isInteger(qty)) {
+          alert(`งานเข้าโหลดของ LOT ${inp.dataset.lot} ต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป`);
+          inp.focus();
+          return;
+        }
+        loadInByLot.push({ lot: inp.dataset.lot, qty: qty });
+        sum += qty;
       }
-
-      loadInToday = Number(rawLoadIn);
-      if (!Number.isFinite(loadInToday) || loadInToday < 0 || !Number.isInteger(loadInToday)) {
-        alert("งานเข้าโหลดวันนี้ต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป");
-        if (loadInInput) loadInInput.focus();
-        return;
-      }
-
+      if (!loadInByLot.length) loadInByLot = null;
+      loadInToday = sum;   // ส่งยอดรวมไปด้วย เผื่อ Apps Script ยังเป็นรุ่นเดิม
       loadInSlot = currentFinalWorkingSlot;
     }
 
@@ -3644,6 +3696,7 @@
     if (loadInToday !== null) {
       payload.loadInToday = loadInToday;
       payload.loadInSlot = loadInSlot;
+      if (loadInByLot) payload.loadInByLot = loadInByLot;
     }
 
     try {
