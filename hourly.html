@@ -1816,8 +1816,20 @@
     return null;
   }
 
-  // เรียก getTodayLine พร้อมลองใหม่ + หมดเวลา 20 วิ ต่อครั้ง
+  // เรียก getTodayLine พร้อมลองใหม่ + หมดเวลา 30 วิ ต่อครั้ง
   // เปลี่ยน LINE ระหว่างรอ = ยกเลิกทันที (AbortError ส่งต่อให้ผู้เรียกเหมือนเดิม)
+  // ดึงข้อความ error จากหน้า error ของ Apps Script (เช่น "TypeError: ... (บรรทัด 123, ไฟล์ Code)")
+  function extractScriptError_(html) {
+    const text = String(html || '')
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      .replace(/\s+/g, ' ').trim();
+    const m = text.match(/((?:Type|Reference|Range|Syntax)?Error|Exception|ข้อผิดพลาด)[:：][^]{0,180}/i);
+    return m ? m[0].trim() : '';
+  }
+
   async function fetchTodayLineWithRetry_(line, outerSignal, onRetry) {
     const attempts = 3;
     let lastError = null;
@@ -1831,7 +1843,7 @@
       const onOuterAbort = () => controller.abort();
       if (outerSignal) outerSignal.addEventListener('abort', onOuterAbort, { once: true });
       let timedOut = false;
-      const timer = setTimeout(() => { timedOut = true; controller.abort(); }, 20000);
+      const timer = setTimeout(() => { timedOut = true; controller.abort(); }, 30000);
 
       try {
         const res = await fetch(
@@ -1842,12 +1854,22 @@
         const text = await res.text();
         let data;
         try { data = JSON.parse(text); }
-        catch (e) { throw new Error('ระบบ Google ตอบกลับไม่ใช่ข้อมูล (อาจมีคนใช้งานพร้อมกันมาก)'); }
+        catch (e) {
+          const scriptError = extractScriptError_(text);
+          if (scriptError) {
+            // Apps Script error จริง (โค้ด/ชีท) ลองใหม่ก็ไม่หาย → แจ้งเลย ไม่ต้องรอ
+            const fatal = new Error('Apps Script error: ' + scriptError);
+            fatal.fatal = true;
+            throw fatal;
+          }
+          throw new Error('ระบบ Google ตอบกลับไม่ใช่ข้อมูล (อาจมีคนใช้งานพร้อมกันมาก)');
+        }
         if (!data || typeof data !== 'object') throw new Error('ข้อมูลว่าง');
         return data;
       } catch (err) {
         if (outerSignal && outerSignal.aborted) throw err;   // เปลี่ยน LINE แล้ว ไม่ต้องลองต่อ
-        lastError = timedOut ? new Error('หมดเวลารอ 20 วินาที') : err;
+        if (err && err.fatal) throw err;
+        lastError = timedOut ? new Error('หมดเวลารอ 30 วินาที (Apps Script ตอบช้า)') : err;
         console.warn(`getTodayLine attempt ${attempt}/${attempts} failed:`, lastError);
         if (attempt < attempts) await new Promise(r => setTimeout(r, 800 * attempt));
       } finally {
