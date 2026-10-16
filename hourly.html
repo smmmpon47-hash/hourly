@@ -335,24 +335,27 @@
       display: none;
       background: #f5f3ff;
       border: 1.5px solid #c4b5fd;
-      border-radius: 16px;
-      padding: 13px 14px;
-      margin: 4px 0 18px;
+      border-radius: 14px;
+      padding: 9px 12px 4px;
+      margin: 4px 0 14px;
     }
+    .load-in-final-head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:6px; }
     .load-in-final label {
       color: #5b21b6;
-      margin-bottom: 7px;
+      margin-bottom: 0;
+      font-size: .84rem;
     }
     .load-in-final input {
       border-color: #c4b5fd;
       font-weight: 700;
     }
     .load-in-lot-row{
-      display:grid; grid-template-columns:minmax(0,1fr) 120px; gap:8px; align-items:center; margin-bottom:8px;
+      display:grid; grid-template-columns:minmax(0,1fr) 96px; gap:8px; align-items:center; margin-bottom:6px;
     }
+    .load-in-lot-row input{ padding:7px 10px; font-size:.95rem; }
     .load-in-lot-name{ font-size:.84rem; font-weight:700; color:#4c1d95; line-height:1.25; overflow-wrap:anywhere; }
     .load-in-lot-name small{ display:block; font-size:.72rem; font-weight:600; color:#7c3aed; }
-    .load-in-lot-total{ text-align:right; font-size:.8rem; font-weight:800; color:#5b21b6; margin-top:2px; }
+    .load-in-lot-total{ white-space:nowrap; font-size:.78rem; font-weight:800; color:#5b21b6; }
     .load-in-final-note {
       margin-top: 6px;
       font-size: .74rem;
@@ -970,13 +973,12 @@
     </div>
 
     <div id="loadInFinalWrap" class="load-in-final">
-      <label>📥 งานเข้าโหลดวันนี้ แยกตาม LOT (ตัว)</label>
-      <div id="loadInLotsBox"></div>
-      <div id="loadInLotTotal" class="load-in-lot-total"></div>
-      <input type="hidden" id="loadInToday">
-      <div id="loadInFinalNote" class="load-in-final-note">
-        แสดงเฉพาะรอบทำงานสุดท้ายตามเวลาทำงานรวม (AA) • ถ้าเพิ่ม OT ภายหลัง ระบบจะย้ายไปให้กรอก/แก้ที่รอบสุดท้ายใหม่
+      <div class="load-in-final-head">
+        <label>📥 งานเข้าโหลดวันนี้ (ตัว)</label>
+        <div id="loadInLotTotal" class="load-in-lot-total"></div>
       </div>
+      <div id="loadInLotsBox"></div>
+      <input type="hidden" id="loadInToday">
     </div>
 
     <div class="sum-box">
@@ -2426,7 +2428,6 @@
 
   function updateLoadInFinalField_(visibleSlots) {
     const wrap = document.getElementById('loadInFinalWrap');
-    const note = document.getElementById('loadInFinalNote');
     if (!wrap) return;
 
     wrap.style.display = 'none';
@@ -2454,10 +2455,6 @@
     // ช่องละ LOT (เติมค่าที่เคยบันทึก แต่ไม่ทับค่าที่กำลังพิมพ์)
     renderLoadInLotInputs_();
 
-    if (note) {
-      note.textContent =
-        `รอบสุดท้ายวันนี้ตาม AA คือ ${finalSlot.label} • กรอกยอดเข้าโหลดของแต่ละ LOT (ไม่มีให้เว้นว่างหรือใส่ 0)`;
-    }
   }
 
   function hasSavedLaterWorkingSlot_(slotLabel) {
