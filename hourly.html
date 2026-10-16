@@ -1054,6 +1054,12 @@
 
       <div id="editLotsContainer"></div>
 
+      <div class="form-group">
+        <label for="editManpower">👥 จำนวนคนในไลน์ตอนนี้ (คน)</label>
+        <input type="number" id="editManpower" min="0" step="0.5" inputmode="decimal" placeholder="เช่น 30 หรือ 30.5" oninput="updateEditPlanPreview()">
+        <div style="font-size:.74rem;color:#64748b;margin-top:5px;">แก้เมื่อมีคนกลับก่อนระหว่างวัน หรือกรอกผิดตอนเช้า • ได้เป็นจำนวนเต็มหรือ .5</div>
+      </div>
+
       <div id="editPlanPreview" class="edit-plan-preview"></div>
       <div id="editPlanStatus" class="edit-status"></div>
 
@@ -1323,6 +1329,10 @@
       };
 
       document.getElementById('editTotalHours').value = totalHours;
+      currentEditPlanState.manpower =
+        (data.manpower === null || data.manpower === undefined || data.manpower === '') ? null : Number(data.manpower);
+      document.getElementById('editManpower').value =
+        currentEditPlanState.manpower === null ? '' : currentEditPlanState.manpower;
 
       const container = document.getElementById('editLotsContainer');
       container.innerHTML = lots.map(item => `
@@ -1489,9 +1499,33 @@
         <span>Target รวม</span>
         <strong>${currentEditPlanState.totalTarget.toLocaleString()} → ${calc.totalTarget.toLocaleString()} ชิ้น</strong>
       </div>
+      ${manpowerPreviewRow_()}
       <div class="edit-preview-divider"></div>
       ${lotRows}
     `;
+  }
+
+  // จำนวนคนในแท็บแก้ไขเป้า: ว่าง = ไม่แก้, ต้องเป็นจำนวนเต็มหรือ .5
+  function readEditManpower_() {
+    const el = document.getElementById('editManpower');
+    const raw = String(el ? el.value : '').trim();
+    if (raw === '') return { value: null };
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 0 || Math.abs(n * 2 - Math.round(n * 2)) > 1e-9) {
+      return { error: 'จำนวนคนกรอกได้เป็นจำนวนเต็มหรือ .5 เช่น 30, 30.5, 31' };
+    }
+    return { value: n };
+  }
+
+  function manpowerPreviewRow_() {
+    if (!currentEditPlanState) return '';
+    const mp = readEditManpower_();
+    const oldText = currentEditPlanState.manpower === null ? '-' : currentEditPlanState.manpower.toLocaleString();
+    if (mp.error) {
+      return `<div class="edit-preview-row"><span>กำลังคน</span><strong style="color:#b91c1c;">⚠️ ${mp.error}</strong></div>`;
+    }
+    const newText = mp.value === null ? oldText : mp.value.toLocaleString();
+    return `<div class="edit-preview-row"><span>กำลังคน</span><strong>${oldText} → ${newText} คน</strong></div>`;
   }
 
   function setEditPlanStatus_(message, type = 'info', show = true) {
@@ -1571,6 +1605,13 @@
       return;
     }
 
+    const manpowerEdit = readEditManpower_();
+    if (manpowerEdit.error) {
+      alert(manpowerEdit.error);
+      document.getElementById('editManpower')?.focus();
+      return;
+    }
+
     const summaryLines = calc.lots.map(
       item => `LOT ${item.index}: TG ${item.tg.toLocaleString()} • ${item.hours} ชม. • Target ${item.target.toLocaleString()}`
     );
@@ -1580,7 +1621,9 @@
       `LINE: ${lineVal}\n` +
       `เวลาทำงานรวม: ${calc.totalHours} ชม.\n` +
       `${summaryLines.join('\n')}\n` +
-      `Target รวมใหม่: ${calc.totalTarget.toLocaleString()} ชิ้น\n\n` +
+      `Target รวมใหม่: ${calc.totalTarget.toLocaleString()} ชิ้น\n` +
+      (manpowerEdit.value !== null ? `กำลังคน: ${manpowerEdit.value.toLocaleString()} คน\n` : '') +
+      `\n` +
       `Actual ที่บันทึกไปแล้วจะไม่ถูกแก้ไข`
     );
 
@@ -1603,6 +1646,7 @@
       tgOriginal3: calc.lots.find(x => x.index === 3)?.tg || 0,
       updatedBy: userDisplayName
     };
+    if (manpowerEdit.value !== null) payload.manpower = manpowerEdit.value;
 
     try {
       await fetch(SCRIPT_URL, {
@@ -1624,9 +1668,16 @@
         return;
       }
 
+      const manpowerSaved =
+        manpowerEdit.value === null || Number(verified.manpower) === manpowerEdit.value;
       setEditPlanStatus_(
-        `บันทึกสำเร็จ • Target รวมใหม่ ${calc.totalTarget.toLocaleString()} ชิ้น • ${calc.totalHours} ชม.`,
-        'success',
+        `บันทึกสำเร็จ • Target รวมใหม่ ${calc.totalTarget.toLocaleString()} ชิ้น • ${calc.totalHours} ชม.` +
+        (manpowerEdit.value !== null
+          ? (manpowerSaved
+              ? ` • กำลังคน ${manpowerEdit.value.toLocaleString()} คน`
+              : ' • ⚠️ จำนวนคนยังไม่เปลี่ยน (Apps Script อาจยังไม่อัปเดต)')
+          : ''),
+        manpowerSaved ? 'success' : 'error',
         true
       );
 
@@ -1638,7 +1689,12 @@
         await loadLineDetails();
       }
 
-      alert('✅ แก้ไขเป้า / ชั่วโมงสำเร็จ');
+      if (manpowerSaved) {
+        alert('✅ แก้ไขเป้า / ชั่วโมงสำเร็จ' + (manpowerEdit.value !== null ? ` • กำลังคน ${manpowerEdit.value.toLocaleString()} คน` : ''));
+      } else {
+        setEditPlanStatus_('⚠️ บันทึกเป้า/ชั่วโมงแล้ว แต่จำนวนคนยังไม่เปลี่ยน — Apps Script อาจยังไม่ได้อัปเดต', 'error', true);
+        alert('⚠️ บันทึกเป้า/ชั่วโมงแล้ว แต่จำนวนคนยังไม่เปลี่ยน\nApps Script อาจยังไม่ได้อัปเดต');
+      }
 
     } catch (err) {
       console.error('saveProductionPlanEdit error:', err);
