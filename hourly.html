@@ -1578,6 +1578,48 @@
   }
 
 
+  // เรียก getTodayLine พร้อมลองใหม่ + หมดเวลา 20 วิ ต่อครั้ง
+  // เปลี่ยน LINE ระหว่างรอ = ยกเลิกทันที (AbortError ส่งต่อให้ผู้เรียกเหมือนเดิม)
+  async function fetchTodayLineWithRetry_(line, outerSignal, onRetry) {
+    const attempts = 3;
+    let lastError = null;
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      if (outerSignal && outerSignal.aborted) {
+        const e = new Error('aborted'); e.name = 'AbortError'; throw e;
+      }
+      if (attempt > 1 && onRetry) onRetry(attempt - 1);
+
+      const controller = new AbortController();
+      const onOuterAbort = () => controller.abort();
+      if (outerSignal) outerSignal.addEventListener('abort', onOuterAbort, { once: true });
+      let timedOut = false;
+      const timer = setTimeout(() => { timedOut = true; controller.abort(); }, 20000);
+
+      try {
+        const res = await fetch(
+          `${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(line)}&_=${Date.now()}_${attempt}`,
+          { cache: 'no-store', signal: controller.signal }
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); }
+        catch (e) { throw new Error('ระบบ Google ตอบกลับไม่ใช่ข้อมูล (อาจมีคนใช้งานพร้อมกันมาก)'); }
+        if (!data || typeof data !== 'object') throw new Error('ข้อมูลว่าง');
+        return data;
+      } catch (err) {
+        if (outerSignal && outerSignal.aborted) throw err;   // เปลี่ยน LINE แล้ว ไม่ต้องลองต่อ
+        lastError = timedOut ? new Error('หมดเวลารอ 20 วินาที') : err;
+        console.warn(`getTodayLine attempt ${attempt}/${attempts} failed:`, lastError);
+        if (attempt < attempts) await new Promise(r => setTimeout(r, 800 * attempt));
+      } finally {
+        clearTimeout(timer);
+        if (outerSignal) outerSignal.removeEventListener('abort', onOuterAbort);
+      }
+    }
+    throw lastError || new Error('โหลดไม่สำเร็จ');
+  }
+
   async function loadLineDetails() {
     const line = document.getElementById('line').value;
     const slotsContainer = document.getElementById('slotsContainer');
@@ -1610,11 +1652,11 @@
       if (__lineLoadController) __lineLoadController.abort();
       __lineLoadController = new AbortController();
 
-      const res = await fetch(
-        `${SCRIPT_URL}?action=getTodayLine&line=${encodeURIComponent(line)}&_=${Date.now()}`,
-        { cache: 'no-store', signal: __lineLoadController.signal }
-      );
-      const data = await res.json();
+      // ลองใหม่อัตโนมัติสูงสุด 3 ครั้ง (Google ตอบช้า/ตอบ error ชั่วคราว/เน็ตสะดุด)
+      const data = await fetchTodayLineWithRetry_(line, __lineLoadController.signal, (attempt) => {
+        slotsContainer.innerHTML =
+          `<p style="color: #64748b; font-size: 0.95rem; text-align: center; padding: 15px 0;">กำลังโหลดข้อมูล... (ลองใหม่ครั้งที่ ${attempt})</p>`;
+      });
 
       activeLots = Array.isArray(data.lots) ? [...data.lots] : [];
 
@@ -1725,8 +1767,13 @@
         slotsContainer.innerHTML =
           '<p style="color:#b91c1c;font-weight:700;text-align:center;padding:14px;">⚠️ ไม่พบเวลาทำงานรวมจากคอลัมน์ AA ระบบหยุดไว้เพื่อป้องกันการเดาเป็น 9 ชั่วโมง</p>';
       } else {
+        const reason = message ? String(message).replace(/[<>&"]/g, '').slice(0, 120) : '';
         slotsContainer.innerHTML =
-          '<p style="color:#b91c1c;font-weight:700;text-align:center;padding:14px;">โหลดข้อมูล LINE ไม่สำเร็จ กรุณารีโหลดแล้วลองใหม่</p>';
+          '<div style="text-align:center;padding:14px;">' +
+            '<p style="color:#b91c1c;font-weight:700;margin:0 0 6px;">โหลดข้อมูล LINE ไม่สำเร็จ</p>' +
+            (reason ? `<p style="color:#94a3b8;font-size:.75rem;margin:0 0 10px;">สาเหตุ: ${reason}</p>` : '') +
+            '<button type="button" onclick="loadLineDetails()" style="border:0;background:#0f766e;color:#fff;font-weight:700;border-radius:10px;padding:9px 18px;font-family:inherit;cursor:pointer;">🔄 ลองใหม่</button>' +
+          '</div>';
       }
       updateHourlyAverage();
     }
