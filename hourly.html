@@ -1250,6 +1250,7 @@
         loadEditPlan();
       } else {
         document.getElementById('editPlanContent').style.display = 'none';
+        document.getElementById('editPlanEmpty').innerText = 'เลือก LINE เพื่อดูแผนการผลิตของวันนี้';
         document.getElementById('editPlanEmpty').style.display = 'block';
       }
     }
@@ -1284,7 +1285,15 @@
     ].filter(item => item.lot);
   }
 
-  async function loadEditPlan() {
+  var __editLoadSeq = 0;
+  var __editLoadController = null;
+  var __editLoadProgress = null;
+
+  async function loadEditPlan(opts) {
+    opts = opts || {};
+    const reqId = ++__editLoadSeq;
+    if (__editLoadProgress) { __editLoadProgress.stop(); __editLoadProgress = null; }
+    if (__editLoadController) { __editLoadController.abort(); __editLoadController = null; }
     const lineVal = document.getElementById('editLine').value;
     const loading = document.getElementById('editPlanLoading');
     const content = document.getElementById('editPlanContent');
@@ -1295,14 +1304,29 @@
     empty.style.display = 'none';
 
     if (!lineVal) {
+      loading.style.display = 'none';
+      empty.innerText = 'เลือก LINE เพื่อดูแผนการผลิตของวันนี้';
       empty.style.display = 'block';
       return;
     }
 
     loading.style.display = 'block';
+    const editProgress = startLoadProgress_(loading, 'กำลังโหลดแผนปัจจุบัน');
+    __editLoadProgress = editProgress;
 
     try {
-      const data = await fetchCurrentLineState_(lineVal);
+      let data = opts.fresh ? null : await getSharedLineState_(lineVal);
+      if (reqId !== __editLoadSeq) return;
+      if (!data) {
+        const controller = new AbortController();
+        __editLoadController = controller;
+        data = await fetchTodayLineWithRetry_(lineVal, controller.signal, (attempt) => {
+          editProgress.setSub(`ระบบตอบช้า กำลังลองใหม่ครั้งที่ ${attempt}`);
+        });
+        if (__editLoadController === controller) __editLoadController = null;
+      }
+      editProgress.stop();
+      if (reqId !== __editLoadSeq) return;   // เปลี่ยน LINE / โหลดใหม่ระหว่างรอ
       const lots = getEditPlanLots_(data);
 
       if (!lots.length) {
@@ -1357,9 +1381,15 @@
       updateEditPlanPreview();
 
     } catch (err) {
+      editProgress.stop();
+      if (reqId !== __editLoadSeq) return;   // ถูกยกเลิกเพราะเปลี่ยน LINE
       console.error('loadEditPlan error:', err);
       loading.style.display = 'none';
-      empty.innerText = 'โหลดแผนการผลิตไม่สำเร็จ กรุณาลองใหม่';
+      const reason = String((err && err.message) || err || '').replace(/[<>&]/g, '');
+      empty.innerHTML =
+        '<div style="color:#b91c1c;font-weight:700;margin-bottom:6px;">โหลดแผนการผลิตไม่สำเร็จ</div>' +
+        (reason ? `<div style="font-size:.76rem;color:#94a3b8;margin-bottom:10px;">${reason}</div>` : '') +
+        '<button type="button" onclick="loadEditPlan({fresh:true})" style="border:0;background:#0f766e;color:#fff;font-weight:700;border-radius:10px;padding:9px 18px;font-family:inherit;cursor:pointer;">🔄 ลองใหม่</button>';
       empty.style.display = 'block';
     }
   }
@@ -1649,6 +1679,7 @@
     if (manpowerEdit.value !== null) payload.manpower = manpowerEdit.value;
 
     try {
+      invalidateLineState_();
       await fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -1682,7 +1713,7 @@
       );
 
       // อัปเดตทั้งแท็บแก้ไขและหน้าบันทึกยอดให้ใช้ค่าชุดใหม่ทันที
-      await loadEditPlan();
+      await loadEditPlan({ fresh: true });
 
       const recordLine = document.getElementById('line');
       if (recordLine && recordLine.value === lineVal) {
@@ -1754,7 +1785,34 @@
     };
   }
 
-  let __lineLoadProgress = null;
+  var __lineLoadProgress;   // ไม่ใส่ค่าเริ่ม: fastBoot_ เรียก loadLineDetails ก่อนถึงบรรทัดนี้
+
+  // ใช้ข้อมูล getTodayLine ร่วมกันระหว่างแท็บ "บันทึกยอด" กับ "แก้ไขเป้า"
+  // (ไม่ต้องยิง Apps Script ซ้ำถ้าเพิ่งโหลด LINE เดียวกันมาไม่เกิน 30 วิ หรือกำลังโหลดอยู่)
+  // ล้างทิ้งทุกครั้งก่อนบันทึก (POST) เพื่อไม่ให้ใช้ข้อมูลเก่า
+  var LINE_STATE_SHARE_MS = 30000;
+  var __lineStateCache;            // { line, at, data }
+  var __lineStateInflight;         // { line, promise }
+
+  function invalidateLineState_() {
+    __lineStateCache = null;
+    __lineStateInflight = null;
+  }
+
+  async function getSharedLineState_(line) {
+    if (__lineStateCache && __lineStateCache.line === line &&
+        Date.now() - __lineStateCache.at < LINE_STATE_SHARE_MS) {
+      return __lineStateCache.data;
+    }
+    if (__lineStateInflight && __lineStateInflight.line === line) {
+      try { return await __lineStateInflight.promise; }
+      catch (e) {
+        if (e && e.name === 'AbortError') return null;  // หน้าบันทึกยอดเปลี่ยน LINE → โหลดเอง
+        throw e;                                          // ลองครบ 3 ครั้งแล้วยังพัง → แสดงเหตุผล + ปุ่มลองใหม่
+      }
+    }
+    return null;
+  }
 
   // เรียก getTodayLine พร้อมลองใหม่ + หมดเวลา 20 วิ ต่อครั้ง
   // เปลี่ยน LINE ระหว่างรอ = ยกเลิกทันที (AbortError ส่งต่อให้ผู้เรียกเหมือนเดิม)
@@ -1833,9 +1891,18 @@
       __lineLoadController = new AbortController();
 
       // ลองใหม่อัตโนมัติสูงสุด 3 ครั้ง (Google ตอบช้า/ตอบ error ชั่วคราว/เน็ตสะดุด)
-      const data = await fetchTodayLineWithRetry_(line, __lineLoadController.signal, (attempt) => {
+      const linePromise = fetchTodayLineWithRetry_(line, __lineLoadController.signal, (attempt) => {
         loadProgress.setSub(`ระบบตอบช้า กำลังลองใหม่ครั้งที่ ${attempt}`);
       });
+      const inflight = { line, promise: linePromise };
+      __lineStateInflight = inflight;
+      let data;
+      try {
+        data = await linePromise;
+      } finally {
+        if (__lineStateInflight === inflight) __lineStateInflight = null;
+      }
+      __lineStateCache = { line, at: Date.now(), data };
       loadProgress.stop();
 
       activeLots = Array.isArray(data.lots) ? [...data.lots] : [];
@@ -2306,7 +2373,7 @@
   }
 
   // งานเข้าโหลดมีเฉพาะ LINE B / C / D (กรอกแยก LOT ครั้งเดียวที่รอบสุดท้าย)
-  const LOAD_IN_LINES = ['B', 'C', 'D'];
+  var LOAD_IN_LINES = ['B', 'C', 'D'];
 
   function isNoLoadInLine_() {
     const lineEl = document.getElementById('line');
@@ -3066,6 +3133,7 @@
     };
 
     try {
+      invalidateLineState_();
       await fetch(SCRIPT_URL, {
         method: "POST",
         mode: "no-cors",
@@ -3614,6 +3682,7 @@
         try { const profile = await liff.getProfile(); userDisplayName = profile.displayName || "Unknown"; } catch (e) {}
       }
 
+      invalidateLineState_();
       await fetch(SCRIPT_URL, {
         method: "POST",
         mode: "no-cors",
@@ -3757,6 +3826,7 @@
 
     try {
       // ส่งข้อมูลด้วย mode: 'no-cors' ป้องกันการบล็อก Preflight บน LINE Browser และ iOS
+      invalidateLineState_();
       await fetch(SCRIPT_URL, {
         method: "POST",
         mode: "no-cors",
