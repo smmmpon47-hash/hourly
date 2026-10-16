@@ -3223,7 +3223,13 @@
     const url = `${SCRIPT_URL}?action=getHourlyEditDay&line=${encodeURIComponent(line)}` +
       (date ? `&date=${encodeURIComponent(date)}` : '') + `&_=${Date.now()}`;
     const res = await fetch(url, { cache: 'no-store' });
-    return res.json();
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    try { return JSON.parse(text); }
+    catch (e) {
+      const m = text.match(/<div[^>]*>([^<]{10,200})<\/div>/);
+      throw new Error('Apps Script ตอบ error' + (m ? ': ' + m[1].trim() : ''));
+    }
   }
 
   async function loadDayEdit(date) {
@@ -3240,11 +3246,15 @@
     }
 
     const seq = ++dayEditLoadSeq;
-    setDayEditStatus_('กำลังโหลดข้อมูลทั้งวัน...');
+    const requestedDate = typeof date === 'string' ? date : '';
+    setDayEditStatus_(requestedDate
+      ? `กำลังโหลดข้อมูลวันที่ ${dayLabel_(requestedDate)}...`
+      : 'กำลังโหลดข้อมูลทั้งวัน...');
     footer.style.display = 'none';
+    document.querySelectorAll('#dayEditDates .day-date-chip').forEach(btn => { btn.disabled = true; });
 
     try {
-      let data = await fetchDayEdit_(line, typeof date === 'string' ? date : '');
+      let data = await fetchDayEdit_(line, requestedDate);
       if (seq !== dayEditLoadSeq) return;
 
       if (!data || !data.version) {
@@ -3253,14 +3263,13 @@
         return;
       }
 
-      // วันที่ที่เลือกไว้ใช้ไม่ได้แล้ว (เช่น ข้ามวัน) → กลับไปวันนี้
-      if (data.error && Array.isArray(data.editableDates) && data.editableDates.length) {
-        data = await fetchDayEdit_(line, data.editableDates[0]);
-        if (seq !== dayEditLoadSeq) return;
-      }
+      // วันที่เลือกใช้ไม่ได้: บอกสาเหตุ ไม่สลับกลับวันนี้เงียบ ๆ
       if (data.error) {
+        if (Array.isArray(data.editableDates) && data.editableDates.length) {
+          renderDayEditDates_(data.editableDates, requestedDate);
+        }
         rowsEl.innerHTML = '';
-        setDayEditStatus_('⚠️ ' + data.error, 'error');
+        setDayEditStatus_(`⚠️ ${data.error}${requestedDate ? ' (วันที่ ' + dayLabel_(requestedDate) + ')' : ''}`, 'error');
         return;
       }
 
@@ -3276,7 +3285,12 @@
     } catch (err) {
       if (seq !== dayEditLoadSeq) return;
       console.error('Day edit load error:', err);
-      setDayEditStatus_('⚠️ โหลดข้อมูลไม่สำเร็จ ลองเลือก LINE ใหม่อีกครั้ง', 'error');
+      const reason = String(err && err.message || '').slice(0, 100);
+      setDayEditStatus_(`⚠️ โหลดข้อมูล${requestedDate ? 'วันที่ ' + dayLabel_(requestedDate) + ' ' : ''}ไม่สำเร็จ${reason ? ' — ' + reason : ''} กดเลือกวันอีกครั้งเพื่อลองใหม่`, 'error');
+    } finally {
+      if (seq === dayEditLoadSeq) {
+        document.querySelectorAll('#dayEditDates .day-date-chip').forEach(btn => { btn.disabled = false; });
+      }
     }
   }
 
