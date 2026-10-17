@@ -1268,8 +1268,15 @@
     const grid = buildSlotGridClient_(cfg.startTime, cfg.breakStart, hours);
     if (!grid.slots.length) return LEGACY_TIME_SLOTS_DEF.slice();
     const lastEnd = grid.slots[grid.slots.length - 1].endMin;
-    const later = buildSlotGridClient_(cfg.startTime, cfg.breakStart, 10).items
+    let later = buildSlotGridClient_(cfg.startTime, cfg.breakStart, 10).items
       .filter(item => item.startMin >= lastEnd);
+    // วันเต็มไม่ต่อกันพอดี (เช่น พัก 12.00 จบ 17.30) → ต่อรอบ OT ทีละ 1 ชม. ถึง 19.30
+    if (!later.length || later[0].startMin !== lastEnd) {
+      later = [];
+      for (let t = lastEnd; t + 60 <= 1170; t += 60) {
+        later.push({ no: 0, label: slotMinText_(t) + '-' + slotMinText_(t + 60), startMin: t, endMin: t + 60, minutes: 60, isBreak: false });
+      }
+    }
     return grid.items.concat(later);
   }
 
