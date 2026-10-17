@@ -506,6 +506,8 @@
 
     /* ===== Loading % ระหว่างรอ Apps Script ===== */
     .load-progress{ padding:18px 6px; text-align:center; }
+    .slot-target-tag{ display:block; font-size:.72rem; font-weight:700; color:#0f766e; margin-top:2px; }
+    .slot-target-tag.odd{ color:#b45309; }
     .load-progress-text{ color:#64748b; font-size:.9rem; font-weight:700; margin-bottom:9px; }
     .load-progress-text b{ color:#0f766e; font-size:1.05rem; }
     .load-progress-bar{ height:8px; background:#e2e8f0; border-radius:99px; overflow:hidden; }
@@ -1054,6 +1056,15 @@
         <div id="editHoursHint" style="font-size:.74rem;color:#64748b;margin-top:5px;"></div>
       </div>
 
+      <div class="form-group">
+        <label for="editStartTime">🕗 เวลาเข้างานวันนี้</label>
+        <select id="editStartTime" onchange="updateEditPlanPreview()">
+          <option value="08:30">08.30</option>
+          <option value="08:00">08.00 (OT เช้า)</option>
+        </select>
+        <div id="editStartHint" style="font-size:.74rem;color:#64748b;margin-top:5px;">แก้เมื่อตอนเช้าเลือกผิด • ยอดที่กรอกแล้วไม่หาย ระบบเปลี่ยนแค่ป้ายเวลาของช่อง</div>
+      </div>
+
       <div id="editLotsContainer"></div>
 
       <div class="form-group">
@@ -1163,7 +1174,106 @@
     }
   }
 
-  const TIME_SLOTS_DEF = [
+  // ===== ช่องเวลา: คำนวณจากเวลาเข้างาน + รอบพักของไลน์ (กฎเดียวกับ Apps Script buildSlotGrid_) =====
+  // ค่าตั้งต้น (ยังไม่ได้ข้อมูลจากระบบ) = ตารางเดิม เข้า 08.30
+  var DEFAULT_BREAK_BY_LINE = { B: '12:30', C: '12:30', D: '11:30', E: '11:30', F: '11:30', G: '11:30' };
+  var lineSlotConfigs = {};   // { B: { startTime: '08:00', breakStart: '12:30' } }
+  var currentSlotTargets = {}; // label -> { target, minutes } ของไลน์ที่เปิดอยู่
+
+  function lineCodeOf_(lineValue) {
+    return String(lineValue || '').replace(/LINE/i, '').replace(/\s+/g, '').toUpperCase();
+  }
+
+  function slotClockMin_(value) {
+    const m = String(value || '').trim().match(/^(\d{1,2})[:.](\d{2})$/);
+    return m ? Number(m[1]) * 60 + Number(m[2]) : NaN;
+  }
+
+  function slotMinText_(minutes) {
+    return String(Math.floor(minutes / 60)).padStart(2, '0') + '.' + String(minutes % 60).padStart(2, '0');
+  }
+
+  function buildSlotGridClient_(startTime, breakStart, totalWorkingHours) {
+    const base = 510; // 08.30
+    const startRaw = slotClockMin_(startTime);
+    const start = (startRaw === 480 || startRaw === 510) ? startRaw : base;
+    const breakMin = slotClockMin_(breakStart);
+    const total = Math.max(0, Math.floor(Number(totalWorkingHours) || 0));
+    const grid = { slots: [], items: [] };
+    if (!total || isNaN(breakMin) || breakMin <= base) return grid;
+
+    const morning = [];
+    for (let t = base; t < breakMin; ) {
+      const e = Math.min(t + 60, breakMin);
+      morning.push([t, e]);
+      t = e;
+    }
+    const shift = base - start;
+    if (shift > 0) {
+      for (let i = 0; i < morning.length; i++) {
+        morning[i] = (i === morning.length - 1)
+          ? [morning[i][0] - shift, morning[i][1]]
+          : [morning[i][0] - shift, morning[i][1] - shift];
+      }
+    }
+    const ranges = morning.slice(0, total);
+    const afternoonCount = total - ranges.length;
+    const afterBreak = breakMin + 60;
+    for (let i = 0; i < afternoonCount; i++) {
+      const sMin = afterBreak + 60 * i;
+      let eMin = sMin + 60;
+      if (i === afternoonCount - 1 && eMin % 60 !== 30) eMin += 30;
+      ranges.push([sMin, eMin]);
+    }
+    ranges.forEach((r, i) => {
+      const slot = {
+        no: i + 1, label: slotMinText_(r[0]) + '-' + slotMinText_(r[1]),
+        startMin: r[0], endMin: r[1], minutes: r[1] - r[0], isBreak: false
+      };
+      grid.slots.push(slot);
+      grid.items.push(slot);
+      if (i === morning.length - 1 && afternoonCount > 0) {
+        grid.items.push({
+          no: 0, label: slotMinText_(breakMin) + '-' + slotMinText_(afterBreak),
+          startMin: breakMin, endMin: afterBreak, minutes: 60, isBreak: true
+        });
+      }
+    });
+    return grid;
+  }
+
+  function getLineSlotConfig_(lineValue) {
+    const code = lineCodeOf_(lineValue);
+    return lineSlotConfigs[code] || { startTime: '08:30', breakStart: DEFAULT_BREAK_BY_LINE[code] || '' };
+  }
+
+  // จำเวลาเข้างาน/รอบพักจากข้อมูลที่ Apps Script ส่งมา (Apps Script เก่าไม่ส่ง = ใช้ค่าตั้งต้น)
+  function rememberLineSlotConfig_(lineValue, data) {
+    const code = lineCodeOf_(lineValue);
+    if (!code || !data) return;
+    const cfg = data.slotConfig || (data.slotGrid ? { startTime: data.slotGrid.startTime, breakStart: data.slotGrid.breakStart } : null);
+    if (cfg && cfg.breakStart) {
+      lineSlotConfigs[code] = {
+        startTime: String(cfg.startTime || '08:30'),
+        breakStart: String(cfg.breakStart)
+      };
+    }
+  }
+
+  // แกนเวลาของไลน์: ช่องตาม AA + รอบหลังจากนั้นของวันเต็ม (สูงสุด 10 ชม.)
+  function getSlotDefsForLine_(lineValue, totalHours) {
+    const cfg = getLineSlotConfig_(lineValue);
+    if (!cfg.breakStart) return LEGACY_TIME_SLOTS_DEF.slice();
+    const hours = Math.max(1, Math.min(10, Math.floor(Number(totalHours) || 10)));
+    const grid = buildSlotGridClient_(cfg.startTime, cfg.breakStart, hours);
+    if (!grid.slots.length) return LEGACY_TIME_SLOTS_DEF.slice();
+    const lastEnd = grid.slots[grid.slots.length - 1].endMin;
+    const later = buildSlotGridClient_(cfg.startTime, cfg.breakStart, 10).items
+      .filter(item => item.startMin >= lastEnd);
+    return grid.items.concat(later);
+  }
+
+  var LEGACY_TIME_SLOTS_DEF = [
     { label: "08.30-09.30", endMin: 570 },
     { label: "09.30-10.30", endMin: 630 },
     { label: "10.30-11.30", endMin: 690 },
@@ -1176,6 +1286,7 @@
     { label: "17.30-18.30", endMin: 1110 },
     { label: "18.30-19.30", endMin: 1170 }
   ];
+  var TIME_SLOTS_DEF = LEGACY_TIME_SLOTS_DEF.slice();
 
   // FAST LOAD: HTML ทั้งฟอร์มอยู่ก่อน <script> นี้แล้ว จึงเริ่มดึงข้อมูล LINE ได้ทันที
   // ไม่ต้องรอ DOMContentLoaded / LIFF / Google Font ให้เสร็จก่อน
@@ -1360,6 +1471,13 @@
       document.getElementById('editManpower').value =
         currentEditPlanState.manpower === null ? '' : currentEditPlanState.manpower;
 
+      // เวลาเข้างาน (Apps Script เก่าไม่ส่ง slotConfig = แก้ไม่ได้)
+      rememberLineSlotConfig_(lineVal, data);
+      currentEditPlanState.startTime = data.slotConfig ? String(data.slotConfig.startTime || '08:30') : null;
+      const startSel = document.getElementById('editStartTime');
+      startSel.value = currentEditPlanState.startTime || '08:30';
+      startSel.disabled = !currentEditPlanState.startTime;
+
       const container = document.getElementById('editLotsContainer');
       container.innerHTML = lots.map(item => `
         <div class="edit-plan-card">
@@ -1531,6 +1649,7 @@
         <span>Target รวม</span>
         <strong>${currentEditPlanState.totalTarget.toLocaleString()} → ${calc.totalTarget.toLocaleString()} ชิ้น</strong>
       </div>
+      ${startTimePreviewRow_()}
       ${manpowerPreviewRow_()}
       <div class="edit-preview-divider"></div>
       ${lotRows}
@@ -1547,6 +1666,21 @@
       return { error: 'จำนวนคนกรอกได้เป็นจำนวนเต็มหรือ .5 เช่น 30, 30.5, 31' };
     }
     return { value: n };
+  }
+
+  // เวลาเข้างานที่เลือกในแท็บแก้ไข: ไม่เปลี่ยน = null
+  function readEditStartTime_() {
+    if (!currentEditPlanState || !currentEditPlanState.startTime) return null;
+    const el = document.getElementById('editStartTime');
+    const value = el ? el.value : '';
+    return value && value !== currentEditPlanState.startTime ? value : null;
+  }
+
+  function startTimePreviewRow_() {
+    const next = readEditStartTime_();
+    if (!next) return '';
+    const fmt = v => String(v).replace(':', '.');
+    return `<div class="edit-preview-row"><span>เวลาเข้างาน</span><strong>${fmt(currentEditPlanState.startTime)} → ${fmt(next)}</strong></div>`;
   }
 
   function manpowerPreviewRow_() {
@@ -1588,7 +1722,7 @@
     }
   }
 
-  async function waitForPlanEditSaved_(lineVal, calc) {
+  async function waitForPlanEditSaved_(lineVal, calc, expectStartTime) {
     for (let attempt = 0; attempt < 8; attempt++) {
       await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -1598,6 +1732,7 @@
         const savedHours = getAuthoritativeTotalWorkingHours_(state) || stateLots.reduce((sum, item) => sum + item.hours, 0);
 
         if (savedHours !== calc.totalHours) continue;
+        if (expectStartTime && (!state.slotConfig || state.slotConfig.startTime !== expectStartTime)) continue;
 
         let matches = true;
         calc.lots.forEach(item => {
@@ -1644,6 +1779,8 @@
       return;
     }
 
+    const startTimeEdit = readEditStartTime_();
+
     const summaryLines = calc.lots.map(
       item => `LOT ${item.index}: TG ${item.tg.toLocaleString()} • ${item.hours} ชม. • Target ${item.target.toLocaleString()}`
     );
@@ -1655,6 +1792,7 @@
       `${summaryLines.join('\n')}\n` +
       `Target รวมใหม่: ${calc.totalTarget.toLocaleString()} ชิ้น\n` +
       (manpowerEdit.value !== null ? `กำลังคน: ${manpowerEdit.value.toLocaleString()} คน\n` : '') +
+      (startTimeEdit ? `เวลาเข้างาน: ${startTimeEdit.replace(':', '.')} (ยอดที่กรอกแล้วย้ายตามช่อง)\n` : '') +
       `\n` +
       `Actual ที่บันทึกไปแล้วจะไม่ถูกแก้ไข`
     );
@@ -1679,6 +1817,7 @@
       updatedBy: userDisplayName
     };
     if (manpowerEdit.value !== null) payload.manpower = manpowerEdit.value;
+    if (startTimeEdit) payload.startTime = startTimeEdit;
 
     try {
       invalidateLineState_();
@@ -1689,7 +1828,7 @@
         body: JSON.stringify(payload)
       });
 
-      const verified = await waitForPlanEditSaved_(lineVal, calc);
+      const verified = await waitForPlanEditSaved_(lineVal, calc, startTimeEdit);
 
       if (!verified) {
         setEditPlanStatus_(
@@ -1966,6 +2105,19 @@
       }
 
       currentHours1 = authoritativeAAHours;
+
+      // ช่องเวลาของไลน์วันนี้ (เวลาเข้างาน + รอบพักจาก Apps Script) + เป้ารายช่อง
+      rememberLineSlotConfig_(line, data);
+      TIME_SLOTS_DEF = getSlotDefsForLine_(line, authoritativeAAHours);
+      currentSlotTargets = {};
+      if (data.slotGrid && Array.isArray(data.slotGrid.slots)) {
+        data.slotGrid.slots.forEach(item => {
+          currentSlotTargets[item.label] = {
+            target: Number(item.target) || 0,
+            minutes: Number(item.minutes) || 60
+          };
+        });
+      }
       currentTarget1 = Number(data.target) || Number(data.target1) || 0;
       currentExistingHourly = data.existingHourly || {};
       currentLoadInToday =
@@ -2116,15 +2268,7 @@
     const slotsContainer = document.getElementById('slotsContainer');
     slotsContainer.innerHTML = '';
 
-    const selectedLine = document.getElementById('line').value.toUpperCase();
-    const cleanLine = selectedLine.replace('LINE', '').trim();
-
-    let breakSlot = "";
-    if (['B', 'C'].includes(cleanLine)) {
-      breakSlot = "12.30-13.30";
-    } else if (['D', 'E', 'F', 'G'].includes(cleanLine)) {
-      breakSlot = "11.30-12.30";
-    }
+    const breakSlot = getBreakSlotForLine_(document.getElementById('line').value);
 
     const now = new Date();
     const currentMinutes = (now.getHours() * 60) + now.getMinutes();
@@ -2136,13 +2280,15 @@
     // 18:30 -> 17.30-18.30
     // 19:30 -> 18.30-19.30 (เฉพาะวัน 10 ชม.)
     // ห้ามโชว์ slot ที่ยังผลิตไม่จบล่วงหน้า
+    // เลือกตามเวลาจบรอบ (17.30 / 18.30 / 19.30) ใช้ได้ทั้งช่อง 1 ชม. และ 1.5 ชม.
     if (currentMinutes >= 1020 && currentMinutes < 1080) {
-      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "16.30-17.30");
+      targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === 1050 && s.label !== breakSlot);
     } else if (currentMinutes >= 1080 && currentMinutes < 1170) {
-      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "17.30-18.30");
+      targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === 1110 && s.label !== breakSlot);
     } else if (currentMinutes >= 1170 && totalHours >= 10) {
-      targetSlots = TIME_SLOTS_DEF.filter(s => s.label === "18.30-19.30");
-    } else {
+      targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === 1170 && s.label !== breakSlot);
+    }
+    if (!targetSlots.length) {
       let passedSlots = TIME_SLOTS_DEF.filter(slot => currentMinutes >= slot.endMin);
       const maxCount = Math.min(Math.ceil(totalHours), TIME_SLOTS_DEF.length);
       passedSlots = passedSlots.slice(-maxCount);
@@ -2196,7 +2342,7 @@
       row.innerHTML = `
         <div class="slot-time" data-slot-label="${slot.label}">
           ${slot.label}
-          ${isBreakTime ? '<br><span style="color:#ef4444; font-size:0.75rem;">(พัก)</span>' : ''}
+          ${isBreakTime ? '<br><span style="color:#ef4444; font-size:0.75rem;">(พัก)</span>' : slotTargetTagHtml_(slot.label)}
           ${!isBreakTime ? `
             <button type="button"
                     class="slot-end-lot-btn ${isClosedHistoricalLot ? 'closed' : ''}"
@@ -2246,6 +2392,15 @@
     refreshLotOrderInfo_();
   }
 
+  // เป้าของช่อง + ความยาวช่องที่ไม่ใช่ 1 ชม. (ช่อง 0.5 / 1.5 ชม.)
+  function slotTargetTagHtml_(label) {
+    const info = currentSlotTargets[label];
+    if (!info) return '';
+    const hours = info.minutes / 60;
+    const lengthText = info.minutes !== 60 ? ` · ${hours} ชม.` : '';
+    return `<span class="slot-target-tag${info.minutes !== 60 ? ' odd' : ''}">เป้า ${Number(info.target).toLocaleString()}${lengthText}</span>`;
+  }
+
   function getModelTextForLot_(lot) {
     const cleanLot = normalizeLot_(lot);
     const model = cleanLot ? masterLotMap[cleanLot] : '';
@@ -2273,16 +2428,7 @@
     // นับรอบที่มีข้อมูลแล้วทั้งหมด รวม OT ด้วย
     // แต่ "ช่วงพัก" ต้องไม่นับเป็นชั่วโมงทำงาน
     const completedLabels = new Set();
-
-    const selectedLine = document.getElementById('line').value.toUpperCase();
-    const cleanLine = selectedLine.replace('LINE', '').trim();
-
-    let breakSlot = "";
-    if (['B', 'C'].includes(cleanLine)) {
-      breakSlot = "12.30-13.30";
-    } else if (['D', 'E', 'F', 'G'].includes(cleanLine)) {
-      breakSlot = "11.30-12.30";
-    }
+    const breakSlot = getBreakSlotForLine_(document.getElementById('line').value);
 
     Object.entries(existingData || {}).forEach(([label, existing]) => {
       const slot = TIME_SLOTS_DEF.find(s => s.label === label);
@@ -2370,14 +2516,8 @@
 
 
   function getBreakSlotForLine_(lineValue) {
-    const cleanLine = String(lineValue || '')
-      .replace(/LINE/i, '')
-      .replace(/\s+/g, '')
-      .toUpperCase();
-
-    if (['B', 'C'].includes(cleanLine)) return '12.30-13.30';
-    if (['D', 'E', 'F', 'G'].includes(cleanLine)) return '11.30-12.30';
-    return '';
+    const b = slotClockMin_(getLineSlotConfig_(lineValue).breakStart);
+    return isNaN(b) ? '' : slotMinText_(b) + '-' + slotMinText_(b + 60);
   }
 
   function getWorkingSlotsForCurrentLine_() {
@@ -2389,11 +2529,7 @@
       return [];
     }
 
-    const workingSlots = TIME_SLOTS_DEF
-      .filter(slot => slot.label !== breakSlot)
-      .slice(0, totalHours);
-
-    return workingSlots;
+    return getWorkingSlotsForLineValue_(lineVal, totalHours);
   }
 
   // งานเข้าโหลดมีเฉพาะ LINE B / C / D (กรอกแยก LOT ครั้งเดียวที่รอบสุดท้าย)
@@ -2655,12 +2791,12 @@
   }
 
   function getWorkingSlotsForLineValue_(lineValue, totalHours) {
-    const breakSlot = getBreakSlotForLine_(lineValue);
+    const cfg = getLineSlotConfig_(lineValue);
     const hours = Math.max(0, Math.floor(Number(totalHours) || 0));
-
-    return TIME_SLOTS_DEF
-      .filter(slot => slot.label !== breakSlot)
-      .slice(0, hours);
+    if (!cfg.breakStart) {
+      return LEGACY_TIME_SLOTS_DEF.slice(0, hours);
+    }
+    return buildSlotGridClient_(cfg.startTime, cfg.breakStart, hours).slots;
   }
 
   function normalizeLotSwitchHistoryForLine_(history, lineValue, totalHours, allowedLots) {
