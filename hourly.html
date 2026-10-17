@@ -506,6 +506,8 @@
 
     /* ===== Loading % ระหว่างรอ Apps Script ===== */
     .load-progress{ padding:18px 6px; text-align:center; }
+    .load-out-head{ margin-top:8px; padding-top:9px; border-top:1px dashed #c4b5fd; }
+    .load-out-lot-input{ border-color:#c4b5fd; font-weight:700; padding:7px 10px; font-size:.95rem; }
     .slot-target-tag{ display:block; font-size:.72rem; font-weight:700; color:#0f766e; margin-top:2px; }
     .slot-target-tag.odd{ color:#b45309; }
     .load-progress-text{ color:#64748b; font-size:.9rem; font-weight:700; margin-bottom:9px; }
@@ -981,6 +983,12 @@
       </div>
       <div id="loadInLotsBox"></div>
       <input type="hidden" id="loadInToday">
+
+      <div class="load-in-final-head load-out-head">
+        <label>📤 งานออกโหลดวันนี้ (ตัว)</label>
+        <div id="loadOutLotTotal" class="load-in-lot-total"></div>
+      </div>
+      <div id="loadOutLotsBox"></div>
     </div>
 
     <div class="sum-box">
@@ -1151,6 +1159,7 @@
   let pendingSwitchMode = ''; // NEXT = เริ่มรอบถัดไป, CURRENT = ใช้รอบที่เลือก
   let currentLoadInToday = null;
   let currentLoadInByLot = {};    // { LOT: qty } จาก LoadIn_Daily (แยก LOT)
+  let currentLoadOutByLot = {};   // { LOT: qty } จาก LoadOut_Daily (แยก LOT)
   let currentFinalWorkingSlot = '';
   let __lineLoadController = null;
 
@@ -2132,6 +2141,7 @@
           ? null
           : Number(data.loadInToday);
       currentLoadInByLot = (data.loadInByLot && typeof data.loadInByLot === 'object') ? data.loadInByLot : {};
+      currentLoadOutByLot = (data.loadOutByLot && typeof data.loadOutByLot === 'object') ? data.loadOutByLot : {};
 
       currentLotTGMap = {};
       const lotTgPairs = [
@@ -2582,6 +2592,36 @@
       </div>`;
     }).join('');
     updateLoadInLotTotal_();
+    renderLoadOutLotInputs_(lots);
+  }
+
+  // งานออกโหลด: ช่องละ LOT เหมือนงานเข้าโหลด (เติมค่าที่เคยบันทึก ไม่ทับค่าที่กำลังพิมพ์)
+  function renderLoadOutLotInputs_(lots) {
+    const box = document.getElementById('loadOutLotsBox');
+    if (!box) return;
+    const typed = {};
+    box.querySelectorAll('.load-out-lot-input').forEach(inp => { typed[inp.dataset.lot] = inp.value; });
+    const sameSet = Object.keys(typed).length === lots.length && lots.every(l => Object.prototype.hasOwnProperty.call(typed, l));
+
+    box.innerHTML = lots.map(lot => {
+      let value = '';
+      if (sameSet && typed[lot] !== undefined) value = typed[lot];
+      else if (Object.prototype.hasOwnProperty.call(currentLoadOutByLot, lot)) value = currentLoadOutByLot[lot];
+      const model = masterLotMap[lot] ? `<small>${String(masterLotMap[lot]).replace(/[<>&"]/g, '')}</small>` : '';
+      return `<div class="load-in-lot-row">
+        <div class="load-in-lot-name">${lot}${model}</div>
+        <input type="number" class="load-out-lot-input" data-lot="${lot}" min="0" step="1" inputmode="numeric"
+               placeholder="0" value="${value}" oninput="updateLoadOutLotTotal_()">
+      </div>`;
+    }).join('');
+    updateLoadOutLotTotal_();
+  }
+
+  function updateLoadOutLotTotal_() {
+    const totalEl = document.getElementById('loadOutLotTotal');
+    let total = 0;
+    document.querySelectorAll('#loadOutLotsBox .load-out-lot-input').forEach(inp => { total += Number(inp.value) || 0; });
+    if (totalEl) totalEl.textContent = `รวม ${total.toLocaleString()} ตัว`;
   }
 
   function updateLoadInLotTotal_() {
@@ -3913,6 +3953,7 @@
 
     let loadInToday = null;
     let loadInByLot = null;
+    let loadOutByLot = null;
     let loadInSlot = '';
     const loadInWrap = document.getElementById('loadInFinalWrap');
     const isLoadInRequiredNow =
@@ -3938,6 +3979,20 @@
       if (!loadInByLot.length) loadInByLot = null;
       loadInToday = sum;   // ส่งยอดรวมไปด้วย เผื่อ Apps Script ยังเป็นรุ่นเดิม
       loadInSlot = currentFinalWorkingSlot;
+
+      // งานออกโหลด: ทุก LOT ส่งครบเหมือนกัน ช่องว่าง = 0
+      loadOutByLot = [];
+      for (const inp of document.querySelectorAll('#loadOutLotsBox .load-out-lot-input')) {
+        const raw = String(inp.value || '').trim();
+        const qty = raw === '' ? 0 : Number(raw);
+        if (!Number.isFinite(qty) || qty < 0 || !Number.isInteger(qty)) {
+          alert(`งานออกโหลดของ LOT ${inp.dataset.lot} ต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป`);
+          inp.focus();
+          return;
+        }
+        loadOutByLot.push({ lot: inp.dataset.lot, qty: qty });
+      }
+      if (!loadOutByLot.length) loadOutByLot = null;
     }
 
     btnSubmit.disabled = true;
@@ -3984,6 +4039,10 @@
       payload.loadInToday = loadInToday;
       payload.loadInSlot = loadInSlot;
       if (loadInByLot) payload.loadInByLot = loadInByLot;
+      if (loadOutByLot) {
+        payload.loadOutByLot = loadOutByLot;
+        payload.loadOutSlot = loadInSlot;
+      }
     }
 
     try {
