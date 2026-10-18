@@ -2,305 +2,308 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=1280">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <title>ตั้งค่าเวลาทำงาน โรง 1</title>
+  <title>จัดการข้อมูลการผลิต โรง 1</title>
   <link rel="preconnect" href="https://script.google.com">
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
       --teal: #0f766e; --teal-2: #14b8a6; --teal-soft: #f0fdfa; --teal-line: #99f6e4;
-      --ink: #0f172a; --ink-2: #334155; --muted: #64748b; --line: #e2e8f0; --bg-soft: #f8fafc;
-      --amber: #b45309; --amber-soft: #fffbeb; --red: #b91c1c; --red-soft: #fef2f2;
+      --ink: #0f172a; --ink-2: #334155; --muted: #64748b; --line: #e2e8f0; --bg: #f1f5f9; --soft: #f8fafc;
+      --amber: #b45309; --amber-soft: #fffbeb; --amber-line: #fde68a;
+      --red: #b91c1c; --red-soft: #fef2f2; --red-line: #fecaca;
+      --blue: #4338ca; --blue-soft: #eef2ff;
+      --edit: #fef9c3;
     }
-    * { box-sizing: border-box; font-family: 'Sarabun', sans-serif; -webkit-tap-highlight-color: transparent; }
-    body { margin: 0; background: #1e3a3f; color: var(--ink); min-height: 100vh; }
+    * { box-sizing: border-box; font-family: 'Sarabun', sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--ink); min-width: 1180px; font-size: 15px; }
     button { font: inherit; cursor: pointer; }
-    .app { max-width: 560px; margin: 0 auto; padding: 16px 14px 96px; }
+    input, select { font: inherit; }
 
-    /* ---------- gate (ใส่รหัสก่อนเข้า) ---------- */
-    .gate { position: fixed; inset: 0; background: #1e3a3f; display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
-    .gate-card { width: 100%; max-width: 380px; background: #fff; border-radius: 24px; padding: 28px 22px 24px; box-shadow: 0 24px 50px rgba(0,0,0,.3); text-align: center; }
-    .gate-icon { width: 64px; height: 64px; border-radius: 20px; background: var(--teal-soft); display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 12px; }
+    /* ---------- gate ---------- */
+    .gate { position: fixed; inset: 0; background: #1e3a3f; display: flex; align-items: center; justify-content: center; z-index: 50; }
+    .gate-card { width: 400px; background: #fff; border-radius: 22px; padding: 30px 28px 26px; box-shadow: 0 24px 50px rgba(0,0,0,.3); text-align: center; }
+    .gate-icon { width: 64px; height: 64px; border-radius: 18px; background: var(--teal-soft); display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 12px; }
     .gate h1 { margin: 0; font-size: 1.3rem; color: var(--teal); font-weight: 800; }
-    .gate p { margin: 6px 0 18px; color: var(--muted); font-size: .88rem; }
+    .gate p { margin: 6px 0 20px; color: var(--muted); font-size: .9rem; }
     .field { text-align: left; margin-bottom: 12px; }
-    .field label { display: block; font-size: .8rem; font-weight: 700; color: var(--ink-2); margin-bottom: 5px; }
-    .field input { width: 100%; padding: 13px 14px; border: 1.5px solid #cbd5e1; border-radius: 14px; font-size: 1.02rem; color: var(--ink); }
-    .field input:focus { outline: none; border-color: var(--teal-2); box-shadow: 0 0 0 3px rgba(20,184,166,.18); }
-    .btn-main { width: 100%; border: 0; border-radius: 14px; padding: 14px; background: var(--teal); color: #fff; font-weight: 800; font-size: 1.02rem; }
-    .btn-main:disabled { opacity: .5; cursor: not-allowed; }
-    .gate-err { color: var(--red); font-size: .85rem; font-weight: 700; min-height: 1.2em; margin-top: 10px; }
+    .field label { display: block; font-size: .82rem; font-weight: 700; color: var(--ink-2); margin-bottom: 5px; }
+    .inp { width: 100%; padding: 10px 12px; border: 1.5px solid #cbd5e1; border-radius: 10px; color: var(--ink); background: #fff; }
+    .inp:focus { outline: none; border-color: var(--teal-2); box-shadow: 0 0 0 3px rgba(20,184,166,.18); }
+    .gate .inp { padding: 12px 14px; font-size: 1rem; border-radius: 12px; }
+    .btn { border: 0; border-radius: 10px; padding: 10px 16px; background: var(--teal); color: #fff; font-weight: 800; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn.full { width: 100%; padding: 13px; font-size: 1rem; border-radius: 12px; }
+    .btn.ghost { background: #fff; color: var(--ink-2); border: 1.5px solid #cbd5e1; }
+    .btn.danger { background: var(--red-soft); color: var(--red); border: 1px solid var(--red-line); padding: 6px 10px; font-size: .82rem; }
+    .btn.small { padding: 7px 12px; font-size: .86rem; }
+    .gate-err { color: var(--red); font-size: .88rem; font-weight: 700; min-height: 1.2em; margin-top: 10px; }
 
-    /* ---------- header + tabs ---------- */
-    .top { display: flex; justify-content: space-between; align-items: center; color: #fff; margin-bottom: 12px; }
-    .top h1 { margin: 0; font-size: 1.15rem; font-weight: 800; }
-    .top .who { font-size: .78rem; opacity: .8; }
-    .top .lock { border: 1px solid rgba(255,255,255,.35); background: transparent; color: #fff; border-radius: 10px; padding: 6px 10px; font-size: .8rem; font-weight: 700; }
-    .tabs { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--line); display: flex; justify-content: center; z-index: 20; padding-bottom: env(safe-area-inset-bottom); }
-    .tabs-inner { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; max-width: 560px; }
-    .tab { border: 0; background: transparent; padding: 9px 4px 10px; color: var(--muted); font-weight: 700; font-size: .78rem; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    .tab .ico { font-size: 1.25rem; line-height: 1.2; }
-    .tab.active { color: var(--teal); }
-    .tab.active .ico { transform: scale(1.08); }
+    /* ---------- layout ---------- */
+    .shell { display: grid; grid-template-columns: 236px 1fr; min-height: 100vh; }
+    .side { background: #1e3a3f; color: #e2e8f0; padding: 22px 14px; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; }
+    .brand { font-weight: 800; font-size: 1.05rem; color: #fff; line-height: 1.35; padding: 0 8px 18px; }
+    .brand small { display: block; font-weight: 600; font-size: .78rem; color: #94a3b8; }
+    .nav button { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; color: #cbd5e1; padding: 11px 12px; border-radius: 10px; font-weight: 700; text-align: left; margin-bottom: 4px; }
+    .nav button:hover { background: rgba(255,255,255,.06); }
+    .nav button.on { background: #fff; color: var(--teal); }
+    .side-foot { margin-top: auto; font-size: .82rem; color: #94a3b8; padding: 0 8px; }
+    .side-foot button { margin-top: 8px; width: 100%; border: 1px solid rgba(255,255,255,.25); background: transparent; color: #e2e8f0; border-radius: 10px; padding: 8px; font-weight: 700; }
+    .main { padding: 22px 28px 110px; max-width: 1320px; }
+    .page { display: none; }
+    .page.on { display: block; }
+    .page-title { font-size: 1.35rem; font-weight: 800; margin: 0 0 4px; }
+    .page-sub { color: var(--muted); margin: 0 0 18px; font-size: .92rem; }
+    .card { background: #fff; border-radius: 16px; border: 1px solid var(--line); padding: 18px; margin-bottom: 16px; }
+    .card h3 { margin: 0 0 12px; font-size: 1.02rem; font-weight: 800; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .card h3 .note { font-weight: 600; font-size: .8rem; color: var(--muted); }
 
-    .panel { display: none; }
-    .panel.active { display: block; }
-    .card { background: #fff; border-radius: 20px; padding: 16px; margin-bottom: 12px; box-shadow: 0 10px 24px rgba(0,0,0,.18); }
-    .card h2 { margin: 0 0 4px; font-size: 1.05rem; font-weight: 800; }
-    .card .hint { color: var(--muted); font-size: .8rem; margin: 0 0 12px; line-height: 1.45; }
+    /* ---------- toolbar ---------- */
+    .toolbar { display: flex; align-items: center; gap: 14px; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 12px 16px; margin-bottom: 16px; }
+    .toolbar .lbl { font-weight: 800; color: var(--ink-2); font-size: .9rem; }
+    .date-nav { display: flex; align-items: center; gap: 6px; }
+    .date-nav .inp { width: 170px; }
+    .icon-btn { border: 1.5px solid #cbd5e1; background: #fff; border-radius: 10px; width: 38px; height: 40px; font-weight: 800; color: var(--ink-2); }
+    .lines { display: flex; gap: 6px; }
+    .line-btn { border: 1.5px solid #cbd5e1; background: #fff; border-radius: 10px; min-width: 52px; height: 40px; font-weight: 800; color: var(--ink-2); }
+    .line-btn.on { background: var(--teal); color: #fff; border-color: var(--teal); }
+    .spacer { flex: 1; }
+    .day-label { font-weight: 700; color: var(--muted); font-size: .88rem; }
+
+    /* ---------- summary strip ---------- */
+    .strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
+    .stat { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+    .stat .k { color: var(--muted); font-size: .8rem; font-weight: 700; }
+    .stat .v { font-size: 1.25rem; font-weight: 800; margin-top: 2px; }
+    .stat .v small { font-size: .8rem; color: var(--muted); font-weight: 700; }
+
+    .grid2 { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(330px, 1fr); gap: 16px; align-items: start; }
+
+    /* ---------- tables ---------- */
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; font-size: .78rem; color: var(--muted); font-weight: 800; padding: 8px 8px; border-bottom: 1.5px solid var(--line); white-space: nowrap; }
+    td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: .92rem; }
+    tr.brk td { background: #fff1f2; color: #be123c; }
+    tr.ot td:first-child { box-shadow: inset 3px 0 0 #c7d2fe; }
+    .slot-time { font-weight: 800; white-space: nowrap; }
+    .len { display: inline-block; font-size: .72rem; font-weight: 800; border-radius: 6px; padding: 1px 6px; margin-left: 4px; }
+    .len.odd { background: var(--amber-soft); color: var(--amber); border: 1px solid var(--amber-line); }
+    .len.ot { background: var(--blue-soft); color: var(--blue); }
+    .lot { font-weight: 700; }
+    .lot small { display: block; color: var(--muted); font-weight: 600; font-size: .74rem; }
+    td .inp { padding: 7px 9px; border-radius: 8px; }
+    td .inp.qty { width: 92px; text-align: right; font-weight: 800; }
+    .inp.changed { background: var(--edit); border-color: #eab308; }
+    .who { color: var(--muted); font-size: .76rem; white-space: nowrap; }
+    .x-btn { border: 0; background: transparent; color: #94a3b8; font-size: 1rem; padding: 4px 6px; border-radius: 6px; }
+    .x-btn:hover { background: var(--red-soft); color: var(--red); }
+    .pending { color: var(--muted); font-size: .78rem; }
+    tfoot td { font-weight: 800; border-top: 1.5px solid var(--line); border-bottom: 0; }
+    .num { text-align: right; }
 
     /* ---------- chips ---------- */
-    .seg { display: grid; gap: 8px; grid-template-columns: repeat(var(--n, 2), 1fr); }
-    .chip { border: 1.8px solid #cbd5e1; background: #fff; border-radius: 14px; padding: 11px 6px; font-weight: 800; color: var(--ink-2); font-size: .98rem; line-height: 1.2; }
-    .chip small { display: block; font-weight: 600; font-size: .72rem; color: var(--muted); margin-top: 2px; }
-    .chip.on { background: var(--teal); border-color: var(--teal); color: #fff; box-shadow: 0 6px 14px rgba(15,118,110,.28); }
+    .chips { display: grid; gap: 6px; grid-template-columns: repeat(var(--n, 2), 1fr); }
+    .chip { border: 1.5px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 8px 4px; font-weight: 800; color: var(--ink-2); line-height: 1.2; }
+    .chip small { display: block; font-weight: 600; font-size: .72rem; color: var(--muted); }
+    .chip.on { background: var(--teal); border-color: var(--teal); color: #fff; }
     .chip.on small { color: rgba(255,255,255,.85); }
-    .chip:disabled { opacity: .45; cursor: not-allowed; }
-    .sub-label { font-size: .8rem; font-weight: 800; color: var(--ink-2); margin: 12px 0 6px; }
+    .sub { font-size: .8rem; font-weight: 800; color: var(--ink-2); margin: 12px 0 6px; }
+    .sub:first-child { margin-top: 0; }
+    .row-inline { display: flex; gap: 8px; align-items: center; }
+    .help { color: var(--muted); font-size: .8rem; line-height: 1.45; margin-top: 8px; }
+    .warn { background: var(--amber-soft); border: 1px solid var(--amber-line); color: var(--amber); border-radius: 10px; padding: 8px 10px; font-size: .84rem; font-weight: 700; margin-top: 10px; }
 
-    /* ---------- day switch ---------- */
-    .day-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: rgba(255,255,255,.12); padding: 4px; border-radius: 14px; margin-bottom: 12px; }
-    .day-switch button { border: 0; border-radius: 11px; padding: 9px 6px; background: transparent; color: #e2e8f0; font-weight: 800; font-size: .86rem; }
-    .day-switch button.on { background: #fff; color: var(--teal); }
+    /* ---------- save bar ---------- */
+    .savebar { position: fixed; left: 236px; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--line); padding: 12px 28px; display: none; align-items: center; gap: 12px; box-shadow: 0 -8px 20px rgba(15,23,42,.06); z-index: 30; }
+    .savebar.show { display: flex; }
+    .savebar .msg { font-weight: 800; }
+    .savebar .msg small { display: block; font-weight: 600; color: var(--muted); font-size: .8rem; }
 
-    /* ---------- line cards ---------- */
-    .line-card { background: #fff; border-radius: 18px; padding: 14px 14px 12px; margin-bottom: 10px; box-shadow: 0 8px 20px rgba(0,0,0,.16); border: 2px solid transparent; }
-    .line-card.open { border-color: var(--teal-2); }
-    .line-head { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; background: transparent; padding: 0; text-align: left; }
-    .line-badge { width: 46px; height: 46px; border-radius: 14px; background: var(--teal-soft); color: var(--teal); font-weight: 800; font-size: 1.25rem; display: flex; align-items: center; justify-content: center; flex: none; }
-    .line-meta { flex: 1; min-width: 0; }
-    .line-title { font-weight: 800; font-size: 1rem; }
-    .line-sub { color: var(--muted); font-size: .84rem; margin-top: 1px; }
-    .pill { display: inline-block; font-size: .72rem; font-weight: 800; border-radius: 999px; padding: 2px 8px; margin-left: 4px; }
-    .pill.odd { background: var(--amber-soft); color: var(--amber); }
-    .pill.none { background: #f1f5f9; color: var(--muted); }
-    .chev { color: #94a3b8; font-size: 1.1rem; transition: transform .2s; }
-    .line-card.open .chev { transform: rotate(90deg); }
-    .line-body { display: none; padding-top: 6px; }
-    .line-card.open .line-body { display: block; }
-    .slots { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
-    .slot { font-size: .74rem; font-weight: 700; border-radius: 8px; padding: 4px 7px; background: var(--bg-soft); color: var(--ink-2); border: 1px solid var(--line); }
-    .slot.odd { background: var(--amber-soft); color: var(--amber); border-color: #fde68a; }
-    .slot.brk { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
-    .slot.ot { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
-    .actions { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-top: 12px; }
-    .btn-ghost { border: 1.5px solid #cbd5e1; background: #fff; border-radius: 14px; padding: 12px; font-weight: 800; color: var(--ink-2); }
-    .noplan { color: var(--muted); font-size: .86rem; padding: 4px 0 2px; }
-
-    /* ---------- break floors ---------- */
-    .floor-now { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--teal-soft); border: 1px solid var(--teal-line); margin-bottom: 8px; }
-    .floor-now b { font-size: 1.02rem; }
-    .floor-now .t { font-size: 1.15rem; font-weight: 800; color: var(--teal); }
-    .sched { list-style: none; margin: 0 0 4px; padding: 0; }
-    .sched li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 2px; border-top: 1px dashed var(--line); font-size: .88rem; }
-    .sched li:first-child { border-top: 0; }
-    .tag { font-size: .7rem; font-weight: 800; border-radius: 999px; padding: 2px 8px; }
+    .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+    .loading { text-align: center; color: var(--muted); padding: 40px 0; font-weight: 700; }
+    .tag { font-size: .72rem; font-weight: 800; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
     .tag.future { background: #ecfeff; color: #0e7490; }
     .tag.active { background: #ecfdf5; color: #047857; }
-    .btn-del { border: 1px solid #fecaca; background: var(--red-soft); color: var(--red); border-radius: 10px; padding: 6px 10px; font-weight: 800; font-size: .78rem; }
-    .date-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    input[type=date].date-input { width: 100%; padding: 11px 12px; border: 1.5px solid #cbd5e1; border-radius: 14px; font-size: .95rem; margin-top: 8px; }
-
-    /* ---------- holidays / log ---------- */
-    .list { list-style: none; margin: 0; padding: 0; }
-    .list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 11px 2px; border-top: 1px dashed var(--line); }
-    .list li:first-child { border-top: 0; }
-    .hol-date { font-weight: 800; }
-    .hol-name { color: var(--muted); font-size: .84rem; }
-    .log li { display: block; }
-    .log .what { font-weight: 800; font-size: .9rem; }
-    .log .meta { color: var(--muted); font-size: .76rem; margin-top: 2px; }
-    .text-input { width: 100%; padding: 11px 12px; border: 1.5px solid #cbd5e1; border-radius: 14px; font-size: .95rem; margin-top: 8px; }
-
-    .loading { color: #cbd5e1; text-align: center; padding: 30px 0; font-weight: 700; }
-    .error-box { background: #fff; border-radius: 18px; padding: 18px; text-align: center; color: var(--red); font-weight: 700; }
-    .toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 16px; border-radius: 14px; font-size: .9rem; font-weight: 700; display: none; z-index: 60; max-width: 90vw; text-align: center; }
+    .tag.ended { background: #f1f5f9; color: #64748b; }
+    .floors { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .now-box { display: flex; justify-content: space-between; align-items: center; background: var(--teal-soft); border: 1px solid var(--teal-line); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+    .now-box .t { font-size: 1.3rem; font-weight: 800; color: var(--teal); }
+    .toast { position: fixed; left: 50%; top: 18px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 12px; font-weight: 700; display: none; z-index: 60; }
   </style>
 </head>
 <body>
 
-<!-- ใส่รหัสก่อนเข้า -->
 <div class="gate" id="gate">
   <div class="gate-card">
     <div class="gate-icon">🔐</div>
-    <h1>ตั้งค่าเวลาทำงาน โรง 1</h1>
-    <p>เวลาเข้างาน • รอบพัก • วันหยุด</p>
+    <h1>จัดการข้อมูลการผลิต โรง 1</h1>
+    <p>สำหรับแอดมิน • แก้ยอด เวลาเข้างาน รอบพัก วันหยุด</p>
     <form onsubmit="login(event)">
-      <div class="field">
-        <label for="byName">ชื่อผู้แก้</label>
-        <input id="byName" placeholder="เช่น หัวหน้า ก." maxlength="40" autocomplete="name">
-      </div>
-      <div class="field">
-        <label for="password">รหัสแอดมิน</label>
-        <input id="password" type="password" autocomplete="current-password" placeholder="••••••">
-      </div>
-      <button class="btn-main" id="loginBtn" type="submit">เข้าใช้งาน</button>
+      <div class="field"><label for="byName">ชื่อผู้แก้</label><input class="inp" id="byName" maxlength="40" placeholder="เช่น หัวหน้า ก." autocomplete="name"></div>
+      <div class="field"><label for="password">รหัสแอดมิน</label><input class="inp" id="password" type="password" autocomplete="current-password" placeholder="••••••"></div>
+      <button class="btn full" id="loginBtn" type="submit">เข้าใช้งาน</button>
     </form>
     <div class="gate-err" id="gateErr"></div>
   </div>
 </div>
 
-<div class="app" id="app" style="display:none;">
-  <div class="top">
-    <div>
-      <h1>⏱️ ตั้งค่าเวลาทำงาน โรง 1</h1>
-      <div class="who" id="whoText"></div>
+<div class="shell" id="shell" style="display:none;">
+  <aside class="side">
+    <div class="brand">จัดการข้อมูลการผลิต<small>โรง 1 • Line B–F</small></div>
+    <nav class="nav">
+      <button class="on" data-page="day" onclick="showPage('day')">📝 แก้ไขข้อมูลรายไลน์</button>
+      <button data-page="break" onclick="showPage('break')">🍱 รอบพักเที่ยง</button>
+      <button data-page="holiday" onclick="showPage('holiday')">📅 วันหยุด</button>
+      <button data-page="log" onclick="showPage('log')">🧾 ประวัติการแก้</button>
+    </nav>
+    <div class="side-foot">
+      <div id="whoText"></div>
+      <button onclick="logout()">ออกจากระบบ</button>
     </div>
-    <button class="lock" onclick="logout()">ออก</button>
-  </div>
+  </aside>
 
-  <!-- แท็บ วันนี้ -->
-  <section class="panel active" id="panel-today">
-    <div class="day-switch" id="daySwitch"></div>
-    <div id="linesBox"><div class="loading">กำลังโหลด...</div></div>
-  </section>
+  <main class="main">
+    <section class="page on" id="page-day">
+      <div class="page-title">แก้ไขข้อมูลรายไลน์</div>
+      <div class="page-sub">เลือกวันและไลน์ แล้วแก้ยอดที่กรอกผิด หมายเหตุ จำนวนคน งานเข้า/ออกโหลด แผนการผลิต และเวลาเข้างาน/รอบพัก</div>
+      <div class="toolbar">
+        <span class="lbl">วันที่</span>
+        <div class="date-nav">
+          <button class="icon-btn" onclick="shiftDay(-1)" title="วันก่อนหน้า">‹</button>
+          <input type="date" class="inp" id="dayDate" onchange="loadDay()">
+          <button class="icon-btn" onclick="shiftDay(1)" title="วันถัดไป">›</button>
+          <button class="btn ghost small" onclick="goToday()">วันนี้</button>
+        </div>
+        <span class="lbl" style="margin-left:10px">ไลน์</span>
+        <div class="lines" id="lineBtns"></div>
+        <span class="spacer"></span>
+        <span class="day-label" id="dayLabel"></span>
+      </div>
+      <div id="dayBox"><div class="empty">เลือกไลน์เพื่อดูข้อมูล</div></div>
+    </section>
 
-  <!-- แท็บ รอบพัก -->
-  <section class="panel" id="panel-break">
-    <div id="floorsBox"><div class="loading">กำลังโหลด...</div></div>
-  </section>
+    <section class="page" id="page-break">
+      <div class="page-title">รอบพักเที่ยง</div>
+      <div class="page-sub">ตั้งรอบพักของแต่ละชั้นเป็นช่วงวันที่ได้ (ไม่ใส่วันสิ้นสุด = ใช้ไปเรื่อย ๆ) • พ้นช่วงแล้วกลับไปใช้รอบหลัก • วันที่ตั้งเป้าไปแล้วไม่เปลี่ยนย้อนหลัง</div>
+      <div class="floors" id="floorsBox"><div class="loading">กำลังโหลด...</div></div>
+    </section>
 
-  <!-- แท็บ วันหยุด -->
-  <section class="panel" id="panel-holiday">
-    <div class="card">
-      <h2>📅 เพิ่มวันหยุด</h2>
-      <p class="hint">วันอาทิตย์หยุดอยู่แล้ว ไม่ต้องใส่ • วันหยุดบอทจะไม่ตามยอด</p>
-      <input type="date" class="date-input" id="holDate">
-      <input class="text-input" id="holName" maxlength="80" placeholder="ชื่อวันหยุด เช่น วันปิยมหาราช">
-      <button class="btn-main" style="margin-top:10px" onclick="addHoliday()">เพิ่มวันหยุด</button>
-    </div>
-    <div class="card">
-      <h2>วันหยุดข้างหน้า</h2>
-      <ul class="list" id="holidayList"><li class="noplan">กำลังโหลด...</li></ul>
-    </div>
-  </section>
+    <section class="page" id="page-holiday">
+      <div class="page-title">วันหยุด</div>
+      <div class="page-sub">วันอาทิตย์หยุดอยู่แล้ว ไม่ต้องใส่ • วันหยุดบอทจะไม่ตามยอด</div>
+      <div class="grid2">
+        <div class="card"><h3>วันหยุดข้างหน้า</h3><table><thead><tr><th>วันที่</th><th>ชื่อวันหยุด</th><th></th></tr></thead><tbody id="holidayRows"></tbody></table></div>
+        <div class="card">
+          <h3>เพิ่มวันหยุด</h3>
+          <div class="sub">วันที่</div><input type="date" class="inp" id="holDate">
+          <div class="sub">ชื่อวันหยุด</div><input class="inp" id="holName" maxlength="80" placeholder="เช่น วันปิยมหาราช">
+          <button class="btn full" style="margin-top:14px" onclick="addHoliday()">เพิ่มวันหยุด</button>
+        </div>
+      </div>
+    </section>
 
-  <!-- แท็บ ประวัติ -->
-  <section class="panel" id="panel-log">
-    <div class="card">
-      <h2>🧾 ประวัติการแก้</h2>
-      <ul class="list log" id="logList"><li class="noplan">กำลังโหลด...</li></ul>
-    </div>
-  </section>
+    <section class="page" id="page-log">
+      <div class="page-title">ประวัติการแก้</div>
+      <div class="page-sub">40 รายการล่าสุด • เก็บไว้ในชีท Maintenance_Log</div>
+      <div class="card"><table><thead><tr><th>เวลา</th><th>รายการ</th><th>ไลน์/ชั้น</th><th>มีผลวันที่</th><th>รายละเอียด</th><th>ผู้แก้</th></tr></thead><tbody id="logRows"></tbody></table></div>
+    </section>
+  </main>
 </div>
 
-<nav class="tabs" id="tabs" style="display:none;">
-  <div class="tabs-inner">
-    <button class="tab active" data-tab="today" onclick="showTab('today')"><span class="ico">🕗</span>เวลาเข้า</button>
-    <button class="tab" data-tab="break" onclick="showTab('break')"><span class="ico">🍱</span>รอบพัก</button>
-    <button class="tab" data-tab="holiday" onclick="showTab('holiday')"><span class="ico">📅</span>วันหยุด</button>
-    <button class="tab" data-tab="log" onclick="showTab('log')"><span class="ico">🧾</span>ประวัติ</button>
-  </div>
-</nav>
-
+<div class="savebar" id="savebar">
+  <div class="msg"><span id="saveCount"></span><small>ยอด/หมายเหตุ/จำนวนคน/เข้า-ออกโหลด ที่แก้จะถูกบันทึกพร้อมกัน</small></div>
+  <span class="spacer"></span>
+  <button class="btn ghost" onclick="discardDay()">ยกเลิกการแก้</button>
+  <button class="btn" id="saveDayBtn" onclick="saveDay()">บันทึกการแก้ไข</button>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLm1LVkTiwK3PCvPSt3PFA1ifb76KCRsWxC1SkaLdDC-ginxy0RHWstWpHgDytaBmm/exec";
+  const LINES = ['B', 'C', 'D', 'E', 'F'];
   const FLOOR_NAMES = { F3: 'ชั้น 3', F4: 'ชั้น 4' };
   const WHAT_TEXT = {
     START_TIME: 'แก้เวลาเข้างาน', BREAK_START: 'แก้รอบพักรายไลน์', BREAK_SCHEDULE: 'ตั้งรอบพัก',
-    BREAK_SCHEDULE_DELETE: 'ยกเลิกรอบพักล่วงหน้า', HOLIDAY_ADD: 'เพิ่มวันหยุด', HOLIDAY_DELETE: 'ลบวันหยุด',
-    LOGIN_FAILED: 'ใส่รหัสผิด'
+    BREAK_SCHEDULE_DELETE: 'ยกเลิกรอบพัก', HOLIDAY_ADD: 'เพิ่มวันหยุด', HOLIDAY_DELETE: 'ลบวันหยุด',
+    LOGIN_FAILED: 'ใส่รหัสผิด', LINE_DAY_FIX: 'แก้ข้อมูลรายไลน์', PLAN_FIX: 'แก้แผนการผลิต'
   };
 
-  let state = null, password = '', selectedDate = '', busy = false;
-  let openLine = '';              // การ์ดไลน์ที่กางอยู่
-  const draft = {};               // line -> { startTime, breakStart } ที่กำลังเลือก
-  const breakDraft = {};          // floor -> { breakStart, from }
+  let state = null, password = '', busy = false;
+  let curLine = '', day = null;
+  let slotDraft = {}, extraDraft = {};
+  let timeDraft = null, planDraft = null;
+  const breakDraft = {};
 
   /* ---------- helpers ---------- */
   const $ = id => document.getElementById(id);
-  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-  function clock(hhmm) { return String(hhmm || '').replace(':', '.'); }
-  function toMin(hhmm) { const p = String(hhmm || '').split(/[:.]/).map(Number); return p.length === 2 ? p[0] * 60 + p[1] : NaN; }
-  function minText(m) { return String(Math.floor(m / 60)).padStart(2, '0') + '.' + String(m % 60).padStart(2, '0'); }
-  function breakRange(hhmm) { const b = toMin(hhmm); return isNaN(b) ? '-' : `${minText(b)}–${minText(b + 60)}`; }
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const clock = v => String(v || '').replace(':', '.');
+  const toMin = v => { const p = String(v || '').split(/[:.]/).map(Number); return p.length === 2 ? p[0] * 60 + p[1] : NaN; };
+  const minText = m => String(Math.floor(m / 60)).padStart(2, '0') + '.' + String(m % 60).padStart(2, '0');
+  const breakRange = v => { const b = toMin(v); return isNaN(b) ? '-' : `${minText(b)}–${minText(b + 60)}`; };
+  const fmtNum = n => (n === null || n === undefined || n === '') ? '-' : Number(n).toLocaleString();
+  const hoursText = h => (Math.round(Number(h) * 10) / 10).toString();
   function thaiDate(iso, opts) {
     const d = new Date(iso + 'T00:00:00+07:00');
-    return isNaN(d.getTime()) ? iso : d.toLocaleDateString('th-TH', Object.assign({ weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Bangkok' }, opts || {}));
+    return isNaN(d.getTime()) ? iso : d.toLocaleDateString('th-TH', Object.assign({ weekday: 'short', day: 'numeric', month: 'short', year: '2-digit', timeZone: 'Asia/Bangkok' }, opts || {}));
   }
-  function addDays(iso, n) {
-    const d = new Date(iso + 'T12:00:00+07:00'); d.setUTCDate(d.getUTCDate() + n);
-    return d.toISOString().slice(0, 10);
-  }
-  function nextMonday(iso) {
-    const d = new Date(iso + 'T12:00:00+07:00'); const dow = d.getUTCDay();
-    return addDays(iso, ((8 - dow) % 7) || 7);
-  }
-  function toast(msg) {
-    const t = $('toast'); t.textContent = msg; t.style.display = 'block';
-    clearTimeout(toast._t); toast._t = setTimeout(() => { t.style.display = 'none'; }, 3200);
-  }
+  function addDays(iso, n) { const d = new Date(iso + 'T12:00:00+07:00'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+  function toast(msg) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(() => { t.style.display = 'none'; }, 3200); }
   function ssGet(k) { try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; } }
   function ssSet(k, v) { try { v ? sessionStorage.setItem(k, v) : sessionStorage.removeItem(k); } catch (e) {} }
   function lsGet(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function todayIso() { return state ? state.today : new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10); }
 
-  // ช่องเวลา (กฎเดียวกับ Apps Script): เช้าตามตาราง 08.30 / เข้า 08.00 เลื่อนขึ้น,
-  // ช่องปกติรวม 8 ช่อง จบที่ เวลาเข้า + 9 ชม. แล้ว OT ทีละ 1 ชม.
+  // ช่องเวลา (กฎเดียวกับ Apps Script) ใช้แสดงตัวอย่างก่อนเปลี่ยนเวลาเข้า/รอบพัก
   function buildGrid(startTime, breakStart, total) {
     const base = 510, start = toMin(startTime) === 480 ? 480 : 510, b = toMin(breakStart);
-    const items = [];
-    if (isNaN(b) || !total) return items;
+    const out = [];
+    if (isNaN(b) || !total) return out;
     const morning = [];
     for (let t = base; t < b; ) { const e = Math.min(t + 60, b); morning.push([t, e]); t = e; }
     const shift = base - start;
     if (shift > 0) morning.forEach((r, i) => { morning[i] = i === morning.length - 1 ? [r[0] - shift, r[1]] : [r[0] - shift, r[1] - shift]; });
     const ranges = morning.slice(0, total);
-    const afterBreak = b + 60, normalEnd = start + 540, normalAfternoon = Math.max(0, 8 - morning.length);
-    const afternoonCount = total - ranges.length;
-    for (let i = 0; i < afternoonCount; i++) {
+    const n = total - ranges.length, afterBreak = b + 60, normalEnd = start + 540, normalAfternoon = Math.max(0, 8 - morning.length);
+    for (let i = 0; i < n; i++) {
       let s, e;
       if (i < normalAfternoon) { s = afterBreak + 60 * i; e = i === normalAfternoon - 1 ? normalEnd : s + 60; }
       else { s = normalEnd + 60 * (i - normalAfternoon); e = s + 60; }
-      if (e <= s) e = s + 60;
-      ranges.push([s, e]);
+      ranges.push([s, e > s ? e : s + 60]);
     }
     ranges.forEach((r, i) => {
-      items.push({ label: minText(r[0]) + '-' + minText(r[1]), minutes: r[1] - r[0], ot: i >= 8 });
-      if (i === morning.length - 1 && ranges.length > morning.length) items.push({ label: minText(b) + '-' + minText(b + 60), brk: true });
+      out.push({ label: minText(r[0]) + '-' + minText(r[1]), minutes: r[1] - r[0] });
+      if (i === morning.length - 1 && ranges.length > morning.length) out.push({ label: minText(b) + '-' + minText(b + 60), brk: true });
     });
-    return items;
+    return out;
   }
 
-  /* ---------- data ---------- */
-  async function fetchState() {
-    let lastError = null;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 30000);
-      try {
-        const res = await fetch(`${SCRIPT_URL}?action=getMaintenanceState&_=${Date.now()}`, { cache: 'no-store', signal: controller.signal });
-        const data = JSON.parse(await res.text());
-        if (!data || !data.version) throw new Error(data && data.error ? data.error : 'Apps Script ยังไม่รองรับหน้านี้ (ต้อง Deploy v6)');
-        return data;
-      } catch (err) {
-        lastError = err.name === 'AbortError' ? new Error('หมดเวลารอ 30 วินาที') : err;
-        if (/Deploy v6/.test(lastError.message)) break;
-        await new Promise(r => setTimeout(r, 800 * attempt));
-      } finally { clearTimeout(timer); }
-    }
-    throw lastError || new Error('โหลดไม่สำเร็จ');
-  }
-
+  /* ---------- API ---------- */
   async function post(payload) {
     const body = Object.assign({}, payload, { password: password, by: $('byName').value.trim() || 'แอดมิน' });
     const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(body) });
     const data = JSON.parse(await res.text());
-    if (!data || data.status !== 'success') throw new Error((data && data.error) || 'บันทึกไม่สำเร็จ');
+    if (!data || data.status !== 'success') throw new Error((data && data.error) || 'ไม่สำเร็จ');
     return data;
   }
-
-  async function refresh() {
-    try {
-      state = await fetchState();
-      if (!selectedDate || state.editableDates.indexOf(selectedDate) === -1) selectedDate = state.today;
-      renderAll();
-    } catch (err) {
-      $('linesBox').innerHTML = `<div class="error-box">โหลดข้อมูลไม่สำเร็จ<br><span style="color:#64748b;font-size:.8rem;font-weight:600">${esc(err.message)}</span><br><button class="btn-main" style="margin-top:12px" onclick="refresh()">🔄 ลองใหม่</button></div>`;
-    }
+  async function fetchState() {
+    const res = await fetch(`${SCRIPT_URL}?action=getMaintenanceState&_=${Date.now()}`, { cache: 'no-store' });
+    const data = JSON.parse(await res.text());
+    if (!data || !data.version) throw new Error('Apps Script ยังไม่รองรับหน้านี้ (ต้อง Deploy v7)');
+    return data;
+  }
+  async function refreshState() {
+    try { state = await fetchState(); renderFloors(); renderHolidays(); renderLog(); }
+    catch (err) { toast(err.message); }
+  }
+  async function act(fn, okText) {
+    if (busy) return false;
+    busy = true;
+    try { const r = await fn(); if (okText) toast(typeof okText === 'function' ? okText(r) : okText); return r; }
+    catch (err) { alert('ไม่สำเร็จ: ' + err.message); if (/รหัส|ล็อก/.test(err.message)) logout(true); return false; }
+    finally { busy = false; }
   }
 
   /* ---------- login ---------- */
@@ -308,218 +311,382 @@
     if (evt) evt.preventDefault();
     const pw = $('password').value;
     if (!pw) { $('gateErr').textContent = 'กรุณาใส่รหัสแอดมิน'; return; }
-    const btn = $('loginBtn'); btn.disabled = true; btn.textContent = 'กำลังตรวจรหัส...';
-    $('gateErr').textContent = '';
+    const btn = $('loginBtn'); btn.disabled = true; btn.textContent = 'กำลังตรวจรหัส...'; $('gateErr').textContent = '';
     try {
-      password = pw;
-      await post({ action: 'MAINT_LOGIN' });
-      ssSet('settingsPw', pw);
-      lsSet('settingsBy', $('byName').value.trim());
-      $('password').value = '';
+      password = pw; await post({ action: 'MAINT_LOGIN' });
+      ssSet('adminPw', pw); lsSet('adminBy', $('byName').value.trim()); $('password').value = '';
       enterApp();
+    } catch (err) { password = ''; $('gateErr').textContent = err.message; }
+    finally { btn.disabled = false; btn.textContent = 'เข้าใช้งาน'; }
+  }
+  async function enterApp() {
+    $('gate').style.display = 'none'; $('shell').style.display = 'grid';
+    $('whoText').textContent = 'ผู้แก้: ' + ($('byName').value.trim() || 'แอดมิน');
+    await refreshState();
+    $('dayDate').max = todayIso();
+    if (!$('dayDate').value) $('dayDate').value = todayIso();
+    renderLineBtns();
+  }
+  function logout(force) {
+    if (!force && hasUnsaved() && !confirm('มีการแก้ที่ยังไม่บันทึก ออกจากระบบเลยไหม?')) return;
+    password = ''; ssSet('adminPw', '');
+    $('shell').style.display = 'none'; $('savebar').classList.remove('show'); $('gate').style.display = 'flex'; $('password').focus();
+  }
+  function showPage(p) {
+    document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('on', b.dataset.page === p));
+    document.querySelectorAll('.page').forEach(s => s.classList.toggle('on', s.id === 'page-' + p));
+    updateSaveBar();
+  }
+
+  /* ---------- แก้ไขข้อมูลรายไลน์ ---------- */
+  function renderLineBtns() {
+    $('lineBtns').innerHTML = LINES.map(l => `<button class="line-btn ${l === curLine ? 'on' : ''}" onclick="pickLine('${l}')">${l}</button>`).join('');
+  }
+  function hasUnsaved() { return Object.keys(slotDraft).length > 0 || Object.keys(extraDraft).length > 0; }
+  function confirmLeave() { return !hasUnsaved() || confirm('มีการแก้ที่ยังไม่บันทึก จะทิ้งการแก้นี้ไหม?'); }
+  function pickLine(l) { if (l === curLine) return; if (!confirmLeave()) return; curLine = l; renderLineBtns(); loadDay(); }
+  function shiftDay(n) {
+    const next = addDays($('dayDate').value || todayIso(), n);
+    if (next > todayIso()) return;
+    if (!confirmLeave()) return;
+    $('dayDate').value = next; loadDay();
+  }
+  function goToday() { if (!confirmLeave()) return; $('dayDate').value = todayIso(); loadDay(); }
+
+  async function loadDay() {
+    slotDraft = {}; extraDraft = {}; timeDraft = null; planDraft = null; updateSaveBar();
+    const date = $('dayDate').value;
+    $('dayLabel').textContent = date ? thaiDate(date, { weekday: 'long', year: 'numeric', month: 'long' }) : '';
+    if (!curLine) { $('dayBox').innerHTML = '<div class="empty">เลือกไลน์เพื่อดูข้อมูล</div>'; return; }
+    $('dayBox').innerHTML = '<div class="loading">กำลังโหลดข้อมูล Line ' + curLine + '...</div>';
+    try {
+      day = await post({ action: 'MAINT_GET_LINE_DAY', line: curLine, date: date });
+      renderDay();
     } catch (err) {
-      password = '';
-      $('gateErr').textContent = err.message;
-    } finally {
-      btn.disabled = false; btn.textContent = 'เข้าใช้งาน';
+      $('dayBox').innerHTML = `<div class="empty" style="color:#b91c1c">โหลดไม่สำเร็จ: ${esc(err.message)}<br><br><button class="btn" onclick="loadDay()">ลองใหม่</button></div>`;
+      if (/รหัส|ล็อก/.test(err.message)) logout(true);
     }
   }
 
-  function enterApp() {
-    $('gate').style.display = 'none';
-    $('app').style.display = 'block';
-    $('tabs').style.display = 'flex';
-    $('whoText').textContent = 'ผู้แก้: ' + ($('byName').value.trim() || 'แอดมิน');
-    refresh();
-  }
+  function lotModel(lot) { const l = (day.lots || []).find(x => x.lot === lot); return l && l.model ? l.model : ''; }
 
-  function logout() {
-    password = ''; ssSet('settingsPw', '');
-    $('app').style.display = 'none'; $('tabs').style.display = 'none'; $('gate').style.display = 'flex';
-    $('password').focus();
-  }
-
-  async function runAction(payload, confirmText, okText) {
-    if (busy) return;
-    if (confirmText && !confirm(confirmText)) return;
-    busy = true;
-    try {
-      const result = await post(payload);
-      toast(okText(result));
-      await refresh();
-    } catch (err) {
-      alert('ไม่สำเร็จ: ' + err.message);
-      if (/รหัส|ล็อก/.test(err.message)) logout();
-    } finally { busy = false; }
-  }
-
-  function showTab(tab) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-    document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab));
-    window.scrollTo(0, 0);
-  }
-
-  function renderAll() { renderLines(); renderFloors(); renderHolidays(); renderLog(); }
-
-  /* ---------- แท็บ เวลาเข้า (รายไลน์) ---------- */
-  function renderLines() {
-    $('daySwitch').innerHTML = state.editableDates.map(d =>
-      `<button class="${d === selectedDate ? 'on' : ''}" onclick="selectedDate='${d}';openLine='';renderLines()">${d === state.today ? 'วันนี้' : 'วันก่อนหน้า'} · ${thaiDate(d)}</button>`
-    ).join('');
-
-    const rows = state.lineDays.filter(l => l.date === selectedDate);
-    $('linesBox').innerHTML = rows.map(l => {
-      if (!l.hasPlan) {
-        return `<div class="line-card"><div class="line-head"><div class="line-badge">${l.line}</div>
-          <div class="line-meta"><div class="line-title">Line ${l.line}</div><div class="line-sub">ยังไม่ได้ตั้งเป้า</div></div></div></div>`;
-      }
-      const d = draft[l.line] || { startTime: l.startTime, breakStart: l.breakStart };
-      const changed = d.startTime !== l.startTime || d.breakStart !== l.breakStart;
-      const grid = buildGrid(d.startTime, d.breakStart, l.totalWorkingHours);
-      const odd = grid.some(s => !s.brk && s.minutes !== 60);
-      const startChips = state.startTimes.slice().sort().reverse().map(t =>
-        `<button class="chip ${d.startTime === t ? 'on' : ''}" onclick="pickLine('${l.line}','startTime','${t}')">${clock(t)}<small>${t === '08:00' ? 'เลิก 17.00' : 'เลิก 17.30'}</small></button>`).join('');
-      const breakChips = state.breakStarts.map(b =>
-        `<button class="chip ${d.breakStart === b ? 'on' : ''}" onclick="pickLine('${l.line}','breakStart','${b}')">${clock(b)}<small>${breakRange(b)}</small></button>`).join('');
-      const slots = grid.map(s => `<span class="slot ${s.brk ? 'brk' : (s.ot ? 'ot' : (s.minutes !== 60 ? 'odd' : ''))}">${s.label}${s.brk ? ' พัก' : (s.minutes !== 60 ? ` · ${s.minutes / 60} ชม.` : '')}</span>`).join('');
-      const isOpen = openLine === l.line;
-      return `<div class="line-card ${isOpen ? 'open' : ''}">
-        <button class="line-head" onclick="toggleLine('${l.line}')">
-          <div class="line-badge">${l.line}</div>
-          <div class="line-meta">
-            <div class="line-title">Line ${l.line} ${odd ? '<span class="pill odd">มีช่อง 0.5 / 1.5 ชม.</span>' : ''}</div>
-            <div class="line-sub">เข้า ${clock(l.startTime)} • พัก ${breakRange(l.breakStart)} • ${l.totalWorkingHours} ชม.</div>
-          </div>
-          <span class="chev">›</span>
-        </button>
-        <div class="line-body">
-          <div class="sub-label">เวลาเข้างาน</div>
-          <div class="seg" style="--n:2">${startChips}</div>
-          <div class="sub-label">พักเที่ยง</div>
-          <div class="seg" style="--n:3">${breakChips}</div>
-          <div class="sub-label">ช่องเวลาที่จะได้</div>
-          <div class="slots">${slots}</div>
-          <div class="actions">
-            <button class="btn-ghost" onclick="resetLine('${l.line}')">ยกเลิก</button>
-            <button class="btn-main" ${changed ? '' : 'disabled'} onclick="saveLine('${l.line}')">${changed ? 'บันทึก' : 'ยังไม่ได้เปลี่ยน'}</button>
+  function renderDay() {
+    if (!day.hasPlan) {
+      $('dayBox').innerHTML = `<div class="card"><div class="empty">Line ${day.line} ยังไม่ได้ตั้งเป้าวันที่ ${thaiDate(day.date)}</div>${renderOrphans()}</div>`;
+      return;
+    }
+    const lotsText = day.lots.map(l => l.lot).join(' → ');
+    $('dayBox').innerHTML = `
+      <div class="strip">
+        <div class="stat"><div class="k">เป้ารวมทั้งวัน</div><div class="v">${fmtNum(day.totalTarget)} <small>ชิ้น</small></div></div>
+        <div class="stat"><div class="k">ผลิตได้ (ยอดที่กรอก)</div><div class="v">${fmtNum(day.actual)} <small>ชิ้น</small></div></div>
+        <div class="stat"><div class="k">เวลาทำงาน</div><div class="v">${day.totalWorkingHours} <small>ชม.</small></div></div>
+        <div class="stat"><div class="k">เข้า / พัก</div><div class="v">${clock(day.startTime)} <small>/ ${breakRange(day.breakStart)}</small></div></div>
+        <div class="stat"><div class="k">LOT</div><div class="v" style="font-size:1rem">${esc(lotsText)}</div></div>
+      </div>
+      <div class="grid2">
+        <div>
+          <div class="card">
+            <h3>ยอดรายช่วงเวลา <span class="note">แก้ยอด/หมายเหตุได้เลย • กด ✕ เพื่อลบยอดช่วงนั้น • ช่วงพักล็อก 0</span></h3>
+            <table>
+              <thead><tr><th>เวลา</th><th>LOT / รุ่น</th><th class="num">เป้า</th><th class="num">ยอด</th><th>หมายเหตุ</th><th>ผู้กรอก</th><th></th></tr></thead>
+              <tbody id="slotRows">${renderSlotRows()}</tbody>
+              <tfoot><tr><td colspan="2">รวม</td><td class="num">${fmtNum(day.slots.reduce((a, s) => a + (Number(s.target) || 0), 0))}</td><td class="num" id="sumQty"></td><td colspan="3"></td></tr></tfoot>
+            </table>
+            ${renderOrphans()}
           </div>
         </div>
+        <div>
+          ${renderTimeCard()}
+          ${renderPlanCard()}
+          ${renderExtraCard()}
+        </div>
       </div>`;
+    updateSum();
+  }
+
+  function renderSlotRows() {
+    return day.slots.map(s => {
+      const d = slotDraft[s.slot];
+      const saved = s.saved;
+      const qty = d ? (d.remove ? '' : d.qty) : (saved ? saved.output : '');
+      const remark = d ? (d.remove ? '' : d.remark) : (saved ? saved.remark : '');
+      const lenTag = s.isBreak ? '' : (s.minutes !== 60 ? `<span class="len odd">${s.minutes / 60} ชม.</span>` : '');
+      const otTag = (!s.isBreak && Number(s.no) > 8) ? '<span class="len ot">OT</span>' : '';
+      const who = d && d.remove ? '<span style="color:#b91c1c;font-weight:800">จะลบ</span>'
+        : saved ? `${esc(saved.reportedBy || '-')}<br>${esc(saved.time || '')}` : (s.ended ? '<span style="color:#b45309">ยังไม่กรอก</span>' : '<span class="pending">ยังไม่ถึงเวลา</span>');
+      if (s.isBreak) {
+        return `<tr class="brk"><td class="slot-time">${s.slot}</td><td>พักเที่ยง</td><td class="num">-</td><td class="num">${saved ? '0' : '-'}</td><td></td><td class="who"></td><td></td></tr>`;
+      }
+      return `<tr class="${Number(s.no) > 8 ? 'ot' : ''}">
+        <td class="slot-time">${s.slot}${lenTag}${otTag}</td>
+        <td class="lot">${esc(s.lot || '-')}<small>${esc(lotModel(s.lot))}</small></td>
+        <td class="num">${s.target === null || s.target === undefined ? '-' : fmtNum(s.target)}</td>
+        <td class="num"><input class="inp qty ${d ? 'changed' : ''}" type="number" min="0" step="1" value="${esc(qty)}" placeholder="-" data-slot="${s.slot}" oninput="editSlot(this)"></td>
+        <td><input class="inp remark ${d ? 'changed' : ''}" value="${esc(remark)}" maxlength="200" data-slot="${s.slot}" oninput="editSlot(this)"></td>
+        <td class="who">${who}</td>
+        <td>${(saved || d) ? `<button class="x-btn" title="ลบยอดช่วงนี้" onclick="removeSlot('${s.slot}')">✕</button>` : ''}</td>
+      </tr>`;
     }).join('');
   }
 
-  function toggleLine(line) { openLine = openLine === line ? '' : line; renderLines(); }
-  function pickLine(line, key, value) {
-    const l = state.lineDays.find(x => x.date === selectedDate && x.line === line);
-    draft[line] = Object.assign({ startTime: l.startTime, breakStart: l.breakStart }, draft[line] || {}, { [key]: value });
-    renderLines();
-  }
-  function resetLine(line) { delete draft[line]; openLine = ''; renderLines(); }
-
-  function saveLine(line) {
-    const l = state.lineDays.find(x => x.date === selectedDate && x.line === line);
-    const d = draft[line];
-    if (!d) return;
-    const parts = [];
-    if (d.startTime !== l.startTime) parts.push(`เวลาเข้างาน ${clock(l.startTime)} → ${clock(d.startTime)}`);
-    if (d.breakStart !== l.breakStart) parts.push(`พักเที่ยง ${breakRange(l.breakStart)} → ${breakRange(d.breakStart)}`);
-    runAction(
-      { action: 'MAINT_SET_LINE_SLOT', line: line, workDate: selectedDate, startTime: d.startTime, breakStart: d.breakStart },
-      `Line ${line} · ${thaiDate(selectedDate)}\n${parts.join('\n')}\n\nยอดที่กรอกแล้วจะย้ายตามลำดับช่อง ไม่หาย`,
-      r => { delete draft[line]; openLine = ''; return `บันทึก Line ${line} แล้ว` + (r.relabeled ? ` • ย้ายยอด ${r.relabeled} ช่อง` : ''); }
-    );
+  function renderOrphans() {
+    if (!day.orphans || !day.orphans.length) return '';
+    return `<div class="warn">มียอดที่ไม่ตรงกับช่องเวลาของวันนี้ (อาจกรอกก่อนเปลี่ยนเวลาเข้างาน/รอบพัก) — ลบได้ถ้าไม่ใช้แล้ว</div>
+      <table style="margin-top:8px"><tbody>${day.orphans.map(o => `<tr><td class="slot-time">${esc(o.slot)}</td><td>${esc(o.lot)}</td><td class="num">${fmtNum(o.output)}</td><td>${esc(o.remark)}</td><td class="who">${esc(o.reportedBy || '')}</td>
+      <td><button class="btn danger" onclick="removeOrphan('${esc(o.slot)}')">${slotDraft[o.slot] ? 'ยกเลิกการลบ' : 'ลบ'}</button></td></tr>`).join('')}</tbody></table>`;
   }
 
-  /* ---------- แท็บ รอบพัก (ตามชั้น) ---------- */
+  function editSlot(input) {
+    const slot = input.dataset.slot;
+    const s = day.slots.find(x => x.slot === slot);
+    const row = input.closest('tr');
+    const qtyEl = row.querySelector('.qty'), remarkEl = row.querySelector('.remark');
+    const qty = qtyEl.value.trim(), remark = remarkEl.value.trim();
+    const savedQty = s.saved ? String(s.saved.output) : '', savedRemark = s.saved ? String(s.saved.remark || '') : '';
+    if (qty === savedQty && remark === savedRemark) delete slotDraft[slot];
+    else if (qty === '') { if (s.saved) slotDraft[slot] = { remove: true }; else delete slotDraft[slot]; }
+    else slotDraft[slot] = { qty: qty, remark: remark };
+    [qtyEl, remarkEl].forEach(el => el.classList.toggle('changed', !!slotDraft[slot]));
+    updateSum(); updateSaveBar();
+  }
+  function removeSlot(slot) {
+    const s = day.slots.find(x => x.slot === slot);
+    if (s && s.saved && !(slotDraft[slot] && slotDraft[slot].remove)) slotDraft[slot] = { remove: true }; else delete slotDraft[slot];
+    $('slotRows').innerHTML = renderSlotRows(); updateSum(); updateSaveBar();
+  }
+  function removeOrphan(slot) {
+    if (slotDraft[slot]) delete slotDraft[slot]; else slotDraft[slot] = { remove: true };
+    renderDay(); updateSaveBar();
+  }
+  function updateSum() {
+    let sum = 0;
+    day.slots.forEach(s => {
+      const d = slotDraft[s.slot];
+      sum += d ? (d.remove ? 0 : Number(d.qty) || 0) : (s.saved ? Number(s.saved.output) || 0 : 0);
+    });
+    const el = $('sumQty'); if (el) el.textContent = sum.toLocaleString();
+  }
+
+  /* เวลาเข้างาน / รอบพัก ของไลน์วันนั้น */
+  function renderTimeCard() {
+    const t = timeDraft || { startTime: day.startTime, breakStart: day.breakStart };
+    const changed = t.startTime !== day.startTime || t.breakStart !== day.breakStart;
+    const preview = changed ? buildGrid(t.startTime, t.breakStart, day.totalWorkingHours) : [];
+    return `<div class="card">
+      <h3>เวลาเข้างาน / รอบพัก <span class="note">เฉพาะ Line ${day.line} วันนี้</span></h3>
+      <div class="sub">เวลาเข้างาน</div>
+      <div class="chips" style="--n:2">${['08:30', '08:00'].map(v => `<button class="chip ${t.startTime === v ? 'on' : ''}" onclick="pickTime('startTime','${v}')">${clock(v)}<small>เลิกปกติ ${v === '08:00' ? '17.00' : '17.30'}</small></button>`).join('')}</div>
+      <div class="sub">พักเที่ยง</div>
+      <div class="chips" style="--n:3">${state.breakStarts.map(v => `<button class="chip ${t.breakStart === v ? 'on' : ''}" onclick="pickTime('breakStart','${v}')">${clock(v)}<small>${breakRange(v)}</small></button>`).join('')}</div>
+      ${changed ? `<div class="help">ช่องใหม่: ${preview.map(p => p.brk ? `<b style="color:#be123c">${p.label} พัก</b>` : (p.minutes !== 60 ? `<b style="color:#b45309">${p.label} (${p.minutes / 60})</b>` : p.label)).join(' · ')}</div>
+        <div class="row-inline" style="margin-top:10px"><button class="btn ghost small" onclick="pickTime()">ยกเลิก</button><button class="btn small" style="flex:1" id="saveTimeBtn" onclick="saveTime()">เปลี่ยนเวลา (ยอดย้ายตามลำดับช่อง)</button></div>` : ''}
+    </div>`;
+  }
+  function pickTime(key, value) {
+    timeDraft = key ? Object.assign({ startTime: day.startTime, breakStart: day.breakStart }, timeDraft || {}, { [key]: value }) : null;
+    renderDay();
+  }
+  async function saveTime() {
+    if (hasUnsaved() && !confirm('มียอดที่แก้แต่ยังไม่บันทึก จะถูกทิ้งไป ดำเนินการต่อไหม?')) return;
+    const t = timeDraft;
+    if (!confirm(`Line ${day.line} · ${thaiDate(day.date)}\nเข้า ${clock(t.startTime)} • พัก ${breakRange(t.breakStart)}\n\nยอดที่กรอกแล้วจะย้ายตามลำดับช่อง`)) return;
+    const r = await act(() => post({ action: 'MAINT_SET_LINE_SLOT', line: day.line, workDate: day.date, startTime: t.startTime, breakStart: t.breakStart }),
+      r => 'เปลี่ยนเวลาแล้ว' + (r.relabeled ? ` • ย้ายยอด ${r.relabeled} ช่อง` : ''));
+    if (r) { await loadDay(); refreshState(); }
+  }
+
+  /* แผนการผลิต (AA + TG Original) */
+  function planNow() { return planDraft || { aa: day.totalWorkingHours, tg: day.lots.map(l => l.tgOriginal) }; }
+  function planChanged(p) { return Number(p.aa) !== Number(day.totalWorkingHours) || p.tg.some((v, i) => Number(v) !== Number(day.lots[i].tgOriginal)); }
+  function renderPlanCard() {
+    const p = planNow();
+    return `<div class="card" id="planCard">
+      <h3>แผนการผลิต <span class="note">เป้า LOT = TG ÷ ชม.ทำงาน × ชม.ที่ทำจริง</span></h3>
+      <div class="row-inline"><span style="font-weight:800;font-size:.86rem;color:#334155">เวลาทำงานรวม</span>
+        <input class="inp" id="planAA" type="number" min="1" max="10" step="1" style="width:80px" value="${esc(p.aa)}" oninput="editPlan()"> <span class="pending">ชม.</span></div>
+      <table style="margin-top:10px"><thead><tr><th>LOT</th><th class="num">TG Original</th><th class="num">ชม.</th><th class="num">เป้า</th></tr></thead><tbody>
+      ${day.lots.map((l, i) => `<tr><td class="lot">${esc(l.lot)}<small>${esc(l.model)}</small></td>
+        <td class="num"><input class="inp plan-tg" data-i="${i}" type="number" min="1" step="1" style="width:100px;text-align:right" value="${esc(p.tg[i])}" oninput="editPlan()"></td>
+        <td class="num">${hoursText(l.hours)}</td><td class="num">${fmtNum(l.target)}</td></tr>`).join('')}
+      </tbody></table>
+      <div class="row-inline" id="planActions" style="margin-top:10px;display:none"><button class="btn ghost small" onclick="planDraft=null;renderDay()">ยกเลิก</button><button class="btn small" style="flex:1" onclick="savePlan()">บันทึกแผน (คำนวณเป้าใหม่)</button></div>
+    </div>`;
+  }
+  function editPlan() {
+    const p = { aa: $('planAA').value, tg: [...document.querySelectorAll('.plan-tg')].map(el => el.value) };
+    planDraft = planChanged(p) ? p : null;
+    $('planAA').classList.toggle('changed', Number(p.aa) !== Number(day.totalWorkingHours));
+    document.querySelectorAll('.plan-tg').forEach(el => el.classList.toggle('changed', Number(el.value) !== Number(day.lots[el.dataset.i].tgOriginal)));
+    $('planActions').style.display = planDraft ? 'flex' : 'none';
+  }
+  async function savePlan() {
+    const p = planDraft;
+    const aa = Number(p.aa);
+    if (!Number.isInteger(aa) || aa < 1 || aa > 10) { alert('เวลาทำงานรวมต้องเป็น 1–10 ชม.'); return; }
+    const tg = day.lots.map((l, i) => Number(p.tg[i]));
+    if (tg.some(v => !Number.isInteger(v) || v <= 0)) { alert('TG Original ต้องเป็นจำนวนเต็มมากกว่า 0'); return; }
+    if (hasUnsaved() && !confirm('มียอดที่แก้แต่ยังไม่บันทึก จะถูกทิ้งไป ดำเนินการต่อไหม?')) return;
+    if (!confirm(`Line ${day.line} · ${thaiDate(day.date)}\nเวลาทำงาน ${aa} ชม.\n${day.lots.map((l, i) => `${l.lot}: TG ${tg[i].toLocaleString()}`).join('\n')}`)) return;
+    const payload = { action: 'MAINT_UPDATE_PLAN', line: 'Line ' + day.line, workDate: day.date, totalWorkingHours: aa };
+    day.lots.forEach((l, i) => { payload['tgOriginal' + l.index] = tg[i]; });
+    const r = await act(() => post(payload), r => `บันทึกแผนแล้ว • เป้ารวมใหม่ ${fmtNum(r.totalTarget)} ชิ้น`);
+    if (r) { await loadDay(); refreshState(); }
+  }
+
+  /* จำนวนคน + เข้า/ออกโหลด */
+  function renderExtraCard() {
+    const mp = extraDraft.manpower !== undefined ? extraDraft.manpower : (day.manpower === null || day.manpower === undefined ? '' : day.manpower);
+    const lotRows = (key, src) => day.lots.map(l => {
+      const draftVal = extraDraft[key] && extraDraft[key][l.lot];
+      const val = draftVal !== undefined ? draftVal : (src && src[l.lot] !== undefined ? src[l.lot] : '');
+      return `<tr><td class="lot">${esc(l.lot)}<small>${esc(l.model)}</small></td><td class="num"><input class="inp ${draftVal !== undefined ? 'changed' : ''}" type="number" min="0" step="1" style="width:110px;text-align:right" value="${esc(val)}" placeholder="0" oninput="editExtra('${key}','${esc(l.lot)}',this)"></td></tr>`;
+    }).join('');
+    return `<div class="card">
+      <h3>จำนวนคน${day.loadInLine ? ' / งานเข้า-ออกโหลด' : ''}</h3>
+      <div class="row-inline"><span style="font-weight:800;font-size:.86rem;color:#334155">จำนวนคน</span>
+        <input class="inp ${extraDraft.manpower !== undefined ? 'changed' : ''}" id="mpInput" type="number" min="0" step="0.5" style="width:100px" value="${esc(mp)}" oninput="editExtra('manpower',null,this)"> <span class="pending">คน</span></div>
+      ${day.loadInLine ? `
+        <div class="sub">📥 งานเข้าโหลด (ตัว)</div><table><tbody>${lotRows('loadIn', day.loadIn)}</tbody></table>
+        <div class="sub">📤 งานออกโหลด (ตัว)</div><table><tbody>${lotRows('loadOut', day.loadOut)}</tbody></table>` : '<div class="help">Line นี้ไม่มีงานเข้า/ออกโหลด</div>'}
+    </div>`;
+  }
+  function editExtra(key, lot, input) {
+    const value = String(input.value).trim();
+    let changed;
+    if (key === 'manpower') {
+      const orig = day.manpower === null || day.manpower === undefined ? '' : String(day.manpower);
+      changed = value !== orig;
+      if (changed) extraDraft.manpower = value; else delete extraDraft.manpower;
+    } else {
+      const src = (key === 'loadIn' ? day.loadIn : day.loadOut) || {};
+      const orig = src[lot] !== undefined ? String(src[lot]) : '';
+      changed = value !== orig && !(value === '' && orig === '0') && !(value === '0' && orig === '');
+      extraDraft[key] = extraDraft[key] || {};
+      if (changed) extraDraft[key][lot] = value; else delete extraDraft[key][lot];
+      if (!Object.keys(extraDraft[key]).length) delete extraDraft[key];
+    }
+    input.classList.toggle('changed', changed);
+    updateSaveBar();
+  }
+
+  function updateSaveBar() {
+    const n = Object.keys(slotDraft).length + (extraDraft.manpower !== undefined ? 1 : 0)
+      + (extraDraft.loadIn ? Object.keys(extraDraft.loadIn).length : 0) + (extraDraft.loadOut ? Object.keys(extraDraft.loadOut).length : 0);
+    $('saveCount').textContent = `แก้ไขแล้ว ${n} รายการ (ยังไม่บันทึก)`;
+    $('savebar').classList.toggle('show', n > 0 && $('page-day').classList.contains('on'));
+  }
+  function discardDay() { if (!confirm('ทิ้งการแก้ทั้งหมด?')) return; slotDraft = {}; extraDraft = {}; renderDay(); updateSaveBar(); }
+
+  async function saveDay() {
+    const slots = Object.keys(slotDraft).map(slot => {
+      const d = slotDraft[slot];
+      return d.remove ? { slot: slot, qty: null } : { slot: slot, qty: Number(d.qty), remark: d.remark || '' };
+    });
+    for (const s of slots) {
+      if (s.qty !== null && (!Number.isInteger(s.qty) || s.qty < 0)) { alert(`ยอดช่วง ${s.slot} ต้องเป็นจำนวนเต็มตั้งแต่ 0`); return; }
+    }
+    if (extraDraft.manpower !== undefined && extraDraft.manpower !== '' && !(Number(extraDraft.manpower) >= 0)) { alert('จำนวนคนไม่ถูกต้อง'); return; }
+    const lines = slots.map(s => {
+      const old = (day.slots.find(x => x.slot === s.slot) || {}).saved || (day.orphans || []).find(o => o.slot === s.slot);
+      return `${s.slot}: ${old ? old.output : '-'} → ${s.qty === null ? 'ลบ' : s.qty}`;
+    });
+    if (extraDraft.manpower !== undefined) lines.push(`จำนวนคน: ${day.manpower === null || day.manpower === undefined ? '-' : day.manpower} → ${extraDraft.manpower || '-'}`);
+    ['loadIn', 'loadOut'].forEach(k => { if (extraDraft[k]) lines.push(`${k === 'loadIn' ? 'เข้าโหลด' : 'ออกโหลด'}: ` + Object.keys(extraDraft[k]).map(l => `${l} = ${extraDraft[k][l] || 0}`).join(', ')); });
+    if (!confirm(`บันทึกการแก้ไข Line ${day.line} · ${thaiDate(day.date)}\n\n${lines.join('\n')}`)) return;
+
+    const payload = { action: 'MAINT_SAVE_LINE_DAY', line: day.line, date: day.date, slots: slots };
+    if (extraDraft.manpower !== undefined) payload.manpower = extraDraft.manpower;
+    ['loadIn', 'loadOut'].forEach(k => {
+      if (!extraDraft[k]) return;
+      const src = (k === 'loadIn' ? day.loadIn : day.loadOut) || {};
+      payload[k] = day.lots.map(l => ({ lot: l.lot, qty: Number(extraDraft[k][l.lot] !== undefined ? extraDraft[k][l.lot] : (src[l.lot] !== undefined ? src[l.lot] : 0)) || 0 }));
+    });
+    $('saveDayBtn').disabled = true;
+    const r = await act(() => post(payload), 'บันทึกการแก้ไขแล้ว');
+    $('saveDayBtn').disabled = false;
+    if (r) { slotDraft = {}; extraDraft = {}; await loadDay(); refreshState(); }
+  }
+
+  /* ---------- รอบพัก ---------- */
   function renderFloors() {
-    const tomorrow = addDays(state.today, 1), monday = nextMonday(state.today);
+    const today = state.today;
     $('floorsBox').innerHTML = state.floors.map(f => {
-      const d = breakDraft[f.floor] || { breakStart: '', from: '' };
-      const future = f.rows.filter(r => r.future);
-      const breakChips = state.breakStarts.map(b =>
-        `<button class="chip ${d.breakStart === b ? 'on' : ''}" onclick="pickBreak('${f.floor}','breakStart','${b}')">${clock(b)}<small>${breakRange(b)}</small></button>`).join('');
-      const quick = [[state.today, 'วันนี้'], [tomorrow, 'พรุ่งนี้'], [monday, 'จันทร์หน้า']].map(([iso, txt]) =>
-        `<button class="chip ${d.from === iso ? 'on' : ''}" onclick="pickBreak('${f.floor}','from','${iso}')">${txt}<small>${thaiDate(iso, { weekday: undefined })}</small></button>`).join('');
-      const custom = d.from && [state.today, tomorrow, monday].indexOf(d.from) === -1 ? d.from : '';
-      const ready = d.breakStart && d.from;
+      const d = breakDraft[f.floor] || { breakStart: '', from: '', to: '' };
+      const rows = f.rows.map(r => {
+        const status = r.future ? '<span class="tag future">รอเริ่มใช้</span>' : (r.ended ? '<span class="tag ended">หมดช่วงแล้ว</span>' : '<span class="tag active">ใช้อยู่</span>');
+        const range = r.base ? 'รอบหลัก (ไม่มีวันสิ้นสุด)' : `${thaiDate(r.from)} – ${r.to ? thaiDate(r.to) : 'ไม่กำหนด'}`;
+        return `<tr><td>${range}</td><td><b>${breakRange(r.breakStart)}</b></td><td>${status}</td><td>${r.future ? `<button class="btn danger" onclick="deleteBreak('${f.floor}','${r.from}')">ยกเลิก</button>` : ''}</td></tr>`;
+      }).join('');
+      const ready = d.breakStart && d.from && (!d.to || d.to >= d.from);
       return `<div class="card">
-        <h2>${FLOOR_NAMES[f.floor] || f.floor} · Line ${f.lines.join(' ')}</h2>
-        <div class="floor-now"><b>พักวันนี้</b><span class="t">${breakRange(f.current)}</span></div>
-        ${future.length ? `<ul class="sched">${future.map(r => `<li><span>${thaiDate(r.from)} → พัก ${breakRange(r.breakStart)} <span class="tag future">รอเริ่มใช้</span></span><button class="btn-del" onclick="deleteBreak('${f.floor}','${r.from}')">ยกเลิก</button></li>`).join('')}</ul>` : ''}
-        <div class="sub-label">เปลี่ยนรอบพักเป็น</div>
-        <div class="seg" style="--n:3">${breakChips}</div>
-        <div class="sub-label">เริ่มใช้</div>
-        <div class="date-row">${quick}</div>
-        <div class="sub-label" style="margin-top:10px;font-weight:700;color:#64748b">หรือเลือกวันอื่น</div>
-        <input type="date" class="date-input" style="margin-top:0" min="${state.today}" value="${custom}" onchange="pickBreak('${f.floor}','from',this.value)" aria-label="เลือกวันอื่น">
-        <button class="btn-main" style="margin-top:10px" ${ready ? '' : 'disabled'} onclick="saveBreak('${f.floor}')">${ready ? `ตั้งพัก ${breakRange(d.breakStart)} เริ่ม ${thaiDate(d.from)}` : 'เลือกรอบพักและวันเริ่มใช้'}</button>
+        <h3>${FLOOR_NAMES[f.floor] || f.floor} · Line ${f.lines.join(' ')}</h3>
+        <div class="now-box"><b>พักวันนี้</b><span class="t">${breakRange(f.current)}</span></div>
+        <table><thead><tr><th>ช่วงวันที่</th><th>พักเที่ยง</th><th>สถานะ</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+        <div class="sub" style="margin-top:16px">ตั้งรอบพักใหม่</div>
+        <div class="chips" style="--n:3">${state.breakStarts.map(v => `<button class="chip ${d.breakStart === v ? 'on' : ''}" onclick="editBreak('${f.floor}','breakStart','${v}')">${clock(v)}<small>${breakRange(v)}</small></button>`).join('')}</div>
+        <div class="row-inline" style="margin-top:10px">
+          <div style="flex:1"><div class="sub" style="margin-top:0">ตั้งแต่วันที่</div><input type="date" class="inp" data-k="from" min="${today}" value="${d.from}" onchange="editBreak('${f.floor}','from',this.value)"></div>
+          <div style="flex:1"><div class="sub" style="margin-top:0">ถึงวันที่ <span class="pending">(ไม่ใส่ = ไม่กำหนด)</span></div><input type="date" class="inp" data-k="to" min="${d.from || today}" value="${d.to}" onchange="editBreak('${f.floor}','to',this.value)"></div>
+        </div>
+        ${d.to && d.from && d.to < d.from ? '<div class="warn">วันสิ้นสุดต้องไม่ก่อนวันเริ่ม</div>' : ''}
+        <button class="btn full" style="margin-top:12px" ${ready ? '' : 'disabled'} onclick="saveBreak('${f.floor}')">${ready ? `ตั้งพัก ${breakRange(d.breakStart)} • ${thaiDate(d.from)} – ${d.to ? thaiDate(d.to) : 'ไม่กำหนด'}` : 'เลือกรอบพักและวันที่'}</button>
       </div>`;
     }).join('');
   }
-
-  function pickBreak(floor, key, value) {
-    breakDraft[floor] = Object.assign({ breakStart: '', from: '' }, breakDraft[floor] || {}, { [key]: value });
-    renderFloors();
-  }
-
-  function saveBreak(floor) {
+  function editBreak(floor, key, value) { breakDraft[floor] = Object.assign({ breakStart: '', from: '', to: '' }, breakDraft[floor] || {}, { [key]: value }); renderFloors(); }
+  async function saveBreak(floor) {
     const d = breakDraft[floor];
-    const f = state.floors.find(x => x.floor === floor);
-    const todayNote = d.from === state.today ? '\n\nเริ่มวันนี้: ไลน์ที่ตั้งเป้าแล้วจะย้ายช่องเวลาให้ทันที ยอดไม่หาย' : '';
-    runAction(
-      { action: 'MAINT_ADD_BREAK', floor: floor, breakStart: d.breakStart, effectiveFrom: d.from },
-      `${FLOOR_NAMES[floor] || floor} (Line ${f.lines.join(' ')})\nพัก ${breakRange(d.breakStart)} เริ่ม ${thaiDate(d.from)}${todayNote}`,
-      r => { delete breakDraft[floor]; return 'ตั้งรอบพักแล้ว' + (r.appliedToday && r.appliedToday.length ? ` • ใช้กับ Line ${r.appliedToday.join(' ')} วันนี้แล้ว` : ''); }
-    );
+    const note = d.from === state.today ? '\n\nเริ่มวันนี้: ไลน์ที่ตั้งเป้าแล้วจะย้ายช่องเวลาให้ทันที ยอดไม่หาย' : '';
+    if (!confirm(`${FLOOR_NAMES[floor]}\nพัก ${breakRange(d.breakStart)}\n${thaiDate(d.from)} – ${d.to ? thaiDate(d.to) : 'ไม่กำหนด'}${note}`)) return;
+    const r = await act(() => post({ action: 'MAINT_ADD_BREAK', floor: floor, breakStart: d.breakStart, effectiveFrom: d.from, effectiveTo: d.to || '' }),
+      r => 'ตั้งรอบพักแล้ว' + (r.appliedToday && r.appliedToday.length ? ` • ใช้กับ Line ${r.appliedToday.join(' ')} วันนี้แล้ว` : ''));
+    if (r) { delete breakDraft[floor]; refreshState(); }
+  }
+  async function deleteBreak(floor, from) {
+    if (!confirm(`ยกเลิกรอบพักของ${FLOOR_NAMES[floor]} ที่จะเริ่ม ${thaiDate(from)}?`)) return;
+    const r = await act(() => post({ action: 'MAINT_DELETE_BREAK', floor: floor, effectiveFrom: from }), 'ยกเลิกแล้ว');
+    if (r) refreshState();
   }
 
-  function deleteBreak(floor, from) {
-    runAction({ action: 'MAINT_DELETE_BREAK', floor: floor, effectiveFrom: from },
-      `ยกเลิกรอบพักของ${FLOOR_NAMES[floor] || floor} ที่จะเริ่ม ${thaiDate(from)}?`, () => 'ยกเลิกแล้ว');
-  }
-
-  /* ---------- แท็บ วันหยุด ---------- */
+  /* ---------- วันหยุด ---------- */
   function renderHolidays() {
     $('holDate').min = state.today;
     const items = state.holidays.filter(h => !h.past);
-    $('holidayList').innerHTML = items.map(h =>
-      `<li><div><div class="hol-date">${thaiDate(h.date, { year: '2-digit' })}</div><div class="hol-name">${esc(h.name || '-')}</div></div>
-        <button class="btn-del" onclick="deleteHoliday('${h.date}')">ลบ</button></li>`
-    ).join('') || '<li class="noplan">ยังไม่มีวันหยุดข้างหน้า</li>';
+    $('holidayRows').innerHTML = items.map(h => `<tr><td><b>${thaiDate(h.date)}</b></td><td>${esc(h.name || '-')}</td><td><button class="btn danger" onclick="deleteHoliday('${h.date}')">ลบ</button></td></tr>`).join('')
+      || '<tr><td colspan="3" class="pending">ยังไม่มีวันหยุดข้างหน้า</td></tr>';
   }
-
-  function addHoliday() {
+  async function addHoliday() {
     const date = $('holDate').value, name = $('holName').value.trim();
     if (!date) { toast('กรุณาเลือกวันที่'); return; }
-    runAction({ action: 'MAINT_ADD_HOLIDAY', date: date, name: name },
-      `เพิ่มวันหยุด ${thaiDate(date, { year: '2-digit' })}${name ? ' · ' + name : ''}?`,
-      () => { $('holName').value = ''; $('holDate').value = ''; return 'เพิ่มวันหยุดแล้ว'; });
+    if (!confirm(`เพิ่มวันหยุด ${thaiDate(date)}${name ? ' · ' + name : ''}?`)) return;
+    const r = await act(() => post({ action: 'MAINT_ADD_HOLIDAY', date: date, name: name }), 'เพิ่มวันหยุดแล้ว');
+    if (r) { $('holDate').value = ''; $('holName').value = ''; refreshState(); }
+  }
+  async function deleteHoliday(date) {
+    if (!confirm(`ลบวันหยุด ${thaiDate(date)}?`)) return;
+    const r = await act(() => post({ action: 'MAINT_DELETE_HOLIDAY', date: date }), 'ลบแล้ว');
+    if (r) refreshState();
   }
 
-  function deleteHoliday(date) {
-    runAction({ action: 'MAINT_DELETE_HOLIDAY', date: date }, `ลบวันหยุด ${thaiDate(date, { year: '2-digit' })}?`, () => 'ลบแล้ว');
-  }
-
-  /* ---------- แท็บ ประวัติ ---------- */
+  /* ---------- ประวัติ ---------- */
   function renderLog() {
-    $('logList').innerHTML = state.log.map(l => {
-      const isTime = /START|BREAK/.test(l.what);
+    $('logRows').innerHTML = state.log.map(l => {
+      const isTime = /^(START_TIME|BREAK_START|BREAK_SCHEDULE)$/.test(l.what);
       const oldV = isTime ? clock(l.oldValue) : l.oldValue, newV = isTime ? clock(l.newValue) : l.newValue;
-      const change = (oldV || newV) ? ` · ${esc(oldV || '-')} → ${esc(newV || '-')}` : '';
-      return `<li><div class="what">${esc(WHAT_TEXT[l.what] || l.what)}${l.line ? ' · ' + esc(/^F\d$/.test(l.line) ? (FLOOR_NAMES[l.line] || l.line) : 'Line ' + l.line) : ''}${change}</div>
-        <div class="meta">${esc(l.at)} • มีผลวันที่ ${esc(l.date)} • ${esc(l.by || '-')}</div></li>`;
-    }).join('') || '<li class="noplan">ยังไม่มีประวัติ</li>';
+      const detail = (oldV || newV) ? `${oldV ? esc(oldV) + ' → ' : ''}${esc(newV || '-')}` : '';
+      const who = /^F\d$/.test(l.line) ? (FLOOR_NAMES[l.line] || l.line) : (l.line ? 'Line ' + l.line : '');
+      return `<tr><td class="who">${esc(l.at)}</td><td><b>${esc(WHAT_TEXT[l.what] || l.what)}</b></td><td>${esc(who)}</td><td class="who">${esc(l.date)}</td><td style="font-size:.86rem">${detail}</td><td>${esc(l.by || '-')}</td></tr>`;
+    }).join('') || '<tr><td colspan="6" class="pending">ยังไม่มีประวัติ</td></tr>';
   }
+
+  window.addEventListener('beforeunload', e => { if (hasUnsaved()) { e.preventDefault(); e.returnValue = ''; } });
 
   /* ---------- start ---------- */
-  $('byName').value = lsGet('settingsBy');
-  password = ssGet('settingsPw');
-  if (password) {
-    // เคยปลดล็อกในแท็บนี้แล้ว: ตรวจรหัสซ้ำแบบเงียบ ๆ
-    post({ action: 'MAINT_LOGIN' }).then(enterApp).catch(() => { password = ''; ssSet('settingsPw', ''); $('password').focus(); });
-  } else {
-    setTimeout(() => ($('byName').value ? $('password') : $('byName')).focus(), 50);
-  }
+  $('byName').value = lsGet('adminBy');
+  password = ssGet('adminPw');
+  if (password) post({ action: 'MAINT_LOGIN' }).then(enterApp).catch(() => { password = ''; ssSet('adminPw', ''); });
+  setTimeout(() => ($('byName').value ? $('password') : $('byName')).focus(), 50);
 </script>
 </body>
 </html>
