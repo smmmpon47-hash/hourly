@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>ตั้งค่าเวลาทำงาน โรง 1</title>
+  <link rel="preconnect" href="https://script.google.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --teal: #0f766e; --teal-2: #14b8a6; --teal-soft: #f0fdfa; --teal-line: #99f6e4;
+      --ink: #0f172a; --ink-2: #334155; --muted: #64748b; --line: #e2e8f0; --bg-soft: #f8fafc;
+      --amber: #b45309; --amber-soft: #fffbeb; --red: #b91c1c; --red-soft: #fef2f2;
+    }
+    * { box-sizing: border-box; font-family: 'Sarabun', sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { margin: 0; background: #1e3a3f; color: var(--ink); min-height: 100vh; }
+    button { font: inherit; cursor: pointer; }
+    .app { max-width: 560px; margin: 0 auto; padding: 16px 14px 96px; }
+
+    /* ---------- gate (ใส่รหัสก่อนเข้า) ---------- */
+    .gate { position: fixed; inset: 0; background: #1e3a3f; display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
+    .gate-card { width: 100%; max-width: 380px; background: #fff; border-radius: 24px; padding: 28px 22px 24px; box-shadow: 0 24px 50px rgba(0,0,0,.3); text-align: center; }
+    .gate-icon { width: 64px; height: 64px; border-radius: 20px; background: var(--teal-soft); display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 12px; }
+    .gate h1 { margin: 0; font-size: 1.3rem; color: var(--teal); font-weight: 800; }
+    .gate p { margin: 6px 0 18px; color: var(--muted); font-size: .88rem; }
+    .field { text-align: left; margin-bottom: 12px; }
+    .field label { display: block; font-size: .8rem; font-weight: 700; color: var(--ink-2); margin-bottom: 5px; }
+    .field input { width: 100%; padding: 13px 14px; border: 1.5px solid #cbd5e1; border-radius: 14px; font-size: 1.02rem; color: var(--ink); }
+    .field input:focus { outline: none; border-color: var(--teal-2); box-shadow: 0 0 0 3px rgba(20,184,166,.18); }
+    .btn-main { width: 100%; border: 0; border-radius: 14px; padding: 14px; background: var(--teal); color: #fff; font-weight: 800; font-size: 1.02rem; }
+    .btn-main:disabled { opacity: .5; cursor: not-allowed; }
+    .gate-err { color: var(--red); font-size: .85rem; font-weight: 700; min-height: 1.2em; margin-top: 10px; }
+
+    /* ---------- header + tabs ---------- */
+    .top { display: flex; justify-content: space-between; align-items: center; color: #fff; margin-bottom: 12px; }
+    .top h1 { margin: 0; font-size: 1.15rem; font-weight: 800; }
+    .top .who { font-size: .78rem; opacity: .8; }
+    .top .lock { border: 1px solid rgba(255,255,255,.35); background: transparent; color: #fff; border-radius: 10px; padding: 6px 10px; font-size: .8rem; font-weight: 700; }
+    .tabs { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--line); display: flex; justify-content: center; z-index: 20; padding-bottom: env(safe-area-inset-bottom); }
+    .tabs-inner { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; max-width: 560px; }
+    .tab { border: 0; background: transparent; padding: 9px 4px 10px; color: var(--muted); font-weight: 700; font-size: .78rem; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .tab .ico { font-size: 1.25rem; line-height: 1.2; }
+    .tab.active { color: var(--teal); }
+    .tab.active .ico { transform: scale(1.08); }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .card { background: #fff; border-radius: 20px; padding: 16px; margin-bottom: 12px; box-shadow: 0 10px 24px rgba(0,0,0,.18); }
+    .card h2 { margin: 0 0 4px; font-size: 1.05rem; font-weight: 800; }
+    .card .hint { color: var(--muted); font-size: .8rem; margin: 0 0 12px; line-height: 1.45; }
+
+    /* ---------- chips ---------- */
+    .seg { display: grid; gap: 8px; grid-template-columns: repeat(var(--n, 2), 1fr); }
+    .chip { border: 1.8px solid #cbd5e1; background: #fff; border-radius: 14px; padding: 11px 6px; font-weight: 800; color: var(--ink-2); font-size: .98rem; line-height: 1.2; }
+    .chip small { display: block; font-weight: 600; font-size: .72rem; color: var(--muted); margin-top: 2px; }
+    .chip.on { background: var(--teal); border-color: var(--teal); color: #fff; box-shadow: 0 6px 14px rgba(15,118,110,.28); }
+    .chip.on small { color: rgba(255,255,255,.85); }
+    .chip:disabled { opacity: .45; cursor: not-allowed; }
+    .sub-label { font-size: .8rem; font-weight: 800; color: var(--ink-2); margin: 12px 0 6px; }
+
+    /* ---------- day switch ---------- */
+    .day-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: rgba(255,255,255,.12); padding: 4px; border-radius: 14px; margin-bottom: 12px; }
+    .day-switch button { border: 0; border-radius: 11px; padding: 9px 6px; background: transparent; color: #e2e8f0; font-weight: 800; font-size: .86rem; }
+    .day-switch button.on { background: #fff; color: var(--teal); }
+
+    /* ---------- line cards ---------- */
+    .line-card { background: #fff; border-radius: 18px; padding: 14px 14px 12px; margin-bottom: 10px; box-shadow: 0 8px 20px rgba(0,0,0,.16); border: 2px solid transparent; }
+    .line-card.open { border-color: var(--teal-2); }
+    .line-head { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; background: transparent; padding: 0; text-align: left; }
+    .line-badge { width: 46px; height: 46px; border-radius: 14px; background: var(--teal-soft); color: var(--teal); font-weight: 800; font-size: 1.25rem; display: flex; align-items: center; justify-content: center; flex: none; }
+    .line-meta { flex: 1; min-width: 0; }
+    .line-title { font-weight: 800; font-size: 1rem; }
+    .line-sub { color: var(--muted); font-size: .84rem; margin-top: 1px; }
+    .pill { display: inline-block; font-size: .72rem; font-weight: 800; border-radius: 999px; padding: 2px 8px; margin-left: 4px; }
+    .pill.odd { background: var(--amber-soft); color: var(--amber); }
+    .pill.none { background: #f1f5f9; color: var(--muted); }
+    .chev { color: #94a3b8; font-size: 1.1rem; transition: transform .2s; }
+    .line-card.open .chev { transform: rotate(90deg); }
+    .line-body { display: none; padding-top: 6px; }
+    .line-card.open .line-body { display: block; }
+    .slots { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+    .slot { font-size: .74rem; font-weight: 700; border-radius: 8px; padding: 4px 7px; background: var(--bg-soft); color: var(--ink-2); border: 1px solid var(--line); }
+    .slot.odd { background: var(--amber-soft); color: var(--amber); border-color: #fde68a; }
+    .slot.brk { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+    .slot.ot { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
+    .actions { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-top: 12px; }
+    .btn-ghost { border: 1.5px solid #cbd5e1; background: #fff; border-radius: 14px; padding: 12px; font-weight: 800; color: var(--ink-2); }
+    .noplan { color: var(--muted); font-size: .86rem; padding: 4px 0 2px; }
+
+    /* ---------- break floors ---------- */
+    .floor-now { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--teal-soft); border: 1px solid var(--teal-line); margin-bottom: 8px; }
+    .floor-now b { font-size: 1.02rem; }
+    .floor-now .t { font-size: 1.15rem; font-weight: 800; color: var(--teal); }
+    .sched { list-style: none; margin: 0 0 4px; padding: 0; }
+    .sched li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 2px; border-top: 1px dashed var(--line); font-size: .88rem; }
+    .sched li:first-child { border-top: 0; }
+    .tag { font-size: .7rem; font-weight: 800; border-radius: 999px; padding: 2px 8px; }
+    .tag.future { background: #ecfeff; color: #0e7490; }
+    .tag.active { background: #ecfdf5; color: #047857; }
+    .btn-del { border: 1px solid #fecaca; background: var(--red-soft); color: var(--red); border-radius: 10px; padding: 6px 10px; font-weight: 800; font-size: .78rem; }
+    .date-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    input[type=date].date-input { width: 100%; padding: 11px 12px; border: 1.5px solid #cbd5e1; border-radius: 14px; font-size: .95rem; margin-top: 8px; }
+
+    /* ---------- holidays / log ---------- */
+    .list { list-style: none; margin: 0; padding: 0; }
+    .list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 11px 2px; border-top: 1px dashed var(--line); }
+    .list li:first-child { border-top: 0; }
+    .hol-date { font-weight: 800; }
+    .hol-name { color: var(--muted); font-size: .84rem; }
+    .log li { display: block; }
+    .log .what { font-weight: 800; font-size: .9rem; }
+    .log .meta { color: var(--muted); font-size: .76rem; margin-top: 2px; }
+    .text-input { width: 100%; padding: 11px 12px; border: 1.5px solid #cbd5e1; border-radius: 14px; font-size: .95rem; margin-top: 8px; }
+
+    .loading { color: #cbd5e1; text-align: center; padding: 30px 0; font-weight: 700; }
+    .error-box { background: #fff; border-radius: 18px; padding: 18px; text-align: center; color: var(--red); font-weight: 700; }
+    .toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 16px; border-radius: 14px; font-size: .9rem; font-weight: 700; display: none; z-index: 60; max-width: 90vw; text-align: center; }
+  </style>
+</head>
+<body>
+
+<!-- ใส่รหัสก่อนเข้า -->
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <div class="gate-icon">🔐</div>
+    <h1>ตั้งค่าเวลาทำงาน โรง 1</h1>
+    <p>เวลาเข้างาน • รอบพัก • วันหยุด</p>
+    <form onsubmit="login(event)">
+      <div class="field">
+        <label for="byName">ชื่อผู้แก้</label>
+        <input id="byName" placeholder="เช่น หัวหน้า ก." maxlength="40" autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="password">รหัสแอดมิน</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="••••••">
+      </div>
+      <button class="btn-main" id="loginBtn" type="submit">เข้าใช้งาน</button>
+    </form>
+    <div class="gate-err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app" id="app" style="display:none;">
+  <div class="top">
+    <div>
+      <h1>⏱️ ตั้งค่าเวลาทำงาน โรง 1</h1>
+      <div class="who" id="whoText"></div>
+    </div>
+    <button class="lock" onclick="logout()">ออก</button>
+  </div>
+
+  <!-- แท็บ วันนี้ -->
+  <section class="panel active" id="panel-today">
+    <div class="day-switch" id="daySwitch"></div>
+    <div id="linesBox"><div class="loading">กำลังโหลด...</div></div>
+  </section>
+
+  <!-- แท็บ รอบพัก -->
+  <section class="panel" id="panel-break">
+    <div id="floorsBox"><div class="loading">กำลังโหลด...</div></div>
+  </section>
+
+  <!-- แท็บ วันหยุด -->
+  <section class="panel" id="panel-holiday">
+    <div class="card">
+      <h2>📅 เพิ่มวันหยุด</h2>
+      <p class="hint">วันอาทิตย์หยุดอยู่แล้ว ไม่ต้องใส่ • วันหยุดบอทจะไม่ตามยอด</p>
+      <input type="date" class="date-input" id="holDate">
+      <input class="text-input" id="holName" maxlength="80" placeholder="ชื่อวันหยุด เช่น วันปิยมหาราช">
+      <button class="btn-main" style="margin-top:10px" onclick="addHoliday()">เพิ่มวันหยุด</button>
+    </div>
+    <div class="card">
+      <h2>วันหยุดข้างหน้า</h2>
+      <ul class="list" id="holidayList"><li class="noplan">กำลังโหลด...</li></ul>
+    </div>
+  </section>
+
+  <!-- แท็บ ประวัติ -->
+  <section class="panel" id="panel-log">
+    <div class="card">
+      <h2>🧾 ประวัติการแก้</h2>
+      <ul class="list log" id="logList"><li class="noplan">กำลังโหลด...</li></ul>
+    </div>
+  </section>
+</div>
+
+<nav class="tabs" id="tabs" style="display:none;">
+  <div class="tabs-inner">
+    <button class="tab active" data-tab="today" onclick="showTab('today')"><span class="ico">🕗</span>เวลาเข้า</button>
+    <button class="tab" data-tab="break" onclick="showTab('break')"><span class="ico">🍱</span>รอบพัก</button>
+    <button class="tab" data-tab="holiday" onclick="showTab('holiday')"><span class="ico">📅</span>วันหยุด</button>
+    <button class="tab" data-tab="log" onclick="showTab('log')"><span class="ico">🧾</span>ประวัติ</button>
+  </div>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLm1LVkTiwK3PCvPSt3PFA1ifb76KCRsWxC1SkaLdDC-ginxy0RHWstWpHgDytaBmm/exec";
+  const FLOOR_NAMES = { F3: 'ชั้น 3', F4: 'ชั้น 4' };
+  const WHAT_TEXT = {
+    START_TIME: 'แก้เวลาเข้างาน', BREAK_START: 'แก้รอบพักรายไลน์', BREAK_SCHEDULE: 'ตั้งรอบพัก',
+    BREAK_SCHEDULE_DELETE: 'ยกเลิกรอบพักล่วงหน้า', HOLIDAY_ADD: 'เพิ่มวันหยุด', HOLIDAY_DELETE: 'ลบวันหยุด',
+    LOGIN_FAILED: 'ใส่รหัสผิด'
+  };
+
+  let state = null, password = '', selectedDate = '', busy = false;
+  let openLine = '';              // การ์ดไลน์ที่กางอยู่
+  const draft = {};               // line -> { startTime, breakStart } ที่กำลังเลือก
+  const breakDraft = {};          // floor -> { breakStart, from }
+
+  /* ---------- helpers ---------- */
+  const $ = id => document.getElementById(id);
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  function clock(hhmm) { return String(hhmm || '').replace(':', '.'); }
+  function toMin(hhmm) { const p = String(hhmm || '').split(/[:.]/).map(Number); return p.length === 2 ? p[0] * 60 + p[1] : NaN; }
+  function minText(m) { return String(Math.floor(m / 60)).padStart(2, '0') + '.' + String(m % 60).padStart(2, '0'); }
+  function breakRange(hhmm) { const b = toMin(hhmm); return isNaN(b) ? '-' : `${minText(b)}–${minText(b + 60)}`; }
+  function thaiDate(iso, opts) {
+    const d = new Date(iso + 'T00:00:00+07:00');
+    return isNaN(d.getTime()) ? iso : d.toLocaleDateString('th-TH', Object.assign({ weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Bangkok' }, opts || {}));
+  }
+  function addDays(iso, n) {
+    const d = new Date(iso + 'T12:00:00+07:00'); d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  }
+  function nextMonday(iso) {
+    const d = new Date(iso + 'T12:00:00+07:00'); const dow = d.getUTCDay();
+    return addDays(iso, ((8 - dow) % 7) || 7);
+  }
+  function toast(msg) {
+    const t = $('toast'); t.textContent = msg; t.style.display = 'block';
+    clearTimeout(toast._t); toast._t = setTimeout(() => { t.style.display = 'none'; }, 3200);
+  }
+  function ssGet(k) { try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; } }
+  function ssSet(k, v) { try { v ? sessionStorage.setItem(k, v) : sessionStorage.removeItem(k); } catch (e) {} }
+  function lsGet(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+  // ช่องเวลา (กฎเดียวกับ Apps Script): เช้าตามตาราง 08.30 / เข้า 08.00 เลื่อนขึ้น,
+  // ช่องปกติรวม 8 ช่อง จบที่ เวลาเข้า + 9 ชม. แล้ว OT ทีละ 1 ชม.
+  function buildGrid(startTime, breakStart, total) {
+    const base = 510, start = toMin(startTime) === 480 ? 480 : 510, b = toMin(breakStart);
+    const items = [];
+    if (isNaN(b) || !total) return items;
+    const morning = [];
+    for (let t = base; t < b; ) { const e = Math.min(t + 60, b); morning.push([t, e]); t = e; }
+    const shift = base - start;
+    if (shift > 0) morning.forEach((r, i) => { morning[i] = i === morning.length - 1 ? [r[0] - shift, r[1]] : [r[0] - shift, r[1] - shift]; });
+    const ranges = morning.slice(0, total);
+    const afterBreak = b + 60, normalEnd = start + 540, normalAfternoon = Math.max(0, 8 - morning.length);
+    const afternoonCount = total - ranges.length;
+    for (let i = 0; i < afternoonCount; i++) {
+      let s, e;
+      if (i < normalAfternoon) { s = afterBreak + 60 * i; e = i === normalAfternoon - 1 ? normalEnd : s + 60; }
+      else { s = normalEnd + 60 * (i - normalAfternoon); e = s + 60; }
+      if (e <= s) e = s + 60;
+      ranges.push([s, e]);
+    }
+    ranges.forEach((r, i) => {
+      items.push({ label: minText(r[0]) + '-' + minText(r[1]), minutes: r[1] - r[0], ot: i >= 8 });
+      if (i === morning.length - 1 && ranges.length > morning.length) items.push({ label: minText(b) + '-' + minText(b + 60), brk: true });
+    });
+    return items;
+  }
+
+  /* ---------- data ---------- */
+  async function fetchState() {
+    let lastError = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 30000);
+      try {
+        const res = await fetch(`${SCRIPT_URL}?action=getMaintenanceState&_=${Date.now()}`, { cache: 'no-store', signal: controller.signal });
+        const data = JSON.parse(await res.text());
+        if (!data || !data.version) throw new Error(data && data.error ? data.error : 'Apps Script ยังไม่รองรับหน้านี้ (ต้อง Deploy v6)');
+        return data;
+      } catch (err) {
+        lastError = err.name === 'AbortError' ? new Error('หมดเวลารอ 30 วินาที') : err;
+        if (/Deploy v6/.test(lastError.message)) break;
+        await new Promise(r => setTimeout(r, 800 * attempt));
+      } finally { clearTimeout(timer); }
+    }
+    throw lastError || new Error('โหลดไม่สำเร็จ');
+  }
+
+  async function post(payload) {
+    const body = Object.assign({}, payload, { password: password, by: $('byName').value.trim() || 'แอดมิน' });
+    const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(body) });
+    const data = JSON.parse(await res.text());
+    if (!data || data.status !== 'success') throw new Error((data && data.error) || 'บันทึกไม่สำเร็จ');
+    return data;
+  }
+
+  async function refresh() {
+    try {
+      state = await fetchState();
+      if (!selectedDate || state.editableDates.indexOf(selectedDate) === -1) selectedDate = state.today;
+      renderAll();
+    } catch (err) {
+      $('linesBox').innerHTML = `<div class="error-box">โหลดข้อมูลไม่สำเร็จ<br><span style="color:#64748b;font-size:.8rem;font-weight:600">${esc(err.message)}</span><br><button class="btn-main" style="margin-top:12px" onclick="refresh()">🔄 ลองใหม่</button></div>`;
+    }
+  }
+
+  /* ---------- login ---------- */
+  async function login(evt) {
+    if (evt) evt.preventDefault();
+    const pw = $('password').value;
+    if (!pw) { $('gateErr').textContent = 'กรุณาใส่รหัสแอดมิน'; return; }
+    const btn = $('loginBtn'); btn.disabled = true; btn.textContent = 'กำลังตรวจรหัส...';
+    $('gateErr').textContent = '';
+    try {
+      password = pw;
+      await post({ action: 'MAINT_LOGIN' });
+      ssSet('settingsPw', pw);
+      lsSet('settingsBy', $('byName').value.trim());
+      $('password').value = '';
+      enterApp();
+    } catch (err) {
+      password = '';
+      $('gateErr').textContent = err.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'เข้าใช้งาน';
+    }
+  }
+
+  function enterApp() {
+    $('gate').style.display = 'none';
+    $('app').style.display = 'block';
+    $('tabs').style.display = 'flex';
+    $('whoText').textContent = 'ผู้แก้: ' + ($('byName').value.trim() || 'แอดมิน');
+    refresh();
+  }
+
+  function logout() {
+    password = ''; ssSet('settingsPw', '');
+    $('app').style.display = 'none'; $('tabs').style.display = 'none'; $('gate').style.display = 'flex';
+    $('password').focus();
+  }
+
+  async function runAction(payload, confirmText, okText) {
+    if (busy) return;
+    if (confirmText && !confirm(confirmText)) return;
+    busy = true;
+    try {
+      const result = await post(payload);
+      toast(okText(result));
+      await refresh();
+    } catch (err) {
+      alert('ไม่สำเร็จ: ' + err.message);
+      if (/รหัส|ล็อก/.test(err.message)) logout();
+    } finally { busy = false; }
+  }
+
+  function showTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab));
+    window.scrollTo(0, 0);
+  }
+
+  function renderAll() { renderLines(); renderFloors(); renderHolidays(); renderLog(); }
+
+  /* ---------- แท็บ เวลาเข้า (รายไลน์) ---------- */
+  function renderLines() {
+    $('daySwitch').innerHTML = state.editableDates.map(d =>
+      `<button class="${d === selectedDate ? 'on' : ''}" onclick="selectedDate='${d}';openLine='';renderLines()">${d === state.today ? 'วันนี้' : 'วันก่อนหน้า'} · ${thaiDate(d)}</button>`
+    ).join('');
+
+    const rows = state.lineDays.filter(l => l.date === selectedDate);
+    $('linesBox').innerHTML = rows.map(l => {
+      if (!l.hasPlan) {
+        return `<div class="line-card"><div class="line-head"><div class="line-badge">${l.line}</div>
+          <div class="line-meta"><div class="line-title">Line ${l.line}</div><div class="line-sub">ยังไม่ได้ตั้งเป้า</div></div></div></div>`;
+      }
+      const d = draft[l.line] || { startTime: l.startTime, breakStart: l.breakStart };
+      const changed = d.startTime !== l.startTime || d.breakStart !== l.breakStart;
+      const grid = buildGrid(d.startTime, d.breakStart, l.totalWorkingHours);
+      const odd = grid.some(s => !s.brk && s.minutes !== 60);
+      const startChips = state.startTimes.slice().sort().reverse().map(t =>
+        `<button class="chip ${d.startTime === t ? 'on' : ''}" onclick="pickLine('${l.line}','startTime','${t}')">${clock(t)}<small>${t === '08:00' ? 'เลิก 17.00' : 'เลิก 17.30'}</small></button>`).join('');
+      const breakChips = state.breakStarts.map(b =>
+        `<button class="chip ${d.breakStart === b ? 'on' : ''}" onclick="pickLine('${l.line}','breakStart','${b}')">${clock(b)}<small>${breakRange(b)}</small></button>`).join('');
+      const slots = grid.map(s => `<span class="slot ${s.brk ? 'brk' : (s.ot ? 'ot' : (s.minutes !== 60 ? 'odd' : ''))}">${s.label}${s.brk ? ' พัก' : (s.minutes !== 60 ? ` · ${s.minutes / 60} ชม.` : '')}</span>`).join('');
+      const isOpen = openLine === l.line;
+      return `<div class="line-card ${isOpen ? 'open' : ''}">
+        <button class="line-head" onclick="toggleLine('${l.line}')">
+          <div class="line-badge">${l.line}</div>
+          <div class="line-meta">
+            <div class="line-title">Line ${l.line} ${odd ? '<span class="pill odd">มีช่อง 0.5 / 1.5 ชม.</span>' : ''}</div>
+            <div class="line-sub">เข้า ${clock(l.startTime)} • พัก ${breakRange(l.breakStart)} • ${l.totalWorkingHours} ชม.</div>
+          </div>
+          <span class="chev">›</span>
+        </button>
+        <div class="line-body">
+          <div class="sub-label">เวลาเข้างาน</div>
+          <div class="seg" style="--n:2">${startChips}</div>
+          <div class="sub-label">พักเที่ยง</div>
+          <div class="seg" style="--n:3">${breakChips}</div>
+          <div class="sub-label">ช่องเวลาที่จะได้</div>
+          <div class="slots">${slots}</div>
+          <div class="actions">
+            <button class="btn-ghost" onclick="resetLine('${l.line}')">ยกเลิก</button>
+            <button class="btn-main" ${changed ? '' : 'disabled'} onclick="saveLine('${l.line}')">${changed ? 'บันทึก' : 'ยังไม่ได้เปลี่ยน'}</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function toggleLine(line) { openLine = openLine === line ? '' : line; renderLines(); }
+  function pickLine(line, key, value) {
+    const l = state.lineDays.find(x => x.date === selectedDate && x.line === line);
+    draft[line] = Object.assign({ startTime: l.startTime, breakStart: l.breakStart }, draft[line] || {}, { [key]: value });
+    renderLines();
+  }
+  function resetLine(line) { delete draft[line]; openLine = ''; renderLines(); }
+
+  function saveLine(line) {
+    const l = state.lineDays.find(x => x.date === selectedDate && x.line === line);
+    const d = draft[line];
+    if (!d) return;
+    const parts = [];
+    if (d.startTime !== l.startTime) parts.push(`เวลาเข้างาน ${clock(l.startTime)} → ${clock(d.startTime)}`);
+    if (d.breakStart !== l.breakStart) parts.push(`พักเที่ยง ${breakRange(l.breakStart)} → ${breakRange(d.breakStart)}`);
+    runAction(
+      { action: 'MAINT_SET_LINE_SLOT', line: line, workDate: selectedDate, startTime: d.startTime, breakStart: d.breakStart },
+      `Line ${line} · ${thaiDate(selectedDate)}\n${parts.join('\n')}\n\nยอดที่กรอกแล้วจะย้ายตามลำดับช่อง ไม่หาย`,
+      r => { delete draft[line]; openLine = ''; return `บันทึก Line ${line} แล้ว` + (r.relabeled ? ` • ย้ายยอด ${r.relabeled} ช่อง` : ''); }
+    );
+  }
+
+  /* ---------- แท็บ รอบพัก (ตามชั้น) ---------- */
+  function renderFloors() {
+    const tomorrow = addDays(state.today, 1), monday = nextMonday(state.today);
+    $('floorsBox').innerHTML = state.floors.map(f => {
+      const d = breakDraft[f.floor] || { breakStart: '', from: '' };
+      const future = f.rows.filter(r => r.future);
+      const breakChips = state.breakStarts.map(b =>
+        `<button class="chip ${d.breakStart === b ? 'on' : ''}" onclick="pickBreak('${f.floor}','breakStart','${b}')">${clock(b)}<small>${breakRange(b)}</small></button>`).join('');
+      const quick = [[state.today, 'วันนี้'], [tomorrow, 'พรุ่งนี้'], [monday, 'จันทร์หน้า']].map(([iso, txt]) =>
+        `<button class="chip ${d.from === iso ? 'on' : ''}" onclick="pickBreak('${f.floor}','from','${iso}')">${txt}<small>${thaiDate(iso, { weekday: undefined })}</small></button>`).join('');
+      const custom = d.from && [state.today, tomorrow, monday].indexOf(d.from) === -1 ? d.from : '';
+      const ready = d.breakStart && d.from;
+      return `<div class="card">
+        <h2>${FLOOR_NAMES[f.floor] || f.floor} · Line ${f.lines.join(' ')}</h2>
+        <div class="floor-now"><b>พักวันนี้</b><span class="t">${breakRange(f.current)}</span></div>
+        ${future.length ? `<ul class="sched">${future.map(r => `<li><span>${thaiDate(r.from)} → พัก ${breakRange(r.breakStart)} <span class="tag future">รอเริ่มใช้</span></span><button class="btn-del" onclick="deleteBreak('${f.floor}','${r.from}')">ยกเลิก</button></li>`).join('')}</ul>` : ''}
+        <div class="sub-label">เปลี่ยนรอบพักเป็น</div>
+        <div class="seg" style="--n:3">${breakChips}</div>
+        <div class="sub-label">เริ่มใช้</div>
+        <div class="date-row">${quick}</div>
+        <div class="sub-label" style="margin-top:10px;font-weight:700;color:#64748b">หรือเลือกวันอื่น</div>
+        <input type="date" class="date-input" style="margin-top:0" min="${state.today}" value="${custom}" onchange="pickBreak('${f.floor}','from',this.value)" aria-label="เลือกวันอื่น">
+        <button class="btn-main" style="margin-top:10px" ${ready ? '' : 'disabled'} onclick="saveBreak('${f.floor}')">${ready ? `ตั้งพัก ${breakRange(d.breakStart)} เริ่ม ${thaiDate(d.from)}` : 'เลือกรอบพักและวันเริ่มใช้'}</button>
+      </div>`;
+    }).join('');
+  }
+
+  function pickBreak(floor, key, value) {
+    breakDraft[floor] = Object.assign({ breakStart: '', from: '' }, breakDraft[floor] || {}, { [key]: value });
+    renderFloors();
+  }
+
+  function saveBreak(floor) {
+    const d = breakDraft[floor];
+    const f = state.floors.find(x => x.floor === floor);
+    const todayNote = d.from === state.today ? '\n\nเริ่มวันนี้: ไลน์ที่ตั้งเป้าแล้วจะย้ายช่องเวลาให้ทันที ยอดไม่หาย' : '';
+    runAction(
+      { action: 'MAINT_ADD_BREAK', floor: floor, breakStart: d.breakStart, effectiveFrom: d.from },
+      `${FLOOR_NAMES[floor] || floor} (Line ${f.lines.join(' ')})\nพัก ${breakRange(d.breakStart)} เริ่ม ${thaiDate(d.from)}${todayNote}`,
+      r => { delete breakDraft[floor]; return 'ตั้งรอบพักแล้ว' + (r.appliedToday && r.appliedToday.length ? ` • ใช้กับ Line ${r.appliedToday.join(' ')} วันนี้แล้ว` : ''); }
+    );
+  }
+
+  function deleteBreak(floor, from) {
+    runAction({ action: 'MAINT_DELETE_BREAK', floor: floor, effectiveFrom: from },
+      `ยกเลิกรอบพักของ${FLOOR_NAMES[floor] || floor} ที่จะเริ่ม ${thaiDate(from)}?`, () => 'ยกเลิกแล้ว');
+  }
+
+  /* ---------- แท็บ วันหยุด ---------- */
+  function renderHolidays() {
+    $('holDate').min = state.today;
+    const items = state.holidays.filter(h => !h.past);
+    $('holidayList').innerHTML = items.map(h =>
+      `<li><div><div class="hol-date">${thaiDate(h.date, { year: '2-digit' })}</div><div class="hol-name">${esc(h.name || '-')}</div></div>
+        <button class="btn-del" onclick="deleteHoliday('${h.date}')">ลบ</button></li>`
+    ).join('') || '<li class="noplan">ยังไม่มีวันหยุดข้างหน้า</li>';
+  }
+
+  function addHoliday() {
+    const date = $('holDate').value, name = $('holName').value.trim();
+    if (!date) { toast('กรุณาเลือกวันที่'); return; }
+    runAction({ action: 'MAINT_ADD_HOLIDAY', date: date, name: name },
+      `เพิ่มวันหยุด ${thaiDate(date, { year: '2-digit' })}${name ? ' · ' + name : ''}?`,
+      () => { $('holName').value = ''; $('holDate').value = ''; return 'เพิ่มวันหยุดแล้ว'; });
+  }
+
+  function deleteHoliday(date) {
+    runAction({ action: 'MAINT_DELETE_HOLIDAY', date: date }, `ลบวันหยุด ${thaiDate(date, { year: '2-digit' })}?`, () => 'ลบแล้ว');
+  }
+
+  /* ---------- แท็บ ประวัติ ---------- */
+  function renderLog() {
+    $('logList').innerHTML = state.log.map(l => {
+      const isTime = /START|BREAK/.test(l.what);
+      const oldV = isTime ? clock(l.oldValue) : l.oldValue, newV = isTime ? clock(l.newValue) : l.newValue;
+      const change = (oldV || newV) ? ` · ${esc(oldV || '-')} → ${esc(newV || '-')}` : '';
+      return `<li><div class="what">${esc(WHAT_TEXT[l.what] || l.what)}${l.line ? ' · ' + esc(/^F\d$/.test(l.line) ? (FLOOR_NAMES[l.line] || l.line) : 'Line ' + l.line) : ''}${change}</div>
+        <div class="meta">${esc(l.at)} • มีผลวันที่ ${esc(l.date)} • ${esc(l.by || '-')}</div></li>`;
+    }).join('') || '<li class="noplan">ยังไม่มีประวัติ</li>';
+  }
+
+  /* ---------- start ---------- */
+  $('byName').value = lsGet('settingsBy');
+  password = ssGet('settingsPw');
+  if (password) {
+    // เคยปลดล็อกในแท็บนี้แล้ว: ตรวจรหัสซ้ำแบบเงียบ ๆ
+    post({ action: 'MAINT_LOGIN' }).then(enterApp).catch(() => { password = ''; ssSet('settingsPw', ''); $('password').focus(); });
+  } else {
+    setTimeout(() => ($('byName').value ? $('password') : $('byName')).focus(), 50);
+  }
+</script>
+</body>
+</html>
