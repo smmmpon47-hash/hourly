@@ -2915,7 +2915,9 @@
 
       if (!currentLot) return;
       slotLotMap[slot.label] = currentLot;
-      hoursByLot[currentLot] = (hoursByLot[currentLot] || 0) + 1;
+      // ชั่วโมงจริงของช่อง (0.5 / 1 / 1.5) — ตารางเดิมไม่มี minutes = 1 ชม.
+      const slotHours = slot.minutes ? slot.minutes / 60 : 1;
+      hoursByLot[currentLot] = (hoursByLot[currentLot] || 0) + slotHours;
     });
 
     return {
