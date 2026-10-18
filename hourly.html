@@ -1225,13 +1225,22 @@
           : [morning[i][0] - shift, morning[i][1] - shift];
       }
     }
+    // ช่องปกติรวม 8 ช่อง จบที่เวลาเลิกปกติ (เวลาเข้า + 9 ชม.) แล้ว OT ต่อทีละ 1 ชม.
     const ranges = morning.slice(0, total);
     const afternoonCount = total - ranges.length;
     const afterBreak = breakMin + 60;
+    const normalEnd = start + 8 * 60 + 60;
+    const afternoonNormal = Math.max(0, 8 - morning.length);
     for (let i = 0; i < afternoonCount; i++) {
-      const sMin = afterBreak + 60 * i;
-      let eMin = sMin + 60;
-      if (i === afternoonCount - 1 && eMin % 60 !== 30) eMin += 30;
+      let sMin, eMin;
+      if (i < afternoonNormal) {
+        sMin = afterBreak + 60 * i;
+        eMin = (i === afternoonNormal - 1) ? normalEnd : sMin + 60;
+      } else {
+        sMin = normalEnd + 60 * (i - afternoonNormal);
+        eMin = sMin + 60;
+      }
+      if (eMin <= sMin) eMin = sMin + 60;
       ranges.push([sMin, eMin]);
     }
     ranges.forEach((r, i) => {
@@ -2297,13 +2306,15 @@
     // 18:30 -> 17.30-18.30
     // 19:30 -> 18.30-19.30 (เฉพาะวัน 10 ชม.)
     // ห้ามโชว์ slot ที่ยังผลิตไม่จบล่วงหน้า
-    // เลือกตามเวลาจบรอบ (17.30 / 18.30 / 19.30) ใช้ได้ทั้งช่อง 1 ชม. และ 1.5 ชม.
-    if (currentMinutes >= 1020 && currentMinutes < 1080) {
-      targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === 1050 && s.label !== breakSlot);
-    } else if (currentMinutes >= 1080 && currentMinutes < 1170) {
-      targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === 1110 && s.label !== breakSlot);
-    } else if (currentMinutes >= 1170 && totalHours >= 10) {
-      targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === 1170 && s.label !== breakSlot);
+    // ท้ายวัน: อิงเวลาเลิกปกติของไลน์ (เข้า 08.30 = 17.30, เข้า 08.00 = 17.00)
+    // ช่องสุดท้ายเปิดให้กรอกก่อนจบ 30 นาที เหมือนเดิม; OT 1 / OT 2 ตามลำดับ
+    const normalEndMin = (slotClockMin_(getLineSlotConfig_(document.getElementById('line').value).startTime) || 510) + 540;
+    if (currentMinutes >= normalEndMin - 30 && currentMinutes < normalEndMin + 30) {
+      targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === normalEndMin && s.label !== breakSlot);
+    } else if (currentMinutes >= normalEndMin + 30 && currentMinutes < normalEndMin + 120) {
+      targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === normalEndMin + 60 && s.label !== breakSlot);
+    } else if (currentMinutes >= normalEndMin + 120 && totalHours >= 10) {
+      targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === normalEndMin + 120 && s.label !== breakSlot);
     }
     if (!targetSlots.length) {
       let passedSlots = TIME_SLOTS_DEF.filter(slot => currentMinutes >= slot.endMin);
