@@ -154,7 +154,8 @@
     <nav class="nav">
       <button class="on" data-page="day" onclick="showPage('day')">📝 แก้ไขข้อมูลรายไลน์</button>
       <button data-page="break" onclick="showPage('break')">🍱 รอบพักเที่ยง</button>
-      <button data-page="holiday" onclick="showPage('holiday')">📅 วันหยุด</button>
+      <button data-page="start" onclick="showPage('start')">🕗 เวลาเข้างาน</button>
+      <button data-page="holiday" onclick="showPage('holiday')">📅 วันหยุด / วันทำงานพิเศษ</button>
       <button data-page="log" onclick="showPage('log')">🧾 ประวัติการแก้</button>
     </nav>
     <div class="side-foot">
@@ -189,16 +190,37 @@
       <div class="floors" id="floorsBox"><div class="loading">กำลังโหลด...</div></div>
     </section>
 
-    <section class="page" id="page-holiday">
-      <div class="page-title">วันหยุด</div>
-      <div class="page-sub">วันอาทิตย์หยุดอยู่แล้ว ไม่ต้องใส่ • วันหยุดบอทจะไม่ตามยอด</div>
+    <section class="page" id="page-start">
+      <div class="page-title">เวลาเข้างาน</div>
+      <div class="page-sub">ตัวเลือกเวลาเข้างานที่หน้างานกดได้ในฟอร์มตั้งเป้า • ช่องเวลาเป็นรายชั่วโมงนับจากเวลาเข้า แล้วหักพักเที่ยงให้เอง • เลิกงานปกติ = เวลาเข้า + 9 ชม. (ทำงาน 8 + พัก 1)</div>
       <div class="grid2">
-        <div class="card"><h3>วันหยุดข้างหน้า</h3><table><thead><tr><th>วันที่</th><th>ชื่อวันหยุด</th><th></th></tr></thead><tbody id="holidayRows"></tbody></table></div>
+        <div class="card"><h3>ตัวเลือกที่เปิดอยู่ <span class="note">ลบแล้วไลน์ที่ใช้อยู่วันนี้ไม่เปลี่ยน</span></h3>
+          <table><thead><tr><th>เวลาเข้า</th><th>เลิกงานปกติ</th><th>ช่องแรก</th><th></th></tr></thead><tbody id="startRows"></tbody></table>
+        </div>
         <div class="card">
-          <h3>เพิ่มวันหยุด</h3>
-          <div class="sub">วันที่</div><input type="date" class="inp" id="holDate">
-          <div class="sub">ชื่อวันหยุด</div><input class="inp" id="holName" maxlength="80" placeholder="เช่น วันปิยมหาราช">
-          <button class="btn full" style="margin-top:14px" onclick="addHoliday()">เพิ่มวันหยุด</button>
+          <h3>เพิ่มเวลาเข้างาน</h3>
+          <div class="sub">เวลาเข้า (05.00–10.30)</div>
+          <div class="chips" id="startAddChips" style="--n:4"></div>
+          <div class="help" id="startAddHint"></div>
+          <button class="btn full" style="margin-top:12px" id="startAddBtn" disabled onclick="addStartTime()">เลือกเวลาก่อน</button>
+          <div class="warn" style="font-weight:600">บอทยังตามยอดตามรอบเดิม (10.30 / 12.30 / 14.30 / 16.30 / 17.30) • ถ้าเข้าเช้ามาก ช่องที่จบก่อนรอบแรกจะขึ้นให้กรอกตอนรอบ 10.30 พร้อมกัน</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-holiday">
+      <div class="page-title">วันหยุด / วันทำงานพิเศษ</div>
+      <div class="page-sub">วันอาทิตย์หยุดอยู่แล้ว ไม่ต้องใส่ • วันหยุด = บอทไม่ส่ง TG/ไม่ตามยอด • วันทำงานพิเศษ = ใช้กับวันอาทิตย์ที่ต้องมาทำงาน ให้บอทส่งตามปกติ</div>
+      <div class="grid2">
+        <div class="card"><h3>รายการ <span class="note">ตั้งแต่ 30 วันก่อน</span></h3><table><thead><tr><th>วันที่</th><th>ประเภท</th><th>หมายเหตุ</th><th></th></tr></thead><tbody id="holidayRows"></tbody></table></div>
+        <div class="card">
+          <h3>เพิ่มวัน</h3>
+          <div class="sub">ประเภท</div>
+          <div class="chips" id="holKindChips" style="--n:2"></div>
+          <div class="sub">วันที่</div><input type="date" class="inp" id="holDate" onchange="renderHolidayForm()">
+          <div class="help" id="holDateHint"></div>
+          <div class="sub">หมายเหตุ</div><input class="inp" id="holName" maxlength="80" placeholder="เช่น วันปิยมหาราช / เร่งงานส่งออก">
+          <button class="btn full" style="margin-top:14px" id="holAddBtn" onclick="addHoliday()">เพิ่มวันหยุด</button>
         </div>
       </div>
     </section>
@@ -226,7 +248,9 @@
   const WHAT_TEXT = {
     START_TIME: 'แก้เวลาเข้างาน', BREAK_START: 'แก้รอบพักรายไลน์', BREAK_SCHEDULE: 'ตั้งรอบพัก',
     BREAK_SCHEDULE_DELETE: 'ยกเลิกรอบพัก', HOLIDAY_ADD: 'เพิ่มวันหยุด', HOLIDAY_DELETE: 'ลบวันหยุด',
-    LOGIN_FAILED: 'ใส่รหัสผิด', LINE_DAY_FIX: 'แก้ข้อมูลรายไลน์', PLAN_FIX: 'แก้แผนการผลิต'
+    LOGIN_FAILED: 'ใส่รหัสผิด', LINE_DAY_FIX: 'แก้ข้อมูลรายไลน์', PLAN_FIX: 'แก้แผนการผลิต',
+    WORKDAY_ADD: 'เพิ่มวันทำงานพิเศษ', WORKDAY_DELETE: 'ลบวันทำงานพิเศษ',
+    START_OPTION_ADD: 'เพิ่มเวลาเข้างาน', START_OPTION_DELETE: 'ลบเวลาเข้างาน'
   };
 
   let state = null, password = '', busy = false;
@@ -258,7 +282,8 @@
 
   // ช่องเวลา (กฎเดียวกับ Apps Script) ใช้แสดงตัวอย่างก่อนเปลี่ยนเวลาเข้า/รอบพัก
   function buildGrid(startTime, breakStart, total, mode) {
-    const base = 510, start = toMin(startTime) === 480 ? 480 : 510, b = toMin(breakStart);
+    const sRaw = toMin(startTime);
+    const base = 510, start = (!isNaN(sRaw) && (mode === 'split' || sRaw === 480)) ? sRaw : 510, b = toMin(breakStart);
     const out = [];
     if (isNaN(b) || !total) return out;
     if (mode === 'split') {
@@ -308,7 +333,7 @@
     return data;
   }
   async function refreshState() {
-    try { state = await fetchState(); renderFloors(); renderHolidays(); renderLog(); }
+    try { state = await fetchState(); renderFloors(); renderStartTimes(); renderHolidays(); renderLog(); }
     catch (err) { toast(err.message); }
   }
   async function act(fn, okText) {
@@ -500,12 +525,19 @@
     return `<div class="card">
       <h3>เวลาเข้างาน / รอบพัก <span class="note">เฉพาะ Line ${day.line} วันนี้</span></h3>
       <div class="sub">เวลาเข้างาน</div>
-      <div class="chips" style="--n:2">${['08:30', '08:00'].map(v => `<button class="chip ${t.startTime === v ? 'on' : ''}" onclick="pickTime('startTime','${v}')">${clock(v)}<small>เลิกปกติ ${v === '08:00' ? '17.00' : '17.30'}</small></button>`).join('')}</div>
+      <div class="chips" style="--n:${Math.min(4, dayStartOptions().length)}">${dayStartOptions().map(v => `<button class="chip ${t.startTime === v ? 'on' : ''}" onclick="pickTime('startTime','${v}')">${clock(v)}<small>เลิกปกติ ${minText(toMin(v) + 540)}</small></button>`).join('')}</div>
       <div class="sub">พักเที่ยง</div>
       <div class="chips" style="--n:3">${state.breakStarts.map(v => `<button class="chip ${t.breakStart === v ? 'on' : ''}" onclick="pickTime('breakStart','${v}')">${clock(v)}<small>${breakRange(v)}</small></button>`).join('')}</div>
       ${changed ? `<div class="help">ช่องใหม่: ${preview.map(p => p.brk ? `<b style="color:#be123c">${p.label} พัก</b>` : (p.minutes !== 60 ? `<b style="color:#b45309">${p.label} (${p.minutes / 60})</b>` : p.label)).join(' · ')}</div>
         <div class="row-inline" style="margin-top:10px"><button class="btn ghost small" onclick="pickTime()">ยกเลิก</button><button class="btn small" style="flex:1" id="saveTimeBtn" onclick="saveTime()">เปลี่ยนเวลา (ยอดย้ายตามลำดับช่อง)</button></div>` : ''}
     </div>`;
+  }
+  // ตัวเลือกเวลาเข้างานของวันนั้น: วันก่อนช่องรายชั่วโมงใช้ได้แค่ 08.00 / 08.30
+  function dayStartOptions() {
+    let list = (state && state.startTimes && state.startTimes.length) ? state.startTimes.slice() : ['08:00', '08:30'];
+    if (day.gridMode !== 'split') list = list.filter(v => v === '08:00' || v === '08:30');
+    if (day.startTime && list.indexOf(day.startTime) < 0) list.push(day.startTime);
+    return list.sort((a, b) => toMin(a) - toMin(b));
   }
   function pickTime(key, value) {
     timeDraft = key ? Object.assign({ startTime: day.startTime, breakStart: day.breakStart }, timeDraft || {}, { [key]: value }) : null;
@@ -673,22 +705,78 @@
     if (r) refreshState();
   }
 
-  /* ---------- วันหยุด ---------- */
+  /* ---------- เวลาเข้างาน ---------- */
+  let startPick = '';
+  function renderStartTimes() {
+    const opts = state.startTimes || ['08:00', '08:30'];
+    const def = state.defaultStartTime || '08:30';
+    $('startRows').innerHTML = opts.map(v => `<tr><td><b>${clock(v)}</b>${v === def ? ' <span class="tag active">ค่าตั้งต้น</span>' : ''}</td>
+      <td>${minText(toMin(v) + 540)}</td><td class="who">${minText(toMin(v))}-${minText(toMin(v) + 60)}</td>
+      <td>${v === def ? '' : `<button class="btn danger" onclick="deleteStartTime('${v}')">ลบ</button>`}</td></tr>`).join('');
+    const all = [];
+    for (let m = 300; m <= 630; m += 30) all.push(minText(m).replace('.', ':'));
+    $('startAddChips').innerHTML = all.map(v => {
+      const has = opts.indexOf(v) >= 0;
+      return `<button class="chip ${startPick === v ? 'on' : ''}" ${has ? 'disabled style="opacity:.35;cursor:not-allowed"' : ''} onclick="pickStartAdd('${v}')">${clock(v)}<small>${has ? 'มีแล้ว' : 'เลิก ' + minText(toMin(v) + 540)}</small></button>`;
+    }).join('');
+    const btn = $('startAddBtn');
+    btn.disabled = !startPick;
+    btn.textContent = startPick ? `เพิ่มเวลาเข้า ${clock(startPick)}` : 'เลือกเวลาก่อน';
+    $('startAddHint').textContent = startPick
+      ? `ตัวอย่าง (พัก 11.30): ${buildGrid(startPick, '11:30', 8, 'split').map(p => p.brk ? 'พัก' : p.label + (p.minutes < 60 ? ' (' + p.minutes + ' นาที)' : '')).join(' · ')}`
+      : '';
+  }
+  function pickStartAdd(v) { startPick = startPick === v ? '' : v; renderStartTimes(); }
+  async function addStartTime() {
+    if (!startPick) return;
+    if (!confirm(`เพิ่มเวลาเข้างาน ${clock(startPick)} (เลิกงานปกติ ${minText(toMin(startPick) + 540)})?\nหน้างานจะเห็นปุ่มนี้ในฟอร์มตั้งเป้าทันที`)) return;
+    const r = await act(() => post({ action: 'MAINT_ADD_START_TIME', startTime: startPick }), 'เพิ่มเวลาเข้างานแล้ว');
+    if (r) { startPick = ''; refreshState(); }
+  }
+  async function deleteStartTime(v) {
+    if (!confirm(`ลบเวลาเข้างาน ${clock(v)} ออกจากตัวเลือก?\nไลน์ที่ตั้งเป้าด้วยเวลานี้ไปแล้วไม่เปลี่ยน`)) return;
+    const r = await act(() => post({ action: 'MAINT_DELETE_START_TIME', startTime: v }), 'ลบแล้ว');
+    if (r) refreshState();
+  }
+
+  /* ---------- วันหยุด / วันทำงานพิเศษ ---------- */
+  let holKind = 'หยุด';
+  const isSunday = iso => new Date(iso + 'T12:00:00+07:00').getUTCDay() === 0;
+  function renderHolidayForm() {
+    $('holKindChips').innerHTML = [['หยุด', 'วันหยุด', 'บอทไม่ส่ง'], ['ทำงาน', 'วันทำงานพิเศษ', 'เช่น อาทิตย์ที่มาทำงาน']]
+      .map(([k, t, sub]) => `<button class="chip ${holKind === k ? 'on' : ''}" onclick="holKind='${k}';renderHolidayForm()">${t}<small>${sub}</small></button>`).join('');
+    const date = $('holDate').value;
+    let hint = '', ok = !!date;
+    if (date && holKind === 'ทำงาน' && !isSunday(date)) { hint = 'วันทำงานพิเศษใช้กับวันอาทิตย์ (จันทร์–เสาร์ทำงานอยู่แล้ว)'; ok = false; }
+    if (date && holKind === 'หยุด' && isSunday(date)) { hint = 'วันอาทิตย์หยุดอยู่แล้ว ไม่ต้องใส่'; ok = false; }
+    if (date && state && state.holidays.some(h => h.date === date)) { hint = 'วันนี้อยู่ในรายการแล้ว'; ok = false; }
+    $('holDateHint').innerHTML = hint ? `<span style="color:#b91c1c;font-weight:700">${hint}</span>` : (date ? thaiDate(date, { weekday: 'long' }) : '');
+    const btn = $('holAddBtn');
+    btn.textContent = holKind === 'ทำงาน' ? 'เพิ่มวันทำงานพิเศษ' : 'เพิ่มวันหยุด';
+    btn.disabled = !ok;
+  }
   function renderHolidays() {
     $('holDate').min = state.today;
-    const items = state.holidays.filter(h => !h.past);
-    $('holidayRows').innerHTML = items.map(h => `<tr><td><b>${thaiDate(h.date)}</b></td><td>${esc(h.name || '-')}</td><td><button class="btn danger" onclick="deleteHoliday('${h.date}')">ลบ</button></td></tr>`).join('')
-      || '<tr><td colspan="3" class="pending">ยังไม่มีวันหยุดข้างหน้า</td></tr>';
+    const items = state.holidays.slice().sort((a, b) => (a.date < b.date ? -1 : 1));
+    $('holidayRows').innerHTML = items.map(h => {
+      const work = h.kind === 'ทำงาน';
+      return `<tr><td><b>${thaiDate(h.date, { weekday: 'long', year: '2-digit' })}</b>${h.past ? ' <span class="pending">ผ่านแล้ว</span>' : ''}</td>
+        <td><span class="tag ${work ? 'active' : 'kind-off'}" style="${work ? '' : 'background:#fef2f2;color:#b91c1c'}">${work ? 'วันทำงานพิเศษ' : 'วันหยุด'}</span></td>
+        <td>${esc(h.name || '-')}</td>
+        <td>${h.past ? '' : `<button class="btn danger" onclick="deleteHoliday('${h.date}','${work ? 'วันทำงานพิเศษ' : 'วันหยุด'}')">ลบ</button>`}</td></tr>`;
+    }).join('') || '<tr><td colspan="4" class="pending">ยังไม่มีรายการ</td></tr>';
+    renderHolidayForm();
   }
   async function addHoliday() {
     const date = $('holDate').value, name = $('holName').value.trim();
     if (!date) { toast('กรุณาเลือกวันที่'); return; }
-    if (!confirm(`เพิ่มวันหยุด ${thaiDate(date)}${name ? ' · ' + name : ''}?`)) return;
-    const r = await act(() => post({ action: 'MAINT_ADD_HOLIDAY', date: date, name: name }), 'เพิ่มวันหยุดแล้ว');
+    const label = holKind === 'ทำงาน' ? 'วันทำงานพิเศษ' : 'วันหยุด';
+    if (!confirm(`เพิ่ม${label} ${thaiDate(date, { weekday: 'long' })}${name ? ' · ' + name : ''}?${holKind === 'ทำงาน' ? '\nบอทจะส่ง TG และตามยอดตามปกติในวันนั้น' : '\nบอทจะไม่ส่ง TG และไม่ตามยอดในวันนั้น'}`)) return;
+    const r = await act(() => post({ action: 'MAINT_ADD_HOLIDAY', date: date, name: name, kind: holKind }), `เพิ่ม${label}แล้ว`);
     if (r) { $('holDate').value = ''; $('holName').value = ''; refreshState(); }
   }
-  async function deleteHoliday(date) {
-    if (!confirm(`ลบวันหยุด ${thaiDate(date)}?`)) return;
+  async function deleteHoliday(date, label) {
+    if (!confirm(`ลบ${label || 'วันหยุด'} ${thaiDate(date)}?`)) return;
     const r = await act(() => post({ action: 'MAINT_DELETE_HOLIDAY', date: date }), 'ลบแล้ว');
     if (r) refreshState();
   }

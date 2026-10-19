@@ -1206,7 +1206,8 @@
   function buildSlotGridClient_(startTime, breakStart, totalWorkingHours, gridMode) {
     const base = 510; // 08.30
     const startRaw = slotClockMin_(startTime);
-    const start = (startRaw === 480 || startRaw === 510) ? startRaw : base;
+    // แบบใหม่รับเวลาเข้างานได้ทุกค่าที่แอดมินเปิดให้เลือก · แบบเดิมรองรับแค่ 08.00 / 08.30
+    const start = (!isNaN(startRaw) && (gridMode === 'split' || startRaw === 480 || startRaw === 510)) ? startRaw : base;
     const breakMin = slotClockMin_(breakStart);
     const total = Math.max(0, Math.floor(Number(totalWorkingHours) || 0));
     const grid = { slots: [], items: [], breakSlot: null };
@@ -1528,6 +1529,13 @@
       rememberLineSlotConfig_(lineVal, data);
       currentEditPlanState.startTime = data.slotConfig ? String(data.slotConfig.startTime || '08:30') : null;
       const startSel = document.getElementById('editStartTime');
+      const startOptions = (Array.isArray(data.startTimeOptions) && data.startTimeOptions.length)
+        ? data.startTimeOptions.slice() : ['08:00', '08:30'];
+      if (currentEditPlanState.startTime && startOptions.indexOf(currentEditPlanState.startTime) < 0) {
+        startOptions.push(currentEditPlanState.startTime);
+      }
+      startOptions.sort((a, b) => slotClockMin_(a) - slotClockMin_(b));
+      startSel.innerHTML = startOptions.map(v => `<option value="${v}">${v.replace(':', '.')}</option>`).join('');
       startSel.value = currentEditPlanState.startTime || '08:30';
       startSel.disabled = !currentEditPlanState.startTime;
 
@@ -2341,14 +2349,19 @@
     // ช่องสุดท้ายเปิดให้กรอกก่อนจบ 30 นาที เหมือนเดิม; OT 1 / OT 2 ตามลำดับ
     // ช่วงเวลาที่เปิดให้กรอกยึดรอบบอทเดิมเสมอ (17.30 / 18.30 / 19.30) ไม่ว่าจะเข้า 08.00 หรือ 08.30
     // ส่วนช่องที่โชว์ยึดเวลาเลิกจริงของไลน์ (เข้า 08.00 → 16.30-17.00 / 17.00-18.00 / 18.00-19.00)
+    // เวลาเข้าอื่น (เช่น 06.00 / 09.00): เลิกงานปกติ = เวลาเข้า + 9 ชม.
+    //  - เลิกก่อน 17.00 → ไม่ใช้ช่วงท้ายวัน ใช้ "2 ช่องล่าสุดที่จบแล้ว" + ช่องที่ยังไม่กรอก
+    //  - เลิก 17.00 ขึ้นไป → ช่วงท้ายวันยึดรอบบอท 17.30 หรือเวลาเลิกจริงถ้าเลิกช้ากว่า
     const normalEndMin = (slotClockMin_(getLineSlotConfig_(document.getElementById('line').value).startTime) || 510) + 540;
-    const ROUND_END_MIN = 1050; // 17.30
-    if (currentMinutes >= ROUND_END_MIN - 30 && currentMinutes < ROUND_END_MIN + 30) {
-      targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === normalEndMin && s.label !== breakSlot);
-    } else if (currentMinutes >= ROUND_END_MIN + 30 && currentMinutes < ROUND_END_MIN + 120) {
-      targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === normalEndMin + 60 && s.label !== breakSlot);
-    } else if (currentMinutes >= ROUND_END_MIN + 120 && totalHours >= 10) {
-      targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === normalEndMin + 120 && s.label !== breakSlot);
+    const ROUND_END_MIN = Math.max(1050, normalEndMin); // 17.30
+    if (normalEndMin >= 1020) {
+      if (currentMinutes >= ROUND_END_MIN - 30 && currentMinutes < ROUND_END_MIN + 30) {
+        targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === normalEndMin && s.label !== breakSlot);
+      } else if (currentMinutes >= ROUND_END_MIN + 30 && currentMinutes < ROUND_END_MIN + 120) {
+        targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === normalEndMin + 60 && s.label !== breakSlot);
+      } else if (currentMinutes >= ROUND_END_MIN + 120 && totalHours >= 10) {
+        targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === normalEndMin + 120 && s.label !== breakSlot);
+      }
     }
     if (!targetSlots.length) {
       let passedSlots = TIME_SLOTS_DEF.filter(slot => currentMinutes >= slot.endMin);
@@ -2361,6 +2374,20 @@
         targetSlots = [TIME_SLOTS_DEF[0], TIME_SLOTS_DEF[1]];
       }
     }
+
+    // ช่องทำงานที่จบไปแล้วแต่ยังไม่ได้กรอก (เช่น เข้า 06.00 แล้วบอทตามรอบแรก 10.30) → ขึ้นให้กรอกด้วย
+    try {
+      const shown = new Set(targetSlots.map(slot => slot.label));
+      const missed = getWorkingSlotsForCurrentLine_().filter(slot => {
+        if (!slot || shown.has(slot.label) || slot.label === breakSlot) return false;
+        if (!(currentMinutes >= slot.endMin)) return false;
+        const saved = existingData[slot.label];
+        return !(saved && saved.output !== undefined && saved.output !== '');
+      });
+      if (missed.length) {
+        targetSlots = missed.concat(targetSlots).sort((a, b) => (a.startMin || a.endMin) - (b.startMin || b.endMin));
+      }
+    } catch (err) { console.warn('missed slots', err); }
 
     const seenSlots = new Set();
     targetSlots = targetSlots.filter(slot => {
