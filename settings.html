@@ -257,10 +257,23 @@
   function todayIso() { return state ? state.today : new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10); }
 
   // ช่องเวลา (กฎเดียวกับ Apps Script) ใช้แสดงตัวอย่างก่อนเปลี่ยนเวลาเข้า/รอบพัก
-  function buildGrid(startTime, breakStart, total) {
+  function buildGrid(startTime, breakStart, total, mode) {
     const base = 510, start = toMin(startTime) === 480 ? 480 : 510, b = toMin(breakStart);
     const out = [];
     if (isNaN(b) || !total) return out;
+    if (mode === 'split') {
+      // แบบใหม่: ช่องละ 1 ชม. จากเวลาเข้างาน พักทับเต็มช่อง = พัก · ทับครึ่งช่อง = ทำงาน 0.5
+      let acc = 0;
+      for (let k = 0; k < 16 && acc < total * 60; k++) {
+        const s0 = start + 60 * k, e0 = s0 + 60;
+        const ov = Math.max(0, Math.min(e0, b + 60) - Math.max(s0, b));
+        const label = minText(s0) + '-' + minText(e0);
+        if (ov >= 60) { out.push({ label: label, brk: true }); continue; }
+        acc += 60 - ov;
+        out.push({ label: label, minutes: 60 - ov });
+      }
+      return out;
+    }
     const morning = [];
     for (let t = base; t < b; ) { const e = Math.min(t + 60, b); morning.push([t, e]); t = e; }
     const shift = base - start;
@@ -406,19 +419,30 @@
   }
 
   function renderSlotRows() {
+    // OT = ช่องที่เริ่มหลังทำงานครบ 8 ชม. (นับตามนาทีจริง ช่อง 0.5 ไม่ทำให้นับเพี้ยน)
+    let workedMin = 0;
+    const otSlot = {};
+    day.slots.forEach(s => { if (s.isBreak) return; if (workedMin >= 480) otSlot[s.slot] = true; workedMin += Number(s.minutes) || 60; });
     return day.slots.map(s => {
       const d = slotDraft[s.slot];
       const saved = s.saved;
       const qty = d ? (d.remove ? '' : d.qty) : (saved ? saved.output : '');
       const remark = d ? (d.remove ? '' : d.remark) : (saved ? saved.remark : '');
-      const lenTag = s.isBreak ? '' : (s.minutes !== 60 ? `<span class="len odd">${s.minutes / 60} ชม.</span>` : '');
-      const otTag = (!s.isBreak && Number(s.no) > 8) ? '<span class="len ot">OT</span>' : '';
+      const lenTag = s.isBreak ? '' : (s.minutes !== 60 ? `<span class="len odd">${day.gridMode === 'split' ? s.minutes + ' นาที' : s.minutes / 60 + ' ชม.'}</span>` : '');
+      const otTag = (!s.isBreak && otSlot[s.slot]) ? '<span class="len ot">OT</span>' : '';
       const who = d && d.remove ? '<span style="color:#b91c1c;font-weight:800">จะลบ</span>'
         : saved ? `${esc(saved.reportedBy || '-')}<br>${esc(saved.time || '')}` : (s.ended ? '<span style="color:#b45309">ยังไม่กรอก</span>' : '<span class="pending">ยังไม่ถึงเวลา</span>');
       if (s.isBreak) {
+        // ช่องพักที่มียอด > 0 (เช่น เปลี่ยนรอบพักหลังกรอกยอดแล้ว) → ให้เห็นและลบได้
+        const brkQty = saved ? Number(saved.output) || 0 : 0;
+        if (brkQty > 0 || (d && d.remove)) {
+          return `<tr class="brk"><td class="slot-time">${s.slot}</td><td>พักเที่ยง <small style="display:block;color:#b45309">มียอดค้างในช่องพัก ตรวจแล้วลบได้</small></td><td class="num">-</td>
+            <td class="num"><b>${d && d.remove ? 'จะลบ' : brkQty.toLocaleString()}</b></td><td>${esc(saved ? saved.remark : '')}</td><td class="who">${saved ? esc(saved.reportedBy || '') : ''}</td>
+            <td><button class="x-btn" title="ลบยอดช่วงนี้" onclick="removeSlot('${s.slot}')">✕</button></td></tr>`;
+        }
         return `<tr class="brk"><td class="slot-time">${s.slot}</td><td>พักเที่ยง</td><td class="num">-</td><td class="num">${saved ? '0' : '-'}</td><td></td><td class="who"></td><td></td></tr>`;
       }
-      return `<tr class="${Number(s.no) > 8 ? 'ot' : ''}">
+      return `<tr class="${otSlot[s.slot] ? 'ot' : ''}">
         <td class="slot-time">${s.slot}${lenTag}${otTag}</td>
         <td class="lot">${esc(s.lot || '-')}<small>${esc(lotModel(s.lot))}</small></td>
         <td class="num">${s.target === null || s.target === undefined ? '-' : fmtNum(s.target)}</td>
@@ -472,7 +496,7 @@
   function renderTimeCard() {
     const t = timeDraft || { startTime: day.startTime, breakStart: day.breakStart };
     const changed = t.startTime !== day.startTime || t.breakStart !== day.breakStart;
-    const preview = changed ? buildGrid(t.startTime, t.breakStart, day.totalWorkingHours) : [];
+    const preview = changed ? buildGrid(t.startTime, t.breakStart, day.totalWorkingHours, day.gridMode) : [];
     return `<div class="card">
       <h3>เวลาเข้างาน / รอบพัก <span class="note">เฉพาะ Line ${day.line} วันนี้</span></h3>
       <div class="sub">เวลาเข้างาน</div>

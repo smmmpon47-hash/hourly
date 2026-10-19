@@ -510,6 +510,7 @@
     .load-out-lot-input{ border-color:#c4b5fd; font-weight:700; padding:7px 10px; font-size:.95rem; }
     .slot-target-tag{ display:block; font-size:.72rem; font-weight:700; color:#0f766e; margin-top:2px; }
     .slot-target-tag.odd{ color:#b45309; }
+    .slot-break-note{ display:block; font-size:.68rem; font-weight:700; color:#be123c; margin-top:1px; }
     .load-progress-text{ color:#64748b; font-size:.9rem; font-weight:700; margin-bottom:9px; }
     .load-progress-text b{ color:#0f766e; font-size:1.05rem; }
     .load-progress-bar{ height:8px; background:#e2e8f0; border-radius:99px; overflow:hidden; }
@@ -1202,14 +1203,37 @@
     return String(Math.floor(minutes / 60)).padStart(2, '0') + '.' + String(minutes % 60).padStart(2, '0');
   }
 
-  function buildSlotGridClient_(startTime, breakStart, totalWorkingHours) {
+  function buildSlotGridClient_(startTime, breakStart, totalWorkingHours, gridMode) {
     const base = 510; // 08.30
     const startRaw = slotClockMin_(startTime);
     const start = (startRaw === 480 || startRaw === 510) ? startRaw : base;
     const breakMin = slotClockMin_(breakStart);
     const total = Math.max(0, Math.floor(Number(totalWorkingHours) || 0));
-    const grid = { slots: [], items: [] };
+    const grid = { slots: [], items: [], breakSlot: null };
     if (!total || isNaN(breakMin) || breakMin <= base) return grid;
+
+    // แบบใหม่ (ตั้งแต่ 20 ต.ค. 69): ช่องละ 1 ชม. นับจากเวลาเข้างาน
+    // พักทับเต็มช่อง = ช่องพัก · พักทับครึ่งช่อง = ช่องนั้นทำงาน 0.5 ชม. (คร่อม 2 ช่อง → 0.5 + 0.5)
+    if (gridMode === 'split') {
+      const breakEnd = breakMin + 60;
+      let acc = 0;
+      for (let k = 0; k < 16 && acc < total * 60; k++) {
+        const sMin = start + 60 * k, eMin = sMin + 60;
+        const overlap = Math.max(0, Math.min(eMin, breakEnd) - Math.max(sMin, breakMin));
+        const label = slotMinText_(sMin) + '-' + slotMinText_(eMin);
+        if (overlap >= 60) {
+          grid.breakSlot = { no: 0, label: label, startMin: sMin, endMin: eMin, minutes: 60, isBreak: true };
+          grid.items.push(grid.breakSlot);
+          continue;
+        }
+        const minutes = Math.min(60 - overlap, total * 60 - acc);
+        acc += minutes;
+        const slot = { no: grid.slots.length + 1, label: label, startMin: sMin, endMin: eMin, minutes: minutes, breakMinutes: overlap, isBreak: false };
+        grid.slots.push(slot);
+        grid.items.push(slot);
+      }
+      return grid;
+    }
 
     const morning = [];
     for (let t = base; t < breakMin; ) {
@@ -1251,10 +1275,11 @@
       grid.slots.push(slot);
       grid.items.push(slot);
       if (i === morning.length - 1 && afternoonCount > 0) {
-        grid.items.push({
+        grid.breakSlot = {
           no: 0, label: slotMinText_(breakMin) + '-' + slotMinText_(afterBreak),
           startMin: breakMin, endMin: afterBreak, minutes: 60, isBreak: true
-        });
+        };
+        grid.items.push(grid.breakSlot);
       }
     });
     return grid;
@@ -1262,7 +1287,7 @@
 
   function getLineSlotConfig_(lineValue) {
     const code = lineCodeOf_(lineValue);
-    return lineSlotConfigs[code] || { startTime: '08:30', breakStart: DEFAULT_BREAK_BY_LINE[code] || '' };
+    return lineSlotConfigs[code] || { startTime: '08:30', breakStart: DEFAULT_BREAK_BY_LINE[code] || '', gridMode: 'legacy' };
   }
 
   // จำเวลาเข้างาน/รอบพักจากข้อมูลที่ Apps Script ส่งมา (Apps Script เก่าไม่ส่ง = ใช้ค่าตั้งต้น)
@@ -1271,9 +1296,12 @@
     if (!code || !data) return;
     const cfg = data.slotConfig || (data.slotGrid ? { startTime: data.slotGrid.startTime, breakStart: data.slotGrid.breakStart } : null);
     if (cfg && cfg.breakStart) {
+      // gridMode มาจาก Apps Script (split = ช่องรายชั่วโมงแบบใหม่) · Apps Script เก่าไม่ส่ง = แบบเดิม
+      const gridMode = String(cfg.gridMode || (data.slotGrid && data.slotGrid.mode) || 'legacy');
       lineSlotConfigs[code] = {
         startTime: String(cfg.startTime || '08:30'),
-        breakStart: String(cfg.breakStart)
+        breakStart: String(cfg.breakStart),
+        gridMode: gridMode === 'split' ? 'split' : 'legacy'
       };
     }
   }
@@ -1283,10 +1311,10 @@
     const cfg = getLineSlotConfig_(lineValue);
     if (!cfg.breakStart) return LEGACY_TIME_SLOTS_DEF.slice();
     const hours = Math.max(1, Math.min(10, Math.floor(Number(totalHours) || 10)));
-    const grid = buildSlotGridClient_(cfg.startTime, cfg.breakStart, hours);
+    const grid = buildSlotGridClient_(cfg.startTime, cfg.breakStart, hours, cfg.gridMode);
     if (!grid.slots.length) return LEGACY_TIME_SLOTS_DEF.slice();
     const lastEnd = grid.slots[grid.slots.length - 1].endMin;
-    let later = buildSlotGridClient_(cfg.startTime, cfg.breakStart, 10).items
+    let later = buildSlotGridClient_(cfg.startTime, cfg.breakStart, 10, cfg.gridMode).items
       .filter(item => item.startMin >= lastEnd);
     // วันเต็มไม่ต่อกันพอดี (เช่น พัก 12.00 จบ 17.30) → ต่อรอบ OT ทีละ 1 ชม. ถึง 19.30
     if (!later.length || later[0].startMin !== lastEnd) {
@@ -2139,7 +2167,10 @@
         data.slotGrid.slots.forEach(item => {
           currentSlotTargets[item.label] = {
             target: Number(item.target) || 0,
-            minutes: Number(item.minutes) || 60
+            minutes: Number(item.minutes) || 60,
+            breakMinutes: Number(item.breakMinutes) || 0,
+            startMin: Number(item.startMin),
+            breakStart: data.slotGrid.breakStart || ''
           };
         });
       }
@@ -2428,6 +2459,14 @@
     const info = currentSlotTargets[label];
     if (!info) return '';
     const hours = info.minutes / 60;
+    // ช่องที่พักทับครึ่งช่อง: บอกว่าทำงานกี่นาที + ช่วงพักในช่องนั้น
+    if (info.breakMinutes > 0 && info.minutes < 60 && info.breakStart) {
+      const bs = slotClockMin_(info.breakStart), be = bs + 60;
+      const s0 = info.startMin, e0 = s0 + 60;
+      const from = Math.max(s0, bs), to = Math.min(e0, be);
+      return `<span class="slot-target-tag odd">เป้า ${Number(info.target).toLocaleString()} · ${info.minutes} นาที</span>` +
+        `<span class="slot-break-note">พัก ${slotMinText_(from)}-${slotMinText_(to)}</span>`;
+    }
     const lengthText = info.minutes !== 60 ? ` · ${hours} ชม.` : '';
     return `<span class="slot-target-tag${info.minutes !== 60 ? ' odd' : ''}">เป้า ${Number(info.target).toLocaleString()}${lengthText}</span>`;
   }
@@ -2547,7 +2586,13 @@
 
 
   function getBreakSlotForLine_(lineValue) {
-    const b = slotClockMin_(getLineSlotConfig_(lineValue).breakStart);
+    const cfg = getLineSlotConfig_(lineValue);
+    if (cfg.gridMode === 'split') {
+      // แบบใหม่: มีช่องพักเฉพาะตอนพักทับเต็มช่อง (พักคร่อม 2 ช่อง = ไม่มีช่องพัก)
+      const grid = buildSlotGridClient_(cfg.startTime, cfg.breakStart, 10, 'split');
+      return grid.breakSlot ? grid.breakSlot.label : '';
+    }
+    const b = slotClockMin_(cfg.breakStart);
     return isNaN(b) ? '' : slotMinText_(b) + '-' + slotMinText_(b + 60);
   }
 
@@ -2797,7 +2842,9 @@
     };
 
     document.getElementById('modalCurrentLot').innerText = lotVal;
-    document.getElementById('modalSwitchSlot').innerText = slotLabel;
+    const halfInfo = currentSlotTargets[slotLabel];
+    document.getElementById('modalSwitchSlot').innerText =
+      (halfInfo && halfInfo.minutes < 60) ? `${slotLabel} (ช่องนี้ทำงาน ${halfInfo.minutes} นาที)` : slotLabel;
     document.getElementById('modalLotNo').value = '';
     document.getElementById('modalLotTarget').value = '';
     syncSwitchLotTargetField_();
@@ -2857,7 +2904,7 @@
     if (!cfg.breakStart) {
       return LEGACY_TIME_SLOTS_DEF.slice(0, hours);
     }
-    return buildSlotGridClient_(cfg.startTime, cfg.breakStart, hours).slots;
+    return buildSlotGridClient_(cfg.startTime, cfg.breakStart, hours, cfg.gridMode).slots;
   }
 
   function normalizeLotSwitchHistoryForLine_(history, lineValue, totalHours, allowedLots) {
@@ -3739,6 +3786,15 @@
       </button>`).join('');
   }
 
+  // ช่องที่พักทับครึ่งช่อง (แบบใหม่) → บอกว่าทำงานกี่นาที
+  function dayHalfTag_(data, label) {
+    const grid = data && data.slotGrid;
+    if (!grid || !Array.isArray(grid.slots)) return '';
+    const s = grid.slots.find(x => x.label === label);
+    if (!s || !(Number(s.minutes) < 60) || !(Number(s.breakMinutes) > 0)) return '';
+    return `<br><span style="color:#b45309;font-size:.72rem;font-weight:700;">ทำงาน ${Number(s.minutes)} นาที</span>`;
+  }
+
   function renderDayEditRows_(data) {
     const rowsEl = document.getElementById('dayEditRows');
     const footer = document.getElementById('dayEditFooter');
@@ -3767,7 +3823,7 @@
         <div class="day-row" data-slot-label="${escDay_(s.slot)}"
              data-break-time="${s.isBreak ? 'true' : 'false'}"
              data-time-locked="${locked ? '1' : '0'}">
-          <div class="slot-time">${escDay_(s.slot)}${s.isBreak ? '<br><span style="color:#ef4444;font-size:.75rem;">(พัก)</span>' : ''}</div>
+          <div class="slot-time">${escDay_(s.slot)}${s.isBreak ? '<br><span style="color:#ef4444;font-size:.75rem;">(พัก)</span>' : dayHalfTag_(data, s.slot)}</div>
           <div class="slot-lot-container">
             <div class="slot-lot-display">${escDay_(lot || '--')}</div>
             <input type="hidden" class="input-lot-val" value="${escDay_(lot)}">
