@@ -2308,12 +2308,15 @@
     // ห้ามโชว์ slot ที่ยังผลิตไม่จบล่วงหน้า
     // ท้ายวัน: อิงเวลาเลิกปกติของไลน์ (เข้า 08.30 = 17.30, เข้า 08.00 = 17.00)
     // ช่องสุดท้ายเปิดให้กรอกก่อนจบ 30 นาที เหมือนเดิม; OT 1 / OT 2 ตามลำดับ
+    // ช่วงเวลาที่เปิดให้กรอกยึดรอบบอทเดิมเสมอ (17.30 / 18.30 / 19.30) ไม่ว่าจะเข้า 08.00 หรือ 08.30
+    // ส่วนช่องที่โชว์ยึดเวลาเลิกจริงของไลน์ (เข้า 08.00 → 16.30-17.00 / 17.00-18.00 / 18.00-19.00)
     const normalEndMin = (slotClockMin_(getLineSlotConfig_(document.getElementById('line').value).startTime) || 510) + 540;
-    if (currentMinutes >= normalEndMin - 30 && currentMinutes < normalEndMin + 30) {
+    const ROUND_END_MIN = 1050; // 17.30
+    if (currentMinutes >= ROUND_END_MIN - 30 && currentMinutes < ROUND_END_MIN + 30) {
       targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === normalEndMin && s.label !== breakSlot);
-    } else if (currentMinutes >= normalEndMin + 30 && currentMinutes < normalEndMin + 120) {
+    } else if (currentMinutes >= ROUND_END_MIN + 30 && currentMinutes < ROUND_END_MIN + 120) {
       targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === normalEndMin + 60 && s.label !== breakSlot);
-    } else if (currentMinutes >= normalEndMin + 120 && totalHours >= 10) {
+    } else if (currentMinutes >= ROUND_END_MIN + 120 && totalHours >= 10) {
       targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === normalEndMin + 120 && s.label !== breakSlot);
     }
     if (!targetSlots.length) {
