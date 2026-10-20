@@ -1114,8 +1114,14 @@
       <input type="text" id="modalLotNo" placeholder="LOT ใหม่ หรือ LOT เดิมที่ต้องการกลับไป" autocomplete="off" autocapitalize="characters" spellcheck="false" oninput="cleanLotInput_(this, event); syncSwitchLotTargetField_()" onblur="cleanLotInput_(this); syncSwitchLotTargetField_()">
     </div>
 
+    <div class="form-group" id="modalSamGroup">
+      <label for="modalLotSam">2) ค่า SAM ของ LOT ใหม่ (นาที/ตัว)</label>
+      <input type="number" id="modalLotSam" min="0" step="0.01" inputmode="decimal" placeholder="เช่น 20.11 • เว้นว่าง = กรอก TG เอง" oninput="syncSwitchLotTargetField_()">
+      <div id="modalSamHint" style="font-size:.74rem;color:#64748b;margin-top:5px;"></div>
+    </div>
+
     <div class="form-group">
-      <label for="modalLotTarget" id="modalLotTargetLabel">2) TG Original ของ LOT ใหม่ (ชิ้น)</label>
+      <label for="modalLotTarget" id="modalLotTargetLabel">3) TG Original ของ LOT ใหม่ (ชิ้น)</label>
       <input type="number" id="modalLotTarget" min="1" placeholder="กรอก TG เต็ม เช่น 742">
     </div>
 
@@ -1159,6 +1165,7 @@
   let pendingSwitchContext = null;
   let pendingSwitchMode = ''; // NEXT = เริ่มรอบถัดไป, CURRENT = ใช้รอบที่เลือก
   let currentLoadInToday = null;
+  var currentLineManpower = 0; // จำนวนคนของไลน์วันนี้ (ใช้คิดเป้าจาก SAM ตอนสลับ LOT)
   let currentLoadInByLot = {};    // { LOT: qty } จาก LoadIn_Daily (แยก LOT)
   let currentLoadOutByLot = {};   // { LOT: qty } จาก LoadOut_Daily (แยก LOT)
   let currentFinalWorkingSlot = '';
@@ -1423,6 +1430,20 @@
     }
   }
 
+  // เป้าจาก SAM: ชั่วโมงทำงานรวม × 60 × คน ÷ SAM (สูตรเดียวกับ Apps Script)
+  function samToTg_(sam, totalHours, manpower) {
+    const s = Number(sam), h = Number(totalHours), m = Number(manpower);
+    if (!(s > 0) || !(h > 0) || !(m > 0)) return 0;
+    return Math.round(h * 60 * m / s);
+  }
+  function readSamInput_(el) {
+    const raw = String(el ? el.value : '').trim();
+    if (raw === '') return { empty: true };
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n <= 0 || n >= 1000) return { error: 'ค่า SAM ต้องมากกว่า 0' };
+    return { value: Math.round(n * 100) / 100 };
+  }
+
   function getEditPlanLots_(data) {
     return [
       {
@@ -1431,6 +1452,7 @@
         hours: Number(data.workingHours) || 0,
         target: Number(data.target1) || 0,
         tg: Number(data.tgOriginal1 || data.target1 || 0),
+        sam: ((data.sams || {})[1] || {}).sam || null,
         model: (data.masterMap || {})[normalizeLot_(data.lotNumber)] || ''
       },
       {
@@ -1439,6 +1461,7 @@
         hours: Number(data.workingHours2) || 0,
         target: Number(data.target2) || 0,
         tg: Number(data.tgOriginal2 || 0),
+        sam: ((data.sams || {})[2] || {}).sam || null,
         model: (data.masterMap || {})[normalizeLot_(data.lotNumber2 || data.lot2Number)] || ''
       },
       {
@@ -1447,6 +1470,7 @@
         hours: Number(data.workingHours3) || 0,
         target: Number(data.target3) || 0,
         tg: Number(data.tgOriginal3 || 0),
+        sam: ((data.sams || {})[3] || {}).sam || null,
         model: (data.masterMap || {})[normalizeLot_(data.lotNumber3 || data.lot3Number)] || ''
       }
     ].filter(item => item.lot);
@@ -1549,8 +1573,12 @@
             </div>
             <span class="edit-plan-hours-badge" id="editHoursBadge${item.index}">${item.hours} ชม.</span>
           </div>
+          <div class="form-group">
+            <label for="editSam${item.index}">ค่า SAM (นาที/ตัว) <span style="font-weight:500;color:#94a3b8;">• เว้นว่าง = กรอก TG เอง</span></label>
+            <input type="number" id="editSam${item.index}" min="0" step="0.01" inputmode="decimal" placeholder="เช่น 20.11" value="${item.sam || ''}" oninput="updateEditPlanPreview()">
+          </div>
           <div class="form-group" style="margin-bottom:0;">
-            <label for="editTG${item.index}">TG Original LOT ${item.index} (ชิ้น)</label>
+            <label for="editTG${item.index}" id="editTGLabel${item.index}">TG Original LOT ${item.index} (ชิ้น)</label>
             <input type="number" id="editTG${item.index}" min="1" step="1" value="${item.tg || ''}" oninput="updateEditPlanPreview()">
           </div>
         </div>
@@ -1651,9 +1679,27 @@
     const hoursByLot = [hours1, hours2, hours3];
     const editedLots = [];
 
+    const mpRead = readEditManpower_();
+    const planManpower = mpRead.value !== null && mpRead.value !== undefined ? mpRead.value : currentEditPlanState.manpower;
     for (const item of lots) {
       const tgEl = document.getElementById(`editTG${item.index}`);
-      const tg = Number(tgEl ? tgEl.value : 0) || 0;
+      const samRead = readSamInput_(document.getElementById(`editSam${item.index}`));
+      if (samRead.error) return { valid: false, error: `LOT ${item.index}: ${samRead.error}` };
+      let tg = Number(tgEl ? tgEl.value : 0) || 0;
+      let sam = null;
+      if (!samRead.empty) {
+        if (!(Number(planManpower) > 0)) return { valid: false, error: 'คิดเป้าจาก SAM ต้องกรอกจำนวนคน' };
+        sam = samRead.value;
+        tg = samToTg_(sam, totalHours, planManpower);
+      }
+      // ช่อง TG: โหมด SAM = ระบบคิดให้ (แก้เองไม่ได้)
+      if (tgEl) {
+        tgEl.readOnly = sam !== null;
+        tgEl.style.backgroundColor = sam !== null ? '#f1f5f9' : '';
+        if (sam !== null) tgEl.value = tg;
+      }
+      const tgLabel = document.getElementById(`editTGLabel${item.index}`);
+      if (tgLabel) tgLabel.innerText = sam !== null ? `TG Original LOT ${item.index} (คิดจาก SAM ${sam})` : `TG Original LOT ${item.index} (ชิ้น)`;
 
       if (tg <= 0) {
         return { valid: false, error: `TG Original LOT ${item.index} ต้องมากกว่า 0` };
@@ -1662,7 +1708,7 @@
       const hours = hoursByLot[item.index - 1] || 0;
       const target = Math.round((tg / totalHours) * hours);
 
-      editedLots.push({ ...item, tg, hours, target });
+      editedLots.push({ ...item, tg, hours, target, samNew: sam });
     }
 
     const totalTarget = editedLots.reduce((sum, item) => sum + item.target, 0);
@@ -1877,6 +1923,8 @@
       tgOriginal3: calc.lots.find(x => x.index === 3)?.tg || 0,
       updatedBy: userDisplayName
     };
+    // SAM ของแต่ละ LOT: ตัวเลข = คิดเป้าจาก SAM · ว่าง = กรอก TG เอง
+    calc.lots.forEach(x => { payload['sam' + x.index] = x.samNew === null || x.samNew === undefined ? '' : x.samNew; });
     if (manpowerEdit.value !== null) payload.manpower = manpowerEdit.value;
     if (startTimeEdit) payload.startTime = startTimeEdit;
 
@@ -2184,6 +2232,7 @@
       }
       currentTarget1 = Number(data.target) || Number(data.target1) || 0;
       currentExistingHourly = data.existingHourly || {};
+      currentLineManpower = (data.manpower === null || data.manpower === undefined || data.manpower === '') ? 0 : Number(data.manpower) || 0;
       currentLoadInToday =
         (data.loadInToday === null || data.loadInToday === undefined || data.loadInToday === '')
           ? null
@@ -2874,6 +2923,7 @@
       (halfInfo && halfInfo.minutes < 60) ? `${slotLabel} (ช่องนี้ทำงาน ${halfInfo.minutes} นาที)` : slotLabel;
     document.getElementById('modalLotNo').value = '';
     document.getElementById('modalLotTarget').value = '';
+    if (document.getElementById('modalLotSam')) document.getElementById('modalLotSam').value = '';
     syncSwitchLotTargetField_();
 
     const statusBox = document.getElementById('switchLotStatus');
@@ -2889,6 +2939,7 @@
     document.getElementById('newLotModal').style.display = 'none';
     document.getElementById('modalLotNo').value = '';
     document.getElementById('modalLotTarget').value = '';
+    if (document.getElementById('modalLotSam')) document.getElementById('modalLotSam').value = '';
     syncSwitchLotTargetField_();
     pendingSwitchMode = '';
 
@@ -3014,6 +3065,9 @@
     const lot = normalizeLot_(lotInput.value);
     const isExisting = !!lot && activeLots.some(x => normalizeLot_(x) === lot);
 
+    const samGroup = document.getElementById('modalSamGroup');
+    const samInput = document.getElementById('modalLotSam');
+    const samHint = document.getElementById('modalSamHint');
     if (isExisting) {
       const existingTG = Number(currentLotTGMap[lot]) || 0;
       tgInput.value = existingTG > 0 ? existingTG : '';
@@ -3021,12 +3075,30 @@
       tgInput.style.backgroundColor = '#f1f5f9';
       tgInput.style.color = '#64748b';
       tgLabel.innerText = '2) TG Original เดิม (ระบบดึงให้อัตโนมัติ)';
+      if (samGroup) samGroup.style.display = 'none';
     } else {
-      if (tgInput.readOnly) tgInput.value = '';
-      tgInput.readOnly = false;
-      tgInput.style.backgroundColor = '';
-      tgInput.style.color = '';
-      tgLabel.innerText = '2) TG Original ของ LOT ใหม่ (ชิ้น)';
+      if (samGroup) samGroup.style.display = '';
+      const samRead = readSamInput_(samInput);
+      if (!samRead.empty && !samRead.error) {
+        // โหมด SAM: เป้าเต็มวัน = ชั่วโมงทำงานรวม × 60 × คน ÷ SAM
+        const hours = Number(currentHours1) || 0;
+        const tg = samToTg_(samRead.value, hours, currentLineManpower);
+        tgInput.value = tg > 0 ? tg : '';
+        tgInput.readOnly = true;
+        tgInput.style.backgroundColor = '#f1f5f9';
+        tgInput.style.color = '#64748b';
+        tgLabel.innerText = '3) TG Original (คิดจาก SAM)';
+        if (samHint) samHint.innerText = currentLineManpower > 0
+          ? `${hours} ชม. × 60 × ${currentLineManpower} คน ÷ ${samRead.value} = ${tg.toLocaleString()} ชิ้น`
+          : 'ยังไม่มีจำนวนคน — กรอกจำนวนคนที่แท็บแก้ไขเป้าก่อน หรือเว้น SAM แล้วกรอก TG เอง';
+      } else {
+        if (tgInput.readOnly) tgInput.value = '';
+        tgInput.readOnly = false;
+        tgInput.style.backgroundColor = '';
+        tgInput.style.color = '';
+        tgLabel.innerText = '3) TG Original ของ LOT ใหม่ (ชิ้น)';
+        if (samHint) samHint.innerText = samRead.error || '';
+      }
     }
   }
 
@@ -3264,9 +3336,13 @@
 
     const localUsedLots = activeLots.map(normalizeLot_).filter(Boolean);
     const isExistingLot = localUsedLots.includes(newLot);
+    const samRead = readSamInput_(document.getElementById('modalLotSam'));
+    const useSam = !isExistingLot && !samRead.empty;
+    if (useSam && samRead.error) { alert(samRead.error); return; }
+    if (useSam && !(currentLineManpower > 0)) { alert('คิดเป้าจาก SAM ต้องมีจำนวนคน กรุณากรอกจำนวนคนที่แท็บแก้ไขเป้า หรือเว้น SAM แล้วกรอก TG เอง'); return; }
     const resolvedTarget = isExistingLot
       ? (Number(currentLotTGMap[newLot]) || 0)
-      : enteredTarget;
+      : (useSam ? samToTg_(samRead.value, Number(currentHours1) || 0, currentLineManpower) : enteredTarget);
 
     if (!newLot) {
       alert("กรุณากรอก LOT ที่ต้องการสลับ");
@@ -3414,6 +3490,7 @@
       switchMode: switchMode,
       newLotNumber: newLot,
       newLotTarget: resolvedTarget,
+      newLotSam: useSam ? samRead.value : '',
       newLotOriginalTG: resolvedTarget,
       tgOriginalNewLot: resolvedTarget,
       totalWorkingHours: totalWorkingHours,

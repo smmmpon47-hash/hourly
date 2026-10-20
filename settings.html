@@ -441,6 +441,7 @@
         </div>
       </div>`;
     updateSum();
+    if ($('planAA')) editPlan(); // ล็อกช่อง TG ของ LOT ที่ใช้ SAM
   }
 
   function renderSlotRows() {
@@ -553,39 +554,69 @@
   }
 
   /* แผนการผลิต (AA + TG Original) */
-  function planNow() { return planDraft || { aa: day.totalWorkingHours, tg: day.lots.map(l => l.tgOriginal) }; }
-  function planChanged(p) { return Number(p.aa) !== Number(day.totalWorkingHours) || p.tg.some((v, i) => Number(v) !== Number(day.lots[i].tgOriginal)); }
+  // เป้าจาก SAM = ชั่วโมงทำงานรวม × 60 × คน ÷ SAM (สูตรเดียวกับ Apps Script)
+  function samToTg(sam, hours, mp) {
+    const s = Number(sam), h = Number(hours), m = Number(mp);
+    return (s > 0 && h > 0 && m > 0) ? Math.round(h * 60 * m / s) : 0;
+  }
+  const samText = v => (v === null || v === undefined) ? '' : String(v);
+  function planNow() { return planDraft || { aa: day.totalWorkingHours, tg: day.lots.map(l => l.tgOriginal), sam: day.lots.map(l => samText(l.sam)) }; }
+  function planChanged(p) {
+    return Number(p.aa) !== Number(day.totalWorkingHours)
+      || p.tg.some((v, i) => Number(v) !== Number(day.lots[i].tgOriginal))
+      || p.sam.some((v, i) => String(v).trim() !== samText(day.lots[i].sam));
+  }
   function renderPlanCard() {
     const p = planNow();
     return `<div class="card" id="planCard">
-      <h3>แผนการผลิต <span class="note">เป้า LOT = TG ÷ ชม.ทำงาน × ชม.ที่ทำจริง</span></h3>
+      <h3>แผนการผลิต <span class="note">SAM: TG = ชม.ทำงาน × 60 × คน ÷ SAM • เว้น SAM = กรอก TG เอง</span></h3>
       <div class="row-inline"><span style="font-weight:800;font-size:.86rem;color:#334155">เวลาทำงานรวม</span>
-        <input class="inp" id="planAA" type="number" min="1" max="10" step="1" style="width:80px" value="${esc(p.aa)}" oninput="editPlan()"> <span class="pending">ชม.</span></div>
-      <table style="margin-top:10px"><thead><tr><th>LOT</th><th class="num">TG Original</th><th class="num">ชม.</th><th class="num">เป้า</th></tr></thead><tbody>
+        <input class="inp" id="planAA" type="number" min="1" max="10" step="1" style="width:80px" value="${esc(p.aa)}" oninput="editPlan()"> <span class="pending">ชม. • ${day.manpower ? fmtNum(day.manpower) + ' คน' : 'ยังไม่กรอกจำนวนคน'}</span></div>
+      <table style="margin-top:10px"><thead><tr><th>LOT</th><th class="num">SAM</th><th class="num">TG Original</th><th class="num">ชม.</th><th class="num">เป้า</th></tr></thead><tbody>
       ${day.lots.map((l, i) => `<tr><td class="lot">${esc(l.lot)}<small>${esc(l.model)}</small></td>
-        <td class="num"><input class="inp plan-tg" data-i="${i}" type="number" min="1" step="1" style="width:100px;text-align:right" value="${esc(p.tg[i])}" oninput="editPlan()"></td>
+        <td class="num"><input class="inp plan-sam" data-i="${i}" type="number" min="0" step="0.01" style="width:84px;text-align:right" value="${esc(p.sam[i])}" placeholder="เอง" oninput="editPlan()"></td>
+        <td class="num"><input class="inp plan-tg" data-i="${i}" type="number" min="1" step="1" style="width:96px;text-align:right" value="${esc(p.tg[i])}" oninput="editPlan()"></td>
         <td class="num">${hoursText(l.hours)}</td><td class="num">${fmtNum(l.target)}</td></tr>`).join('')}
       </tbody></table>
+      <div class="help" id="planHint"></div>
       <div class="row-inline" id="planActions" style="margin-top:10px;display:none"><button class="btn ghost small" onclick="planDraft=null;renderDay()">ยกเลิก</button><button class="btn small" style="flex:1" onclick="savePlan()">บันทึกแผน (คำนวณเป้าใหม่)</button></div>
     </div>`;
   }
   function editPlan() {
-    const p = { aa: $('planAA').value, tg: [...document.querySelectorAll('.plan-tg')].map(el => el.value) };
+    const aa = $('planAA').value;
+    const samEls = [...document.querySelectorAll('.plan-sam')], tgEls = [...document.querySelectorAll('.plan-tg')];
+    const p = { aa: aa, sam: samEls.map(el => el.value.trim()), tg: tgEls.map(el => el.value) };
+    let hint = '';
+    // มี SAM = TG คิดให้อัตโนมัติ (แก้เองไม่ได้)
+    p.sam.forEach((v, i) => {
+      const el = tgEls[i];
+      if (v !== '') {
+        const tg = samToTg(v, aa, day.manpower);
+        p.tg[i] = tg || '';
+        el.value = tg || '';
+        el.readOnly = true; el.style.background = '#f1f5f9';
+        if (!day.manpower) hint = 'คิดเป้าจาก SAM ต้องมีจำนวนคน — กรอกจำนวนคนในการ์ดด้านล่างแล้วบันทึกก่อน';
+      } else { el.readOnly = false; el.style.background = ''; }
+    });
     planDraft = planChanged(p) ? p : null;
+    $('planHint').textContent = hint;
     $('planAA').classList.toggle('changed', Number(p.aa) !== Number(day.totalWorkingHours));
-    document.querySelectorAll('.plan-tg').forEach(el => el.classList.toggle('changed', Number(el.value) !== Number(day.lots[el.dataset.i].tgOriginal)));
+    tgEls.forEach(el => el.classList.toggle('changed', Number(el.value) !== Number(day.lots[el.dataset.i].tgOriginal)));
+    samEls.forEach(el => el.classList.toggle('changed', el.value.trim() !== samText(day.lots[el.dataset.i].sam)));
     $('planActions').style.display = planDraft ? 'flex' : 'none';
   }
   async function savePlan() {
     const p = planDraft;
     const aa = Number(p.aa);
     if (!Number.isInteger(aa) || aa < 1 || aa > 10) { alert('เวลาทำงานรวมต้องเป็น 1–10 ชม.'); return; }
+    if (p.sam.some(v => v !== '' && !(Number(v) > 0))) { alert('ค่า SAM ต้องมากกว่า 0'); return; }
+    if (p.sam.some(v => v !== '') && !day.manpower) { alert('คิดเป้าจาก SAM ต้องมีจำนวนคน'); return; }
     const tg = day.lots.map((l, i) => Number(p.tg[i]));
     if (tg.some(v => !Number.isInteger(v) || v <= 0)) { alert('TG Original ต้องเป็นจำนวนเต็มมากกว่า 0'); return; }
     if (hasUnsaved() && !confirm('มียอดที่แก้แต่ยังไม่บันทึก จะถูกทิ้งไป ดำเนินการต่อไหม?')) return;
-    if (!confirm(`Line ${day.line} · ${thaiDate(day.date)}\nเวลาทำงาน ${aa} ชม.\n${day.lots.map((l, i) => `${l.lot}: TG ${tg[i].toLocaleString()}`).join('\n')}`)) return;
+    if (!confirm(`Line ${day.line} · ${thaiDate(day.date)}\nเวลาทำงาน ${aa} ชม.\n${day.lots.map((l, i) => `${l.lot}: ${p.sam[i] ? 'SAM ' + p.sam[i] + ' → ' : ''}TG ${tg[i].toLocaleString()}`).join('\n')}`)) return;
     const payload = { action: 'MAINT_UPDATE_PLAN', line: 'Line ' + day.line, workDate: day.date, totalWorkingHours: aa };
-    day.lots.forEach((l, i) => { payload['tgOriginal' + l.index] = tg[i]; });
+    day.lots.forEach((l, i) => { payload['tgOriginal' + l.index] = tg[i]; payload['sam' + l.index] = p.sam[i]; });
     const r = await act(() => post(payload), r => `บันทึกแผนแล้ว • เป้ารวมใหม่ ${fmtNum(r.totalTarget)} ชิ้น`);
     if (r) { await loadDay(); refreshState(); }
   }
