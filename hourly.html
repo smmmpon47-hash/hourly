@@ -1430,11 +1430,17 @@
     }
   }
 
-  // เป้าจาก SAM: ชั่วโมงทำงานรวม × 60 × คน ÷ SAM (สูตรเดียวกับ Apps Script)
+  // เป้าจาก SAM: นาทีค่าแรง × คน ÷ SAM (8 ชม. = 450 · 9 = 550 · 10 = 600)
+  const SAM_PAID_MINUTES = { 8: 450, 9: 550, 10: 600 }; // นาทีค่าแรง (สูตรเดียวกับ Apps Script)
+  function samPaidMinutes_(hours) {
+    const h = Math.floor(Number(hours) || 0);
+    if (SAM_PAID_MINUTES[h]) return SAM_PAID_MINUTES[h];
+    return h > 0 && h < 8 ? Math.round(SAM_PAID_MINUTES[8] * h / 8) : 0;
+  }
   function samToTg_(sam, totalHours, manpower) {
-    const s = Number(sam), h = Number(totalHours), m = Number(manpower);
-    if (!(s > 0) || !(h > 0) || !(m > 0)) return 0;
-    return Math.round(h * 60 * m / s);
+    const s = Number(sam), paid = samPaidMinutes_(totalHours), m = Number(manpower);
+    if (!(s > 0) || !(paid > 0) || !(m > 0)) return 0;
+    return Math.round(paid * m / s);
   }
   function readSamInput_(el) {
     const raw = String(el ? el.value : '').trim();
@@ -3080,7 +3086,7 @@
       if (samGroup) samGroup.style.display = '';
       const samRead = readSamInput_(samInput);
       if (!samRead.empty && !samRead.error) {
-        // โหมด SAM: เป้าเต็มวัน = ชั่วโมงทำงานรวม × 60 × คน ÷ SAM
+        // โหมด SAM: เป้าเต็มวัน = นาทีค่าแรง × คน ÷ SAM
         const hours = Number(currentHours1) || 0;
         const tg = samToTg_(samRead.value, hours, currentLineManpower);
         tgInput.value = tg > 0 ? tg : '';
@@ -3089,7 +3095,7 @@
         tgInput.style.color = '#64748b';
         tgLabel.innerText = '3) TG Original (คิดจาก SAM)';
         if (samHint) samHint.innerText = currentLineManpower > 0
-          ? `${hours} ชม. × 60 × ${currentLineManpower} คน ÷ ${samRead.value} = ${tg.toLocaleString()} ชิ้น`
+          ? `${hours} ชม. (${samPaidMinutes_(hours)} นาที) × ${currentLineManpower} คน ÷ ${samRead.value} = ${tg.toLocaleString()} ชิ้น`
           : 'ยังไม่มีจำนวนคน — กรอกจำนวนคนที่แท็บแก้ไขเป้าก่อน หรือเว้น SAM แล้วกรอก TG เอง';
       } else {
         if (tgInput.readOnly) tgInput.value = '';

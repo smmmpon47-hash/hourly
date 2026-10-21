@@ -554,10 +554,16 @@
   }
 
   /* แผนการผลิต (AA + TG Original) */
-  // เป้าจาก SAM = ชั่วโมงทำงานรวม × 60 × คน ÷ SAM (สูตรเดียวกับ Apps Script)
+  // เป้าจาก SAM = นาทีค่าแรง × คน ÷ SAM (8 ชม. = 450 · 9 = 550 · 10 = 600)
+  const SAM_PAID_MINUTES = { 8: 450, 9: 550, 10: 600 }; // นาทีค่าแรง (สูตรเดียวกับ Apps Script)
+  function samPaidMinutes_(hours) {
+    const h = Math.floor(Number(hours) || 0);
+    if (SAM_PAID_MINUTES[h]) return SAM_PAID_MINUTES[h];
+    return h > 0 && h < 8 ? Math.round(SAM_PAID_MINUTES[8] * h / 8) : 0;
+  }
   function samToTg(sam, hours, mp) {
-    const s = Number(sam), h = Number(hours), m = Number(mp);
-    return (s > 0 && h > 0 && m > 0) ? Math.round(h * 60 * m / s) : 0;
+    const s = Number(sam), paid = samPaidMinutes_(hours), m = Number(mp);
+    return (s > 0 && paid > 0 && m > 0) ? Math.round(paid * m / s) : 0;
   }
   const samText = v => (v === null || v === undefined) ? '' : String(v);
   function planNow() { return planDraft || { aa: day.totalWorkingHours, tg: day.lots.map(l => l.tgOriginal), sam: day.lots.map(l => samText(l.sam)) }; }
@@ -569,7 +575,7 @@
   function renderPlanCard() {
     const p = planNow();
     return `<div class="card" id="planCard">
-      <h3>แผนการผลิต <span class="note">SAM: TG = ชม.ทำงาน × 60 × คน ÷ SAM • เว้น SAM = กรอก TG เอง</span></h3>
+      <h3>แผนการผลิต <span class="note">SAM: TG = นาทีค่าแรง × คน ÷ SAM (8=450 • 9=550 • 10=600) • เว้น SAM = กรอก TG เอง</span></h3>
       <div class="row-inline"><span style="font-weight:800;font-size:.86rem;color:#334155">เวลาทำงานรวม</span>
         <input class="inp" id="planAA" type="number" min="1" max="10" step="1" style="width:80px" value="${esc(p.aa)}" oninput="editPlan()"> <span class="pending">ชม. • ${day.manpower ? fmtNum(day.manpower) + ' คน' : 'ยังไม่กรอกจำนวนคน'}</span></div>
       <table style="margin-top:10px"><thead><tr><th>LOT</th><th class="num">SAM</th><th class="num">TG Original</th><th class="num">ชม.</th><th class="num">เป้า</th></tr></thead><tbody>
