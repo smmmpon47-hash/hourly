@@ -1116,14 +1116,15 @@
 
     <div class="form-group" id="modalSamGroup">
       <label for="modalLotSam">2) ค่า SAM ของ LOT ใหม่ (นาที/ตัว)</label>
-      <input type="number" id="modalLotSam" min="0" step="0.01" inputmode="decimal" placeholder="เช่น 20.11 • เว้นว่าง = กรอก TG เอง" oninput="syncSwitchLotTargetField_()">
+      <input type="number" id="modalLotSam" min="0" step="0.01" inputmode="decimal" placeholder="เช่น 20.11" oninput="syncSwitchLotTargetField_()">
       <div id="modalSamHint" style="font-size:.74rem;color:#64748b;margin-top:5px;"></div>
     </div>
 
-    <div class="form-group">
+    <div class="form-group" id="modalTgGroup">
       <label for="modalLotTarget" id="modalLotTargetLabel">3) TG Original ของ LOT ใหม่ (ชิ้น)</label>
       <input type="number" id="modalLotTarget" min="1" placeholder="กรอก TG เต็ม เช่น 742">
     </div>
+    <a href="#" id="modalModeLink" onclick="toggleSwitchTgMode_(event)" style="display:inline-block;margin:-4px 0 12px;font-size:.78rem;color:#64748b;text-decoration:underline;">ไม่มีค่า SAM? กรอก TG เอง</a>
 
     <div id="switchLotStatus" style="display:none;font-size:.78rem;border-radius:10px;padding:9px 10px;margin-bottom:10px;"></div>
 
@@ -2930,6 +2931,7 @@
     document.getElementById('modalLotNo').value = '';
     document.getElementById('modalLotTarget').value = '';
     if (document.getElementById('modalLotSam')) document.getElementById('modalLotSam').value = '';
+    switchManualTg = false;
     syncSwitchLotTargetField_();
 
     const statusBox = document.getElementById('switchLotStatus');
@@ -2946,6 +2948,7 @@
     document.getElementById('modalLotNo').value = '';
     document.getElementById('modalLotTarget').value = '';
     if (document.getElementById('modalLotSam')) document.getElementById('modalLotSam').value = '';
+    switchManualTg = false;
     syncSwitchLotTargetField_();
     pendingSwitchMode = '';
 
@@ -3062,6 +3065,17 @@
     };
   }
 
+  var switchManualTg = false; // หน้าต่างสลับ LOT: false = คิดจาก SAM (ช่องหลัก) · true = กรอก TG เอง
+  function toggleSwitchTgMode_(evt) {
+    if (evt) evt.preventDefault();
+    switchManualTg = !switchManualTg;
+    const samInput = document.getElementById('modalLotSam');
+    if (switchManualTg && samInput) samInput.value = '';
+    const tgInput = document.getElementById('modalLotTarget');
+    if (tgInput && !switchManualTg) tgInput.value = '';
+    syncSwitchLotTargetField_();
+  }
+
   function syncSwitchLotTargetField_() {
     const lotInput = document.getElementById('modalLotNo');
     const tgInput = document.getElementById('modalLotTarget');
@@ -3074,6 +3088,22 @@
     const samGroup = document.getElementById('modalSamGroup');
     const samInput = document.getElementById('modalLotSam');
     const samHint = document.getElementById('modalSamHint');
+    const tgGroup = document.getElementById('modalTgGroup');
+    const modeLink = document.getElementById('modalModeLink');
+    if (tgGroup) tgGroup.style.display = '';
+    if (modeLink) {
+      modeLink.style.display = isExisting ? 'none' : 'inline-block';
+      modeLink.textContent = switchManualTg ? '← กลับไปคิดจาก SAM' : 'ไม่มีค่า SAM? กรอก TG เอง';
+    }
+    if (!isExisting && switchManualTg) {
+      if (samGroup) samGroup.style.display = 'none';
+      if (tgInput.readOnly) tgInput.value = '';
+      tgInput.readOnly = false;
+      tgInput.style.backgroundColor = '';
+      tgInput.style.color = '';
+      tgLabel.innerText = '2) TG Original ของ LOT ใหม่ (ชิ้น)';
+      return;
+    }
     if (isExisting) {
       const existingTG = Number(currentLotTGMap[lot]) || 0;
       tgInput.value = existingTG > 0 ? existingTG : '';
@@ -3098,11 +3128,9 @@
           ? `${hours} ชม. (${samPaidMinutes_(hours)} นาที) × ${currentLineManpower} คน ÷ ${samRead.value} = ${tg.toLocaleString()} ชิ้น`
           : 'ยังไม่มีจำนวนคน — กรอกจำนวนคนที่แท็บแก้ไขเป้าก่อน หรือเว้น SAM แล้วกรอก TG เอง';
       } else {
-        if (tgInput.readOnly) tgInput.value = '';
-        tgInput.readOnly = false;
-        tgInput.style.backgroundColor = '';
-        tgInput.style.color = '';
-        tgLabel.innerText = '3) TG Original ของ LOT ใหม่ (ชิ้น)';
+        // ยังไม่กรอก SAM: ซ่อนช่อง TG (โหมดหลักคือ SAM)
+        tgInput.value = '';
+        if (tgGroup) tgGroup.style.display = 'none';
         if (samHint) samHint.innerText = samRead.error || '';
       }
     }
@@ -3343,8 +3371,9 @@
     const localUsedLots = activeLots.map(normalizeLot_).filter(Boolean);
     const isExistingLot = localUsedLots.includes(newLot);
     const samRead = readSamInput_(document.getElementById('modalLotSam'));
-    const useSam = !isExistingLot && !samRead.empty;
+    const useSam = !isExistingLot && !switchManualTg && !samRead.empty;
     if (useSam && samRead.error) { alert(samRead.error); return; }
+    if (!isExistingLot && !switchManualTg && samRead.empty) { alert("กรุณากรอกค่า SAM ของ LOT ใหม่ (หรือกด 'กรอก TG เอง')"); return; }
     if (useSam && !(currentLineManpower > 0)) { alert('คิดเป้าจาก SAM ต้องมีจำนวนคน กรุณากรอกจำนวนคนที่แท็บแก้ไขเป้า หรือเว้น SAM แล้วกรอก TG เอง'); return; }
     const resolvedTarget = isExistingLot
       ? (Number(currentLotTGMap[newLot]) || 0)
