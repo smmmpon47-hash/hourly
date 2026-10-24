@@ -2537,6 +2537,30 @@
     refreshLotOrderInfo_();
   }
 
+  // ===== ตรวจยอดสูงผิดปกติก่อนบันทึก (ยอดเกิน OUTPUT_SPIKE_RATIO เท่าของเป้าช่องนั้น) =====
+  // entries: [{ slot, qty }] = ช่องที่กำลังจะบันทึก · targetOf(slot) = เป้าช่อง (0/ไม่รู้ = ข้าม)
+  // otherSum(slot) = ยอดของช่องอื่นในวันเดียวกัน (ใช้บอกว่าน่าจะกรอกยอดสะสมทั้งวัน)
+  // คืนข้อความยืนยัน หรือ '' ถ้าไม่มีช่องผิดปกติ · ไม่บล็อก แค่ให้ยืนยันอีกครั้ง
+  const OUTPUT_SPIKE_RATIO = 2;
+  function outputSpikeMessage_(entries, targetOf, otherSum) {
+    const rows = [];
+    let cumulativeHint = false;
+    entries.forEach(e => {
+      const qty = Number(e.qty) || 0;
+      const target = Number(targetOf(e.slot)) || 0;
+      if (!(target > 0) || qty <= target * OUTPUT_SPIKE_RATIO) return;
+      const others = Number(otherSum(e.slot)) || 0;
+      const looksCumulative = others > 0 && qty >= others * 0.8;
+      if (looksCumulative) cumulativeHint = true;
+      rows.push(`• ${e.slot}: กรอก ${qty.toLocaleString()} (เป้าช่อง ${target.toLocaleString()})`);
+    });
+    if (!rows.length) return '';
+    return '⚠️ ยอดสูงกว่าปกติมาก\n\n' + rows.join('\n') +
+      '\n\nแต่ละช่องให้กรอกเฉพาะยอดของช่วงเวลานั้น ไม่ใช่ยอดรวมทั้งวัน' +
+      (cumulativeHint ? '\n(ยอดนี้ใกล้กับยอดรวมของช่องอื่นแล้ว น่าจะเป็นยอดสะสม)' : '') +
+      '\n\nกด "ตกลง" ถ้ายอดนี้ถูกต้องจริง\nกด "ยกเลิก" เพื่อกลับไปแก้';
+  }
+
   // เป้าของช่อง + ความยาวช่องที่ไม่ใช่ 1 ชม. (ช่อง 0.5 / 1.5 ชม.)
   function slotTargetTagHtml_(label) {
     const info = currentSlotTargets[label];
@@ -4083,6 +4107,21 @@
     if (!changes.length) { alert('ยังไม่มีช่องที่เปลี่ยนแปลง'); return; }
 
     const workSlots = changes.filter(c => !(dayEditData.slots || []).find(s => s.slot === c.timeSlot && s.isBreak));
+
+    // ยอดสูงผิดปกติ → ให้ยืนยันก่อน (ใช้เป้าช่องจาก slotGrid ของวันนั้น)
+    {
+      const gridSlots = (dayEditData.slotGrid && dayEditData.slotGrid.slots) || [];
+      const dayQty = {};
+      (dayEditData.slots || []).forEach(s => { if (!s.isBreak && s.saved) dayQty[s.slot] = Number(s.saved.output) || 0; });
+      workSlots.forEach(c => { dayQty[c.timeSlot] = Number(c.qty) || 0; });
+      const spikeMsg = outputSpikeMessage_(
+        workSlots.map(c => ({ slot: c.timeSlot, qty: c.qty })),
+        label => (gridSlots.find(x => x.label === label) || {}).target,
+        label => Object.keys(dayQty).reduce((s, k) => s + (k === label ? 0 : dayQty[k]), 0)
+      );
+      if (spikeMsg && !confirm(spikeMsg)) return;
+    }
+
     const summary = workSlots.map(c => `${c.timeSlot}: ${c.qty}`).join('\n');
     if (!confirm(`บันทึก ${workSlots.length} ช่วง ของวันที่ ${dayLabel_(dayEditDate)} (${line})\n\n${summary}`)) return;
 
@@ -4160,6 +4199,33 @@
     if (orderError) {
       alert("⛔ กรอกยอดเกินออเดอร์\n" + orderError);
       return;
+    }
+
+    // ยอดสูงผิดปกติ (เช่น กรอกยอดรวมทั้งวันลงช่องเดียว) → ให้ยืนยันก่อน
+    {
+      const formQty = {};
+      document.querySelectorAll('.slot-row').forEach(row => {
+        if (row.dataset.breakTime === 'true') return;
+        const v = row.querySelector('.input-val')?.value;
+        if (v !== undefined && v !== '') formQty[row.dataset.slotLabel] = Number(v) || 0;
+      });
+      const dayQty = {};
+      Object.entries(currentExistingHourly || {}).forEach(([label, ex]) => {
+        if (ex && ex.output !== undefined && ex.output !== '') dayQty[label] = Number(ex.output) || 0;
+      });
+      Object.assign(dayQty, formQty);
+      const entries = Object.keys(formQty)
+        .filter(label => {
+          const old = currentExistingHourly && currentExistingHourly[label];
+          return !old || Number(old.output) !== formQty[label]; // เตือนเฉพาะช่องที่เพิ่งกรอก/แก้
+        })
+        .map(label => ({ slot: label, qty: formQty[label] }));
+      const spikeMsg = outputSpikeMessage_(
+        entries,
+        label => (currentSlotTargets[label] || {}).target,
+        label => Object.keys(dayQty).reduce((s, k) => s + (k === label ? 0 : dayQty[k]), 0)
+      );
+      if (spikeMsg && !confirm(spikeMsg)) return;
     }
 
     let loadInToday = null;
