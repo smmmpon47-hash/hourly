@@ -112,6 +112,16 @@
     .sub:first-child { margin-top: 0; }
     .row-inline { display: flex; gap: 8px; align-items: center; }
     .help { color: var(--muted); font-size: .8rem; line-height: 1.45; margin-top: 8px; }
+    .row-inline.wrap { flex-wrap: wrap; }
+    .lot-tl { list-style: none; margin: 4px 0 0; padding: 0 0 0 14px; border-left: 2px solid #cbd5e1; display: flex; flex-direction: column; gap: 6px; font-size: .84rem; }
+    .lot-tl li { position: relative; }
+    .lot-tl li::before { content: ""; position: absolute; left: -20px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--teal, #0d9488); }
+    .lot-tl b { font-variant-numeric: tabular-nums; margin-right: 6px; }
+    .lot-tl small { color: var(--muted); font-weight: 600; }
+    .sw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .sw-grid label { display: flex; flex-direction: column; gap: 4px; font-size: .76rem; font-weight: 800; color: var(--ink-2); min-width: 0; }
+    .sw-grid .inp { width: 100%; }
+    @media (max-width: 520px) { .sw-grid { grid-template-columns: 1fr; } }
     .warn { background: var(--amber-soft); border: 1px solid var(--amber-line); color: var(--amber); border-radius: 10px; padding: 8px 10px; font-size: .84rem; font-weight: 700; margin-top: 10px; }
 
     /* ---------- save bar ---------- */
@@ -437,11 +447,13 @@
         <div>
           ${renderTimeCard()}
           ${renderPlanCard()}
+          ${renderLotCard()}
           ${renderExtraCard()}
         </div>
       </div>`;
     updateSum();
     if ($('planAA')) editPlan(); // ล็อกช่อง TG ของ LOT ที่ใช้ SAM
+    if ($('swSlot')) swPreview();
   }
 
   function renderSlotRows() {
@@ -554,7 +566,7 @@
   }
 
   /* แผนการผลิต (AA + TG Original) */
-  // เป้าจาก SAM = นาทีค่าแรง × คน ÷ SAM (8 ชม. = 450 · 9 = 550 · 10 = 600)
+  // เป้าจาก SAM = นาทีค่าแรง × คน ÷ SAM (8 ชม. = 450 · 9 = 550 · 10 = 600 · 11 = 650)
   const SAM_PAID_MINUTES = { 8: 450, 9: 550, 10: 600, 11: 650 }; // นาทีค่าแรง (สูตรเดียวกับ Apps Script)
   function samPaidMinutes_(hours) {
     const h = Math.floor(Number(hours) || 0);
@@ -575,7 +587,7 @@
   function renderPlanCard() {
     const p = planNow();
     return `<div class="card" id="planCard">
-      <h3>แผนการผลิต <span class="note">SAM: TG = นาทีค่าแรง × คน ÷ SAM (8=450 • 9=550 • 10=600) • เว้น SAM = กรอก TG เอง</span></h3>
+      <h3>แผนการผลิต <span class="note">SAM: TG = นาทีค่าแรง × คน ÷ SAM (8=450 • 9=550 • 10=600 • 11=650) • เว้น SAM = กรอก TG เอง</span></h3>
       <div class="row-inline"><span style="font-weight:800;font-size:.86rem;color:#334155">เวลาทำงานรวม</span>
         <input class="inp" id="planAA" type="number" min="1" max="11" step="1" style="width:80px" value="${esc(p.aa)}" oninput="editPlan()"> <span class="pending">ชม. • ${day.manpower ? fmtNum(day.manpower) + ' คน' : 'ยังไม่กรอกจำนวนคน'}</span></div>
       <table style="margin-top:10px"><thead><tr><th>LOT</th><th class="num">SAM</th><th class="num">TG Original</th><th class="num">ชม.</th><th class="num">เป้า</th></tr></thead><tbody>
@@ -624,6 +636,124 @@
     const payload = { action: 'MAINT_UPDATE_PLAN', line: 'Line ' + day.line, workDate: day.date, totalWorkingHours: aa };
     day.lots.forEach((l, i) => { payload['tgOriginal' + l.index] = tg[i]; payload['sam' + l.index] = p.sam[i]; });
     const r = await act(() => post(payload), r => `บันทึกแผนแล้ว • เป้ารวมใหม่ ${fmtNum(r.totalTarget)} ชิ้น`);
+    if (r) { await loadDay(); refreshState(); }
+  }
+
+  /* LOT: แก้เลข LOT ที่กรอกผิด / เพิ่มจุดสลับรุ่นที่ลืมกด */
+  function workSlots() { return day.slots.filter(s => !s.isBreak); }
+  function renderLotCard() {
+    const ws = workSlots();
+    const switches = day.switches || [];
+    const swSet = new Set(switches.map(x => x.slot));
+    const first = ws.length ? ws[0].lot : (day.lots[0] || {}).lot;
+    const timeline = [`<li><b>${esc(ws.length ? ws[0].slot.split('-')[0] : '')}</b> เริ่มวัน · ${esc(first || '-')} <small>${esc(lotModel(first))}</small></li>`]
+      .concat(switches.map(x => `<li><b>${esc(x.slot.split('-')[0])}</b> สลับเป็น ${esc(x.to)} <small>${esc(lotModel(x.to))}</small></li>`)).join('');
+    const slotOpts = ws.slice(1).filter(s => !swSet.has(s.slot))
+      .map(s => `<option value="${esc(s.slot)}">${esc(s.slot)} · ตอนนี้ ${esc(s.lot || '-')}${s.saved ? ' · มียอด' : ''}</option>`).join('');
+    return `<div class="card" id="lotCard">
+      <h3>LOT / สลับรุ่น <span class="note">ช่องที่เลือก = ชั่วโมงแรกของ LOT ใหม่ เหมือนกดสลับในฟอร์ม</span></h3>
+      <ul class="lot-tl">${timeline}</ul>
+
+      <div class="sub">✏️ แก้เลข LOT (กรอกผิด)</div>
+      <div class="row-inline wrap">
+        <select class="inp" id="renOld" style="width:auto">${day.lots.map(l => `<option value="${esc(l.lot)}">${esc(l.lot)}${l.model ? ' · ' + esc(l.model) : ''}</option>`).join('')}</select>
+        <span class="pending">เป็น</span>
+        <input class="inp" id="renNew" placeholder="เลข LOT ที่ถูก" maxlength="30" style="width:150px;text-transform:uppercase" autocomplete="off">
+        <button class="btn small" onclick="renameLot()">แก้เลข LOT</button>
+      </div>
+      <div class="help">เปลี่ยนทุกที่ของวันนั้น: แผน, ยอดรายชั่วโมง, ประวัติสลับ, เข้า/ออกโหลด · รุ่นดึงจาก Master LOT · ค่า SAM / เป้าเดิมใช้ต่อ</div>
+
+      <div class="sub">🔁 เพิ่มจุดสลับรุ่น (ลืมกด)</div>
+      ${slotOpts ? `
+      <div class="sw-grid">
+        <label>เริ่มช่อง<select class="inp" id="swSlot" onchange="swPreview()">${slotOpts}</select></label>
+        <label>LOT ใหม่<input class="inp" id="swLot" list="swLots" maxlength="30" placeholder="เลข LOT" style="text-transform:uppercase" autocomplete="off" oninput="swPreview()"></label>
+        <label id="swSamWrap">SAM<input class="inp" id="swSam" type="number" min="0" step="0.01" placeholder="เว้น = กรอกเป้าเอง" oninput="swPreview()"></label>
+        <label id="swTgWrap">เป้าทั้งวัน (TG)<input class="inp" id="swTg" type="number" min="1" step="1" placeholder="ถ้าไม่มี SAM" oninput="swPreview()"></label>
+      </div>
+      <datalist id="swLots">${day.lots.map(l => `<option value="${esc(l.lot)}">`).join('')}</datalist>
+      <div class="help" id="swHint"></div>
+      <div class="row-inline" style="margin-top:8px"><button class="btn small" style="flex:1" onclick="addSwitch()">เพิ่มจุดสลับ (คำนวณเป้าใหม่)</button></div>` : '<div class="help">ไม่มีช่องที่เพิ่มจุดสลับได้</div>'}
+    </div>`;
+  }
+  function swState() {
+    const slot = $('swSlot') ? $('swSlot').value : '';
+    const lot = ($('swLot') ? $('swLot').value : '').trim().toUpperCase().replace(/\s+/g, '');
+    const sam = $('swSam') ? $('swSam').value.trim() : '';
+    const tg = $('swTg') ? $('swTg').value.trim() : '';
+    const ws = workSlots(), i = ws.findIndex(s => s.slot === slot);
+    const cur = i >= 0 ? ws[i].lot : '';
+    const switches = day.switches || [];
+    // ช่องที่จะย้ายไป LOT ใหม่ = ตั้งแต่ช่องที่เลือก จนถึงก่อนจุดสลับถัดไป
+    const nextSw = ws.findIndex((s, k) => k > i && switches.some(x => x.slot === s.slot));
+    const moved = i >= 0 ? ws.slice(i, nextSw > i ? nextSw : ws.length) : [];
+    const repeat = day.lots.some(l => l.lot === lot);
+    return { slot, lot, sam, tg, cur, moved, repeat };
+  }
+  function swPreview() {
+    const st = swState();
+    if (!$('swHint')) return;
+    $('swSamWrap').style.display = $('swTgWrap').style.display = st.repeat ? 'none' : '';
+    if (!st.repeat && st.sam !== '') {
+      const v = samToTg(st.sam, day.totalWorkingHours, day.manpower);
+      $('swTg').value = v || ''; $('swTg').readOnly = true; $('swTg').style.background = '#f1f5f9';
+    } else if ($('swTg').readOnly) { $('swTg').readOnly = false; $('swTg').style.background = ''; $('swTg').value = ''; }
+    const savedN = st.moved.filter(s => s.saved).length;
+    let t = '';
+    if (st.lot && st.lot === st.cur) t = `ช่องนี้เป็น ${st.lot} อยู่แล้ว`;
+    else if (st.lot) {
+      const span = st.moved.length ? `${st.moved[0].slot.split('-')[0]}–${st.moved[st.moved.length - 1].slot.split('-')[1]}` : '';
+      t = `${st.cur} → ${st.lot}${st.repeat ? ' (กลับ LOT เดิม ใช้เป้าเดิม)' : ''} · ช่วง ${span} (${st.moved.length} ช่อง) · ยอดที่กรอกแล้ว ${savedN} ช่องจะย้ายเป็น ${st.lot}`;
+      if (!st.repeat && day.lots.length >= 3) t = 'วันนั้นมีครบ 3 LOT แล้ว เพิ่ม LOT ใหม่ไม่ได้ (สลับกลับ LOT เดิมได้)';
+      if (!st.repeat && st.sam !== '' && !day.manpower) t += ' · คิดเป้าจาก SAM ต้องมีจำนวนคนก่อน';
+    }
+    $('swHint').textContent = t;
+  }
+  // ส่งคำสั่ง LOT: ถ้า LOT ไม่มีใน Master ระบบถามยืนยันก่อน
+  async function postLot(payload) {
+    const body = Object.assign({}, payload, { password: password, by: $('byName').value.trim() || 'แอดมิน' });
+    let res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(body) });
+    let data = JSON.parse(await res.text());
+    if (data && data.status === 'confirm') {
+      if (!confirm(data.error)) return null;
+      body.allowNotInMaster = true;
+      res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(body) });
+      data = JSON.parse(await res.text());
+    }
+    if (!data || data.status !== 'success') throw new Error((data && data.error) || 'ไม่สำเร็จ');
+    return data;
+  }
+  async function renameLot() {
+    const oldLot = $('renOld').value;
+    const newLot = $('renNew').value.trim().toUpperCase().replace(/\s+/g, '');
+    if (!newLot) { alert('กรุณาใส่เลข LOT ที่ถูก'); return; }
+    if (newLot === oldLot) { alert('เลข LOT ใหม่เหมือนเดิม'); return; }
+    if (day.lots.some(l => l.lot === newLot)) { alert(`วันนั้นมี LOT ${newLot} อยู่แล้ว`); return; }
+    if (hasUnsaved() && !confirm('มียอดที่แก้แต่ยังไม่บันทึก จะถูกทิ้งไป ดำเนินการต่อไหม?')) return;
+    const n = day.slots.filter(s => s.saved && s.saved.lot === oldLot).length;
+    if (!confirm(`Line ${day.line} · ${thaiDate(day.date)}\nแก้เลข LOT ${oldLot} → ${newLot}\nยอดรายชั่วโมงที่บันทึกแล้ว ${n} ช่องจะเปลี่ยนเป็น ${newLot}`)) return;
+    const r = await act(() => postLot({ action: 'MAINT_RENAME_LOT', line: day.line, date: day.date, oldLot, newLot }),
+      r => r ? `แก้เป็น ${r.newLot}${r.model ? ' (' + r.model + ')' : ''} แล้ว • ยอด ${r.hourlyRows} ช่อง` : 'ยกเลิกแล้ว');
+    if (r) { await loadDay(); refreshState(); }
+  }
+  async function addSwitch() {
+    const st = swState();
+    if (!st.slot) { alert('กรุณาเลือกช่อง'); return; }
+    if (!st.lot) { alert('กรุณาใส่เลข LOT ใหม่'); return; }
+    if (st.lot === st.cur) { alert(`ช่อง ${st.slot} เป็น ${st.lot} อยู่แล้ว`); return; }
+    if (!st.repeat) {
+      if (day.lots.length >= 3) { alert('วันนั้นมีครบ 3 LOT แล้ว'); return; }
+      if (st.sam !== '' && !(Number(st.sam) > 0)) { alert('ค่า SAM ต้องมากกว่า 0'); return; }
+      if (st.sam !== '' && !day.manpower) { alert('คิดเป้าจาก SAM ต้องมีจำนวนคน — กรอกจำนวนคนแล้วบันทึกก่อน'); return; }
+      if (st.sam === '' && !(Number(st.tg) > 0)) { alert('กรุณาใส่ SAM หรือเป้าทั้งวันของ LOT ใหม่'); return; }
+    }
+    if (hasUnsaved() && !confirm('มียอดที่แก้แต่ยังไม่บันทึก จะถูกทิ้งไป ดำเนินการต่อไหม?')) return;
+    const savedN = st.moved.filter(s => s.saved).length;
+    const tgText = st.repeat ? 'ใช้เป้าเดิมของ ' + st.lot : (st.sam ? `SAM ${st.sam} → TG ${fmtNum(samToTg(st.sam, day.totalWorkingHours, day.manpower))}` : `TG ${fmtNum(st.tg)}`);
+    if (!confirm(`Line ${day.line} · ${thaiDate(day.date)}\nสลับ ${st.cur} → ${st.lot} เริ่มช่อง ${st.slot}\n${tgText}\nยอดที่บันทึกแล้ว ${savedN} ช่องจะย้ายเป็น ${st.lot}\nเป้าแต่ละ LOT จะคำนวณใหม่`)) return;
+    const payload = { action: 'MAINT_ADD_LOT_SWITCH', line: day.line, date: day.date, slot: st.slot, newLot: st.lot };
+    if (!st.repeat) { if (st.sam !== '') payload.sam = st.sam; else payload.target = Number(st.tg); }
+    const r = await act(() => postLot(payload), r => r ? `เพิ่มจุดสลับแล้ว • เป้ารวมใหม่ ${fmtNum(r.totalTarget)} ชิ้น` : 'ยกเลิกแล้ว');
     if (r) { await loadDay(); refreshState(); }
   }
 
