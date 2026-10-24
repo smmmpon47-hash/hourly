@@ -3514,13 +3514,15 @@
       return;
     }
 
-    const completedWorkingHours = switchIndex;
-    if (completedWorkingHours < 1) {
+    if (switchIndex < 1) {
       alert("ไม่สามารถสลับ LOT ในรอบทำงานแรกของวันได้ เพราะ LOT ก่อนหน้าจะไม่มีชั่วโมงผลิต");
       return;
     }
 
-    const remainingHours = Math.max(0, totalWorkingHours - completedWorkingHours);
+    // นับชั่วโมงตามนาทีจริงของแต่ละช่อง (วันที่มีช่องพักครึ่งชั่วโมง จำนวนช่อง > ชั่วโมงทำงาน)
+    const slotHours_ = list => list.reduce((sum, slot) => sum + (Number(slot.minutes) || 60), 0) / 60;
+    const completedWorkingHours = slotHours_(workingSlots.slice(0, switchIndex));
+    const remainingHours = slotHours_(workingSlots.slice(switchIndex));
     if (remainingHours <= 0) {
       alert("ไม่มีชั่วโมงเหลือสำหรับ LOT ปลายทาง กรุณาตรวจรอบที่เลือก");
       return;
