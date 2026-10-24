@@ -1061,7 +1061,7 @@
     <div id="editPlanContent" style="display:none;">
       <div class="form-group">
         <label for="editTotalHours">⏱️ เวลาทำงานรวมวันนี้ (ชม.)</label>
-        <input type="number" id="editTotalHours" min="1" max="10" step="1" oninput="updateEditPlanPreview()">
+        <input type="number" id="editTotalHours" min="1" max="11" step="1" oninput="updateEditPlanPreview()">
         <div id="editHoursHint" style="font-size:.74rem;color:#64748b;margin-top:5px;"></div>
       </div>
 
@@ -1315,15 +1315,18 @@
     }
   }
 
-  // แกนเวลาของไลน์: ช่องตาม AA + รอบหลังจากนั้นของวันเต็ม (สูงสุด 10 ชม.)
+  // ชั่วโมงทำงานรวมสูงสุดต่อวัน (OT สูงสุด 3 ชม. · โรง 1 ไม่มีพักเย็น) — ตรงกับ Apps Script
+  var MAX_WORKING_HOURS = 11;
+
+  // แกนเวลาของไลน์: ช่องตาม AA + รอบหลังจากนั้นของวันเต็ม (10 ชม. หรือตาม AA ถ้าเกิน)
   function getSlotDefsForLine_(lineValue, totalHours) {
     const cfg = getLineSlotConfig_(lineValue);
     if (!cfg.breakStart) return LEGACY_TIME_SLOTS_DEF.slice();
-    const hours = Math.max(1, Math.min(10, Math.floor(Number(totalHours) || 10)));
+    const hours = Math.max(1, Math.min(MAX_WORKING_HOURS, Math.floor(Number(totalHours) || 10)));
     const grid = buildSlotGridClient_(cfg.startTime, cfg.breakStart, hours, cfg.gridMode);
     if (!grid.slots.length) return LEGACY_TIME_SLOTS_DEF.slice();
     const lastEnd = grid.slots[grid.slots.length - 1].endMin;
-    let later = buildSlotGridClient_(cfg.startTime, cfg.breakStart, 10, cfg.gridMode).items
+    let later = buildSlotGridClient_(cfg.startTime, cfg.breakStart, Math.max(10, hours), cfg.gridMode).items
       .filter(item => item.startMin >= lastEnd);
     // วันเต็มไม่ต่อกันพอดี (เช่น พัก 12.00 จบ 17.30) → ต่อรอบ OT ทีละ 1 ชม. ถึง 19.30
     if (!later.length || later[0].startMin !== lastEnd) {
@@ -1432,7 +1435,7 @@
   }
 
   // เป้าจาก SAM: นาทีค่าแรง × คน ÷ SAM (8 ชม. = 450 · 9 = 550 · 10 = 600)
-  const SAM_PAID_MINUTES = { 8: 450, 9: 550, 10: 600 }; // นาทีค่าแรง (สูตรเดียวกับ Apps Script)
+  const SAM_PAID_MINUTES = { 8: 450, 9: 550, 10: 600, 11: 650 }; // นาทีค่าแรง (สูตรเดียวกับ Apps Script)
   function samPaidMinutes_(hours) {
     const h = Math.floor(Number(hours) || 0);
     if (SAM_PAID_MINUTES[h]) return SAM_PAID_MINUTES[h];
@@ -1618,8 +1621,8 @@
     const lots = currentEditPlanState.lots;
     const totalHours = Math.floor(Number(document.getElementById('editTotalHours').value) || 0);
 
-    if (totalHours < 1 || totalHours > 10) {
-      return { valid: false, error: 'เวลาทำงานรวมต้องอยู่ระหว่าง 1–10 ชั่วโมง' };
+    if (totalHours < 1 || totalHours > MAX_WORKING_HOURS) {
+      return { valid: false, error: 'เวลาทำงานรวมต้องอยู่ระหว่าง 1–' + MAX_WORKING_HOURS + ' ชั่วโมง' };
     }
 
     let hours1 = 0;
@@ -2011,7 +2014,7 @@
 
     for (const value of candidates) {
       const hours = Math.floor(Number(value) || 0);
-      if (hours >= 1 && hours <= 10) return hours;
+      if (hours >= 1 && hours <= MAX_WORKING_HOURS) return hours;
     }
 
     return 0;
@@ -2214,7 +2217,7 @@
       }
 
       const authoritativeAAHours = Math.floor(Number(data.totalWorkingHoursAA) || 0);
-      if (authoritativeAAHours < 1 || authoritativeAAHours > 10) {
+      if (authoritativeAAHours < 1 || authoritativeAAHours > MAX_WORKING_HOURS) {
         throw new Error(
           'TOTAL_WORKING_HOURS_AA_MISSING: ไม่พบเวลาทำงานรวมจาก AA'
         );
@@ -2399,7 +2402,8 @@
     // คง Logic เดิมทั้งหมด ยกเว้นรอบท้าย:
     // 17:30 -> 16.30-17.30
     // 18:30 -> 17.30-18.30
-    // 19:30 -> 18.30-19.30 (เฉพาะวัน 10 ชม.)
+    // 19:30 -> 18.30-19.30 (เฉพาะวัน 10 ชม.ขึ้นไป)
+    // 20:30 -> 19.30-20.30 (เฉพาะวัน 11 ชม.)
     // ห้ามโชว์ slot ที่ยังผลิตไม่จบล่วงหน้า
     // ท้ายวัน: อิงเวลาเลิกปกติของไลน์ (เข้า 08.30 = 17.30, เข้า 08.00 = 17.00)
     // ช่องสุดท้ายเปิดให้กรอกก่อนจบ 30 นาที เหมือนเดิม; OT 1 / OT 2 ตามลำดับ
@@ -2415,6 +2419,8 @@
         targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === normalEndMin && s.label !== breakSlot);
       } else if (currentMinutes >= ROUND_END_MIN + 30 && currentMinutes < ROUND_END_MIN + 120) {
         targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === normalEndMin + 60 && s.label !== breakSlot);
+      } else if (currentMinutes >= ROUND_END_MIN + 180 && totalHours >= 11) {
+        targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === normalEndMin + 180 && s.label !== breakSlot);
       } else if (currentMinutes >= ROUND_END_MIN + 120 && totalHours >= 10) {
         targetSlots = TIME_SLOTS_DEF.filter(s => s.endMin === normalEndMin + 120 && s.label !== breakSlot);
       }
@@ -2708,7 +2714,7 @@
     const breakSlot = getBreakSlotForLine_(lineVal);
     const totalHours = Math.floor(Number(currentHours1) || 0);
 
-    if (totalHours < 1 || totalHours > 10) {
+    if (totalHours < 1 || totalHours > MAX_WORKING_HOURS) {
       return [];
     }
 
@@ -3300,7 +3306,7 @@
   ) {
     const nextLot = normalizeLot_(newLot);
     const total = Math.floor(Number(totalWorkingHours) || 0);
-    if (!nextLot || total < 1 || total > 10 || !switchSlot) return;
+    if (!nextLot || total < 1 || total > MAX_WORKING_HOURS || !switchSlot) return;
 
     if (!activeLots.some(lot => normalizeLot_(lot) === nextLot)) {
       activeLots.push(nextLot);
@@ -3489,7 +3495,7 @@
 
     // AA เป็น source of truth เหมือนเดิม
     const totalWorkingHours = Math.floor(Number(currentHours1) || 0);
-    if (totalWorkingHours < 1 || totalWorkingHours > 10) {
+    if (totalWorkingHours < 1 || totalWorkingHours > MAX_WORKING_HOURS) {
       alert("ไม่พบเวลาทำงานรวมจาก AA ระบบจะไม่เดาเป็น 9 ชั่วโมง กรุณารีโหลดข้อมูล");
       return;
     }

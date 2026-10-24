@@ -555,7 +555,7 @@
 
   /* แผนการผลิต (AA + TG Original) */
   // เป้าจาก SAM = นาทีค่าแรง × คน ÷ SAM (8 ชม. = 450 · 9 = 550 · 10 = 600)
-  const SAM_PAID_MINUTES = { 8: 450, 9: 550, 10: 600 }; // นาทีค่าแรง (สูตรเดียวกับ Apps Script)
+  const SAM_PAID_MINUTES = { 8: 450, 9: 550, 10: 600, 11: 650 }; // นาทีค่าแรง (สูตรเดียวกับ Apps Script)
   function samPaidMinutes_(hours) {
     const h = Math.floor(Number(hours) || 0);
     if (SAM_PAID_MINUTES[h]) return SAM_PAID_MINUTES[h];
@@ -577,7 +577,7 @@
     return `<div class="card" id="planCard">
       <h3>แผนการผลิต <span class="note">SAM: TG = นาทีค่าแรง × คน ÷ SAM (8=450 • 9=550 • 10=600) • เว้น SAM = กรอก TG เอง</span></h3>
       <div class="row-inline"><span style="font-weight:800;font-size:.86rem;color:#334155">เวลาทำงานรวม</span>
-        <input class="inp" id="planAA" type="number" min="1" max="10" step="1" style="width:80px" value="${esc(p.aa)}" oninput="editPlan()"> <span class="pending">ชม. • ${day.manpower ? fmtNum(day.manpower) + ' คน' : 'ยังไม่กรอกจำนวนคน'}</span></div>
+        <input class="inp" id="planAA" type="number" min="1" max="11" step="1" style="width:80px" value="${esc(p.aa)}" oninput="editPlan()"> <span class="pending">ชม. • ${day.manpower ? fmtNum(day.manpower) + ' คน' : 'ยังไม่กรอกจำนวนคน'}</span></div>
       <table style="margin-top:10px"><thead><tr><th>LOT</th><th class="num">SAM</th><th class="num">TG Original</th><th class="num">ชม.</th><th class="num">เป้า</th></tr></thead><tbody>
       ${day.lots.map((l, i) => `<tr><td class="lot">${esc(l.lot)}<small>${esc(l.model)}</small></td>
         <td class="num"><input class="inp plan-sam" data-i="${i}" type="number" min="0" step="0.01" style="width:84px;text-align:right" value="${esc(p.sam[i])}" placeholder="เอง" oninput="editPlan()"></td>
@@ -614,7 +614,7 @@
   async function savePlan() {
     const p = planDraft;
     const aa = Number(p.aa);
-    if (!Number.isInteger(aa) || aa < 1 || aa > 10) { alert('เวลาทำงานรวมต้องเป็น 1–10 ชม.'); return; }
+    if (!Number.isInteger(aa) || aa < 1 || aa > 11) { alert('เวลาทำงานรวมต้องเป็น 1–11 ชม.'); return; }
     if (p.sam.some(v => v !== '' && !(Number(v) > 0))) { alert('ค่า SAM ต้องมากกว่า 0'); return; }
     if (p.sam.some(v => v !== '') && !day.manpower) { alert('คิดเป้าจาก SAM ต้องมีจำนวนคน'); return; }
     const tg = day.lots.map((l, i) => Number(p.tg[i]));
