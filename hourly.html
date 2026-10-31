@@ -774,6 +774,9 @@
       align-items: start;
       margin-bottom: 12px;
     }
+    /* กล่องเวลาด้านซ้ายกินหลายแถว → รุ่น / ออเดอร์คงเหลือ / หมายเหตุ เรียงชิดใต้ LOT ไม่มีช่องว่างตามความสูงกล่องเวลา */
+    .slot-row[data-break-time="false"] > .slot-time{ grid-row: span 3; }
+    .slot-row[data-break-time="false"] > .slot-order-text{ margin-top: -3px; }
 
     .slot-time{
       min-width: 0;
@@ -1260,7 +1263,7 @@
     { key: 'เย็บ', label: 'เย็บ', subs: [
       { key: 'งานติดขั้นตอน', ph: 'ติดขั้นตอนไหน เช่น ติดซิป' },
       { key: 'งานซ่อม', ph: 'ซ่อมอะไร / ประมาณกี่ตัว' },
-      { key: 'ขึ้นงานรุ่นใหม่', ph: 'รายละเอียด เช่น ตั้งไลน์รุ่นใหม่' }
+      { key: 'ขึ้นงานรุ่นใหม่', ph: '' }   // ไม่ต้องกรอกเพิ่ม
     ] },
     { key: 'ของเข้าไม่ทัน', label: 'ของเข้าไม่ทันเวลา', subs: [
       { key: 'อุปกรณ์', ph: 'อุปกรณ์อะไร เช่น ยางขอบเอว' },
@@ -1355,7 +1358,7 @@
     let text = '';
     if (cat && (!cat.subs.length || subKey)) {
       const head = cat.subs.length ? cat.key + ' › ' + subKey : cat.key;
-      const d = detail.value.trim();
+      const d = ph ? detail.value.trim() : '';   // หัวข้อที่ไม่มีช่องกรอก (ขึ้นงานรุ่นใหม่) ไม่เอาข้อความค้าง
       text = d ? head + ': ' + d : head;
     }
     wrap.querySelector('.slot-remark-input').value = text;
