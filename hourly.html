@@ -237,7 +237,8 @@
       margin-top:2px;
     }
     .slot-problem-fields[hidden],
-    .slot-problem-detail[hidden]{ display:none !important; }
+    .slot-problem-detail[hidden],
+    .slot-remark-sub[hidden]{ display:none !important; }
     .slot-remark-field{
       width:100%;
       min-width:0;
@@ -1252,79 +1253,115 @@
     return String(lineValue || '').replace(/LINE/i, '').replace(/\s+/g, '').toUpperCase();
   }
 
-  // ===== หมายเหตุรายช่วง: ติ๊ก "มีปัญหา" แล้วค่อยเลือกสาเหตุ =====
+  // ===== หมายเหตุรายช่วง: ติ๊ก "หมายเหตุ" → เลือกหัวข้อใหญ่ → เลือกหัวข้อย่อย (ถ้ามี) → ช่องพิมพ์รายละเอียด =====
   // ส่งเป็นข้อความเดียวในช่องหมายเหตุเดิม เช่น "ของเข้าไม่ทัน › อุปกรณ์: ยางขอบเอว"
-  // ช่อง "ระบุ" ขึ้นเฉพาะ อุปกรณ์ / อื่น ๆ · เครื่องจักร ไม่ขึ้นให้ Line B C (มีระบบแจ้งซ่อมแล้ว)
-  var SLOT_PROBLEM_GROUPS = [
-    { label: '1. เย็บ', items: ['เย็บ › งานติดขั้นตอน', 'เย็บ › งานซ่อม', 'เย็บ › ขึ้นงานรุ่นใหม่'] },
-    { label: '2. ของเข้าไม่ทันเวลา', items: ['ของเข้าไม่ทัน › อุปกรณ์', 'ของเข้าไม่ทัน › กระเป๋าปัก/Screen'] },
-    { label: '3. เครื่องจักร / Eton', items: ['เครื่องจักร/Eton'], skipLines: ['B', 'C'] },
-    { label: 'อื่น ๆ', items: ['อื่น ๆ'] }
+  // เครื่องจักร/Eton ไม่ขึ้นให้ Line B C (มีระบบแจ้งซ่อมแล้ว)
+  var SLOT_REMARK_CATS = [
+    { key: 'เย็บ', label: 'เย็บ', subs: [
+      { key: 'งานติดขั้นตอน', ph: 'ติดขั้นตอนไหน เช่น ติดซิป' },
+      { key: 'งานซ่อม', ph: 'ซ่อมอะไร / ประมาณกี่ตัว' },
+      { key: 'ขึ้นงานรุ่นใหม่', ph: 'รายละเอียด เช่น ตั้งไลน์รุ่นใหม่' }
+    ] },
+    { key: 'ของเข้าไม่ทัน', label: 'ของเข้าไม่ทันเวลา', subs: [
+      { key: 'อุปกรณ์', ph: 'อุปกรณ์อะไร เช่น ยางขอบเอว' },
+      { key: 'กระเป๋าปัก/Screen', ph: 'รายละเอียด เช่น กระเป๋าปักยังไม่มา' }
+    ] },
+    { key: 'เครื่องจักร/Eton', label: 'เครื่องจักร / Eton', subs: [], ph: 'เครื่องอะไร / อาการ', skipLines: ['B', 'C'] },
+    { key: 'อื่น ๆ', label: 'อื่น ๆ', subs: [], ph: 'พิมพ์สาเหตุ' }
   ];
-  var SLOT_PROBLEM_DETAIL = {
-    'ของเข้าไม่ทัน › อุปกรณ์': 'อุปกรณ์อะไร เช่น ยางขอบเอว',
-    'อื่น ๆ': 'พิมพ์สาเหตุสั้น ๆ'
-  };
 
   function escAttr_(value) {
     return String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  // หมายเหตุที่บันทึกไว้ → { reason, detail } · หมายเหตุเก่าที่พิมพ์เองนับเป็น "อื่น ๆ"
+  // หมายเหตุที่บันทึกไว้ → { cat, sub, detail } · หมายเหตุเก่าที่พิมพ์เองนับเป็น "อื่น ๆ" + ข้อความเดิม
   function parseSlotRemark_(remark) {
     const text = String(remark || '').trim();
-    if (!text) return { reason: '', detail: '' };
-    const all = SLOT_PROBLEM_GROUPS.reduce((a, g) => a.concat(g.items), []).sort((a, b) => b.length - a.length);
-    const hit = all.find(r => text === r || text.indexOf(r + ':') === 0);
-    if (hit) return { reason: hit, detail: text.slice(hit.length).replace(/^:\s*/, '') };
-    return { reason: 'อื่น ๆ', detail: text };
+    if (!text) return { cat: '', sub: '', detail: '' };
+    for (const c of SLOT_REMARK_CATS) {
+      for (const s of c.subs) {
+        const head = c.key + ' › ' + s.key;
+        if (text === head || text.indexOf(head + ':') === 0) return { cat: c.key, sub: s.key, detail: text.slice(head.length).replace(/^:\s*/, '') };
+      }
+      if (!c.subs.length && (text === c.key || text.indexOf(c.key + ':') === 0)) return { cat: c.key, sub: '', detail: text.slice(c.key.length).replace(/^:\s*/, '') };
+    }
+    return { cat: 'อื่น ๆ', sub: '', detail: text };
+  }
+
+  function slotRemarkCat_(key) {
+    return SLOT_REMARK_CATS.find(c => c.key === key) || null;
+  }
+
+  function slotRemarkSubOptions_(cat, selected) {
+    return '<option value="">— เลือกหัวข้อย่อย —</option>' +
+      (cat ? cat.subs.map(s => `<option value="${escAttr_(s.key)}"${s.key === selected ? ' selected' : ''}>${escAttr_(s.key)}</option>`).join('') : '');
+  }
+
+  // ช่องรายละเอียดขึ้นเมื่อเลือกครบแล้ว (หัวข้อที่ไม่มีหัวข้อย่อย = ขึ้นทันที)
+  function slotRemarkDetailPh_(cat, subKey) {
+    if (!cat) return '';
+    if (!cat.subs.length) return cat.ph || 'รายละเอียด';
+    const s = cat.subs.find(x => x.key === subKey);
+    return s ? s.ph : '';
   }
 
   function slotRemarkHtml_(label, remark) {
     const p = parseSlotRemark_(remark);
     const lineEl = document.getElementById('line');
     const lineCode = lineCodeOf_(lineEl ? lineEl.value : '');
-    const groups = SLOT_PROBLEM_GROUPS.filter(g => !(g.skipLines && g.skipLines.indexOf(lineCode) >= 0) || g.items.indexOf(p.reason) >= 0);
-    const opts = groups.map(g =>
-      `<optgroup label="${escAttr_(g.label)}">` +
-      g.items.map(it => `<option value="${escAttr_(it)}"${it === p.reason ? ' selected' : ''}>${escAttr_(it.split(' › ').pop())}</option>`).join('') +
-      `</optgroup>`
-    ).join('');
-    const on = !!p.reason;
-    const ph = SLOT_PROBLEM_DETAIL[p.reason] || '';
+    const cats = SLOT_REMARK_CATS.filter(c => !(c.skipLines && c.skipLines.indexOf(lineCode) >= 0) || c.key === p.cat);
+    const cat = slotRemarkCat_(p.cat);
+    const ph = slotRemarkDetailPh_(cat, p.sub);
+    const on = !!p.cat;
     return `
       <div class="slot-remark-wrap">
         <label class="slot-problem-toggle">
-          <input type="checkbox" class="slot-problem-check" ${on ? 'checked' : ''} onchange="onSlotProblemChange_(this)">
-          <span>มีปัญหาในช่วง ${label}</span>
+          <input type="checkbox" class="slot-problem-check" ${on ? 'checked' : ''} onchange="onSlotRemarkChange_(this)">
+          <span>หมายเหตุ (สำหรับช่วง ${label})</span>
         </label>
         <div class="slot-problem-fields" ${on ? '' : 'hidden'}>
-          <select class="slot-remark-field slot-problem-select" onchange="onSlotProblemChange_(this)" aria-label="สาเหตุช่วง ${label}">
-            <option value="">— เลือกสาเหตุ —</option>${opts}
+          <select class="slot-remark-field slot-remark-cat" onchange="onSlotRemarkChange_(this)" aria-label="หัวข้อหมายเหตุช่วง ${label}">
+            <option value="">— เลือกหัวข้อ —</option>
+            ${cats.map(c => `<option value="${escAttr_(c.key)}"${c.key === p.cat ? ' selected' : ''}>${escAttr_(c.label)}</option>`).join('')}
+          </select>
+          <select class="slot-remark-field slot-remark-sub" onchange="onSlotRemarkChange_(this)" aria-label="หัวข้อย่อยช่วง ${label}" ${cat && cat.subs.length ? '' : 'hidden'}>
+            ${slotRemarkSubOptions_(cat, p.sub)}
           </select>
           <input type="text" class="slot-remark-field slot-problem-detail" maxlength="150"
                  placeholder="${escAttr_(ph)}" value="${escAttr_(p.detail)}"
-                 oninput="onSlotProblemChange_(this)" ${ph ? '' : 'hidden'}>
+                 oninput="onSlotRemarkChange_(this)" ${ph ? '' : 'hidden'}>
         </div>
         <input type="hidden" class="slot-remark-input" value="${escAttr_(String(remark || '').trim())}">
       </div>`;
   }
 
   // ติ๊ก / เลือก / พิมพ์ → รวมเป็นข้อความหมายเหตุใน .slot-remark-input (ตัวที่ส่งบันทึก)
-  function onSlotProblemChange_(el) {
+  function onSlotRemarkChange_(el) {
     const wrap = el && el.closest('.slot-remark-wrap');
     if (!wrap) return;
     const on = wrap.querySelector('.slot-problem-check').checked;
-    const sel = wrap.querySelector('.slot-problem-select');
+    const catSel = wrap.querySelector('.slot-remark-cat');
+    const subSel = wrap.querySelector('.slot-remark-sub');
     const detail = wrap.querySelector('.slot-problem-detail');
     wrap.querySelector('.slot-problem-fields').hidden = !on;
-    const reason = on ? sel.value : '';
-    const ph = SLOT_PROBLEM_DETAIL[reason] || '';
+    const cat = on ? slotRemarkCat_(catSel.value) : null;
+    // เปลี่ยนหัวข้อใหญ่ → ล้างหัวข้อย่อยแล้วสร้างตัวเลือกใหม่
+    if (el === catSel) subSel.innerHTML = slotRemarkSubOptions_(cat, '');
+    subSel.hidden = !(cat && cat.subs.length);
+    const subKey = cat && cat.subs.length ? subSel.value : '';
+    const ph = slotRemarkDetailPh_(cat, subKey);
     detail.hidden = !ph;
     if (ph) detail.placeholder = ph;
-    const d = ph ? detail.value.trim() : '';
-    wrap.querySelector('.slot-remark-input').value = reason ? (d ? reason + ': ' + d : reason) : '';
-    if (el.classList.contains('slot-problem-check') && on && !sel.value) sel.focus();
+    let text = '';
+    if (cat && (!cat.subs.length || subKey)) {
+      const head = cat.subs.length ? cat.key + ' › ' + subKey : cat.key;
+      const d = detail.value.trim();
+      text = d ? head + ': ' + d : head;
+    }
+    wrap.querySelector('.slot-remark-input').value = text;
+    if (el.classList.contains('slot-problem-check') && on && !catSel.value) catSel.focus();
+    else if (el === catSel && cat && cat.subs.length) subSel.focus();
+    else if ((el === subSel || (el === catSel && cat && !cat.subs.length)) && ph) detail.focus();
   }
 
   function slotClockMin_(value) {
