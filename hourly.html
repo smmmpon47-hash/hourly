@@ -209,6 +209,54 @@
       border-color:#14b8a6;
       box-shadow:0 0 0 3px rgba(20,184,166,.10);
     }
+    /* หมายเหตุแบบติ๊ก: ติ๊ก "มีปัญหา" แล้วค่อยขึ้นช่องเลือกสาเหตุ */
+    .slot-problem-toggle{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      min-height:36px;
+      padding:2px;
+      font-size:.8rem;
+      font-weight:700;
+      color:#64748b;
+      cursor:pointer;
+      user-select:none;
+    }
+    .slot-problem-check{
+      width:20px;
+      height:20px;
+      margin:0;
+      accent-color:#0d9488;
+      cursor:pointer;
+      flex:none;
+    }
+    .slot-problem-fields{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin-top:2px;
+    }
+    .slot-problem-fields[hidden],
+    .slot-problem-detail[hidden]{ display:none !important; }
+    .slot-remark-field{
+      width:100%;
+      min-width:0;
+      box-sizing:border-box;
+      padding:9px 10px;
+      border:1.5px solid #cbd5e1;
+      border-radius:11px;
+      background:#fff;
+      color:#334155;
+      font-family:'Sarabun',sans-serif;
+      font-size:.82rem;
+      line-height:1.3;
+    }
+    .slot-remark-field:focus{
+      outline:none;
+      border-color:#14b8a6;
+      box-shadow:0 0 0 3px rgba(20,184,166,.10);
+    }
+    .slot-problem-check:checked + span{ color:#0f766e; }
 
 
     /* ===== AUTO CURRENT LOT / END LOT IN TIME ROW ===== */
@@ -897,10 +945,12 @@
       .slot-remark-label{
         font-size:.64rem;
       }
-      .slot-remark-input{
+      .slot-remark-input,
+      .slot-remark-field{
         font-size:.74rem;
         padding:8px 9px;
       }
+      .slot-problem-toggle{ font-size:.74rem; }
 
       .pace-only-value{ font-size: 1.22rem; }
 
@@ -1200,6 +1250,81 @@
 
   function lineCodeOf_(lineValue) {
     return String(lineValue || '').replace(/LINE/i, '').replace(/\s+/g, '').toUpperCase();
+  }
+
+  // ===== หมายเหตุรายช่วง: ติ๊ก "มีปัญหา" แล้วค่อยเลือกสาเหตุ =====
+  // ส่งเป็นข้อความเดียวในช่องหมายเหตุเดิม เช่น "ของเข้าไม่ทัน › อุปกรณ์: ยางขอบเอว"
+  // ช่อง "ระบุ" ขึ้นเฉพาะ อุปกรณ์ / อื่น ๆ · เครื่องจักร ไม่ขึ้นให้ Line B C (มีระบบแจ้งซ่อมแล้ว)
+  var SLOT_PROBLEM_GROUPS = [
+    { label: '1. เย็บ', items: ['เย็บ › งานติดขั้นตอน', 'เย็บ › งานซ่อม', 'เย็บ › ขึ้นงานรุ่นใหม่'] },
+    { label: '2. ของเข้าไม่ทันเวลา', items: ['ของเข้าไม่ทัน › อุปกรณ์', 'ของเข้าไม่ทัน › กระเป๋าปัก/Screen'] },
+    { label: '3. เครื่องจักร / Eton', items: ['เครื่องจักร/Eton'], skipLines: ['B', 'C'] },
+    { label: 'อื่น ๆ', items: ['อื่น ๆ'] }
+  ];
+  var SLOT_PROBLEM_DETAIL = {
+    'ของเข้าไม่ทัน › อุปกรณ์': 'อุปกรณ์อะไร เช่น ยางขอบเอว',
+    'อื่น ๆ': 'พิมพ์สาเหตุสั้น ๆ'
+  };
+
+  function escAttr_(value) {
+    return String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // หมายเหตุที่บันทึกไว้ → { reason, detail } · หมายเหตุเก่าที่พิมพ์เองนับเป็น "อื่น ๆ"
+  function parseSlotRemark_(remark) {
+    const text = String(remark || '').trim();
+    if (!text) return { reason: '', detail: '' };
+    const all = SLOT_PROBLEM_GROUPS.reduce((a, g) => a.concat(g.items), []).sort((a, b) => b.length - a.length);
+    const hit = all.find(r => text === r || text.indexOf(r + ':') === 0);
+    if (hit) return { reason: hit, detail: text.slice(hit.length).replace(/^:\s*/, '') };
+    return { reason: 'อื่น ๆ', detail: text };
+  }
+
+  function slotRemarkHtml_(label, remark) {
+    const p = parseSlotRemark_(remark);
+    const lineEl = document.getElementById('line');
+    const lineCode = lineCodeOf_(lineEl ? lineEl.value : '');
+    const groups = SLOT_PROBLEM_GROUPS.filter(g => !(g.skipLines && g.skipLines.indexOf(lineCode) >= 0) || g.items.indexOf(p.reason) >= 0);
+    const opts = groups.map(g =>
+      `<optgroup label="${escAttr_(g.label)}">` +
+      g.items.map(it => `<option value="${escAttr_(it)}"${it === p.reason ? ' selected' : ''}>${escAttr_(it.split(' › ').pop())}</option>`).join('') +
+      `</optgroup>`
+    ).join('');
+    const on = !!p.reason;
+    const ph = SLOT_PROBLEM_DETAIL[p.reason] || '';
+    return `
+      <div class="slot-remark-wrap">
+        <label class="slot-problem-toggle">
+          <input type="checkbox" class="slot-problem-check" ${on ? 'checked' : ''} onchange="onSlotProblemChange_(this)">
+          <span>มีปัญหาในช่วง ${label}</span>
+        </label>
+        <div class="slot-problem-fields" ${on ? '' : 'hidden'}>
+          <select class="slot-remark-field slot-problem-select" onchange="onSlotProblemChange_(this)" aria-label="สาเหตุช่วง ${label}">
+            <option value="">— เลือกสาเหตุ —</option>${opts}
+          </select>
+          <input type="text" class="slot-remark-field slot-problem-detail" maxlength="150"
+                 placeholder="${escAttr_(ph)}" value="${escAttr_(p.detail)}"
+                 oninput="onSlotProblemChange_(this)" ${ph ? '' : 'hidden'}>
+        </div>
+        <input type="hidden" class="slot-remark-input" value="${escAttr_(String(remark || '').trim())}">
+      </div>`;
+  }
+
+  // ติ๊ก / เลือก / พิมพ์ → รวมเป็นข้อความหมายเหตุใน .slot-remark-input (ตัวที่ส่งบันทึก)
+  function onSlotProblemChange_(el) {
+    const wrap = el && el.closest('.slot-remark-wrap');
+    if (!wrap) return;
+    const on = wrap.querySelector('.slot-problem-check').checked;
+    const sel = wrap.querySelector('.slot-problem-select');
+    const detail = wrap.querySelector('.slot-problem-detail');
+    wrap.querySelector('.slot-problem-fields').hidden = !on;
+    const reason = on ? sel.value : '';
+    const ph = SLOT_PROBLEM_DETAIL[reason] || '';
+    detail.hidden = !ph;
+    if (ph) detail.placeholder = ph;
+    const d = ph ? detail.value.trim() : '';
+    wrap.querySelector('.slot-remark-input').value = reason ? (d ? reason + ': ' + d : reason) : '';
+    if (el.classList.contains('slot-problem-check') && on && !sel.value) sel.focus();
   }
 
   function slotClockMin_(value) {
@@ -2523,16 +2648,7 @@
 
         ${!isBreakTime ? `<div class="slot-order-text"></div>` : ''}
 
-        ${!isBreakTime ? `
-          <div class="slot-remark-wrap">
-            <label class="slot-remark-label">หมายเหตุ (สำหรับช่วง ${slot.label})</label>
-            <input type="text"
-                   class="slot-remark-input"
-                   maxlength="200"
-                   placeholder="ระบุปัญหาในช่วง ${slot.label} (ถ้ามี)"
-                   value="${String(currentRemark).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}">
-          </div>
-        ` : ''}
+        ${!isBreakTime ? slotRemarkHtml_(slot.label, currentRemark) : ''}
       `;
 
       slotsContainer.appendChild(row);
