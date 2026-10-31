@@ -1619,36 +1619,35 @@
     return { value: Math.round(n * 100) / 100 };
   }
 
+  // LOT ลำดับ 1..MAX_DAY_LOTS ของวัน (ชื่อฟิลด์จาก getTodayLine: lotNumber / lotNumber2..5)
+  var MAX_DAY_LOTS = 5;
+  function dayLotField_(data, n) {
+    data = data || {};
+    const lot = normalizeLot_(n === 1 ? data.lotNumber : (data['lotNumber' + n] || data['lot' + n + 'Number']));
+    return {
+      lot: lot,
+      hours: Number(n === 1 ? data.workingHours : data['workingHours' + n]) || 0,
+      target: Number(data['target' + n]) || 0,
+      tg: Number(data['tgOriginal' + n] || (n === 1 ? data.target1 : 0) || 0)
+    };
+  }
+  function dayLotNumbers_() {
+    return Array.from({ length: MAX_DAY_LOTS }, (_, i) => i + 1);
+  }
+
   function getEditPlanLots_(data) {
-    return [
-      {
-        index: 1,
-        lot: normalizeLot_(data.lotNumber),
-        hours: Number(data.workingHours) || 0,
-        target: Number(data.target1) || 0,
-        tg: Number(data.tgOriginal1 || data.target1 || 0),
-        sam: ((data.sams || {})[1] || {}).sam || null,
-        model: (data.masterMap || {})[normalizeLot_(data.lotNumber)] || ''
-      },
-      {
-        index: 2,
-        lot: normalizeLot_(data.lotNumber2 || data.lot2Number),
-        hours: Number(data.workingHours2) || 0,
-        target: Number(data.target2) || 0,
-        tg: Number(data.tgOriginal2 || 0),
-        sam: ((data.sams || {})[2] || {}).sam || null,
-        model: (data.masterMap || {})[normalizeLot_(data.lotNumber2 || data.lot2Number)] || ''
-      },
-      {
-        index: 3,
-        lot: normalizeLot_(data.lotNumber3 || data.lot3Number),
-        hours: Number(data.workingHours3) || 0,
-        target: Number(data.target3) || 0,
-        tg: Number(data.tgOriginal3 || 0),
-        sam: ((data.sams || {})[3] || {}).sam || null,
-        model: (data.masterMap || {})[normalizeLot_(data.lotNumber3 || data.lot3Number)] || ''
-      }
-    ].filter(item => item.lot);
+    return dayLotNumbers_().map(n => {
+      const f = dayLotField_(data, n);
+      return {
+        index: n,
+        lot: f.lot,
+        hours: f.hours,
+        target: f.target,
+        tg: f.tg,
+        sam: ((data.sams || {})[n] || {}).sam || null,
+        model: (data.masterMap || {})[f.lot] || ''
+      };
+    }).filter(item => item.lot);
   }
 
   var __editLoadSeq = 0;
@@ -1790,9 +1789,7 @@
       return { valid: false, error: 'เวลาทำงานรวมต้องอยู่ระหว่าง 1–' + MAX_WORKING_HOURS + ' ชั่วโมง' };
     }
 
-    let hours1 = 0;
-    let hours2 = 0;
-    let hours3 = 0;
+    let hoursByLot = lots.map(() => 0);
 
     const switchHistory = Array.isArray(currentEditPlanState.switchHistory)
       ? currentEditPlanState.switchHistory
@@ -1823,35 +1820,19 @@
         lots.map(item => item.lot)
       );
 
-      hours1 = allocation.hoursByLot[lots[0]?.lot] || 0;
-      hours2 = lots[1] ? (allocation.hoursByLot[lots[1].lot] || 0) : 0;
-      hours3 = lots[2] ? (allocation.hoursByLot[lots[2].lot] || 0) : 0;
+      hoursByLot = lots.map(item => allocation.hoursByLot[item.lot] || 0);
 
-    } else if (lots.length >= 3) {
-      hours1 = lots[0].hours;
-      hours2 = lots[1].hours;
-      const fixed = hours1 + hours2;
-
+    } else if (lots.length >= 2) {
+      // ข้อมูลเก่าไม่มี history: LOT ก่อนหน้าคงชั่วโมงเดิม LOT สุดท้ายได้ที่เหลือ
+      const fixed = lots.slice(0, -1).reduce((sum, item) => sum + item.hours, 0);
       if (totalHours <= fixed) {
-        return { valid: false, error: `ต้องมากกว่า ${fixed} ชม. เพราะขึ้น LOT3 แล้ว` };
+        return { valid: false, error: `ต้องมากกว่า ${fixed} ชม. เพราะขึ้น LOT${lots.length} แล้ว` };
       }
-
-      hours3 = totalHours - fixed;
-
-    } else if (lots.length === 2) {
-      hours1 = lots[0].hours;
-
-      if (totalHours <= hours1) {
-        return { valid: false, error: `ต้องมากกว่า ${hours1} ชม. เพราะขึ้น LOT2 แล้ว` };
-      }
-
-      hours2 = totalHours - hours1;
+      hoursByLot = lots.map((item, i) => i < lots.length - 1 ? item.hours : totalHours - fixed);
 
     } else {
-      hours1 = totalHours;
+      hoursByLot = [totalHours];
     }
-
-    const hoursByLot = [hours1, hours2, hours3];
     const editedLots = [];
 
     const mpRead = readEditManpower_();
@@ -1880,7 +1861,7 @@
         return { valid: false, error: `TG Original LOT ${item.index} ต้องมากกว่า 0` };
       }
 
-      const hours = hoursByLot[item.index - 1] || 0;
+      const hours = hoursByLot[lots.indexOf(item)] || 0;
       const target = Math.round((tg / totalHours) * hours);
 
       editedLots.push({ ...item, tg, hours, target, samNew: sam });
@@ -2093,11 +2074,9 @@
       action: 'UPDATE_PRODUCTION_PLAN',
       line: lineVal,
       totalWorkingHours: calc.totalHours,
-      tgOriginal1: calc.lots.find(x => x.index === 1)?.tg || 0,
-      tgOriginal2: calc.lots.find(x => x.index === 2)?.tg || 0,
-      tgOriginal3: calc.lots.find(x => x.index === 3)?.tg || 0,
       updatedBy: userDisplayName
     };
+    dayLotNumbers_().forEach(n => { payload['tgOriginal' + n] = calc.lots.find(x => x.index === n)?.tg || 0; });
     // SAM ของแต่ละ LOT: ตัวเลข = คิดเป้าจาก SAM · ว่าง = กรอก TG เอง
     calc.lots.forEach(x => { payload['sam' + x.index] = x.samNew === null || x.samNew === undefined ? '' : x.samNew; });
     if (manpowerEdit.value !== null) payload.manpower = manpowerEdit.value;
@@ -2354,13 +2333,7 @@
 
       activeLots = Array.isArray(data.lots) ? [...data.lots] : [];
 
-      const loadedLots = [
-        data.lotNumber,
-        data.lotNumber2 || data.lot2Number,
-        data.lotNumber3 || data.lot3Number
-      ]
-        .map(v => normalizeLot_(v))
-        .filter(Boolean);
+      const loadedLots = dayLotNumbers_().map(n => dayLotField_(data, n).lot).filter(Boolean);
 
       loadedLots.forEach(lot => {
         if (!activeLots.some(x => normalizeLot_(x) === lot)) {
@@ -2416,11 +2389,10 @@
       currentLoadOutByLot = (data.loadOutByLot && typeof data.loadOutByLot === 'object') ? data.loadOutByLot : {};
 
       currentLotTGMap = {};
-      const lotTgPairs = [
-        [data.lotNumber, data.tgOriginal1 || data.target1],
-        [data.lotNumber2 || data.lot2Number, data.tgOriginal2 || data.target2],
-        [data.lotNumber3 || data.lot3Number, data.tgOriginal3 || data.target3]
-      ];
+      const lotTgPairs = dayLotNumbers_().map(n => {
+        const f = dayLotField_(data, n);
+        return [f.lot, f.tg || f.target];
+      });
       lotTgPairs.forEach(([lot, tg]) => {
         const cleanLot = normalizeLot_(lot);
         if (cleanLot) currentLotTGMap[cleanLot] = Number(tg) || 0;
@@ -2434,11 +2406,9 @@
       );
 
       // Summary เก็บชั่วโมงรวมต่อ LOT; Timeline จริงอ่านจาก lotSwitchHistory
-      currentLotPlan = [
-        { lot: normalizeLot_(data.lotNumber), hours: Number(data.workingHours) || 0 },
-        { lot: normalizeLot_(data.lotNumber2 || data.lot2Number), hours: Number(data.workingHours2) || 0 },
-        { lot: normalizeLot_(data.lotNumber3 || data.lot3Number), hours: Number(data.workingHours3) || 0 }
-      ].filter(item => item.lot && item.hours > 0);
+      currentLotPlan = dayLotNumbers_()
+        .map(n => { const f = dayLotField_(data, n); return { lot: f.lot, hours: f.hours }; })
+        .filter(item => item.lot && item.hours > 0);
 
       currentActiveLot =
         normalizeLot_(data.currentLot) ||
@@ -3323,13 +3293,7 @@
   }
 
   function getUsedLotsFromState_(data) {
-    return [
-      data && data.lotNumber,
-      data && (data.lotNumber2 || data.lot2Number),
-      data && (data.lotNumber3 || data.lot3Number)
-    ]
-      .map(normalizeLot_)
-      .filter(Boolean);
+    return dayLotNumbers_().map(n => dayLotField_(data, n).lot).filter(Boolean);
   }
 
   async function fetchCurrentLineState_(lineVal) {
@@ -3377,22 +3341,15 @@
 
       try {
         const state = await fetchCurrentLineState_(lineVal);
-        const lot2 = normalizeLot_(state.lotNumber2 || state.lot2Number);
-        const lot3 = normalizeLot_(state.lotNumber3 || state.lot3Number);
+        const fields = dayLotNumbers_().map(n => dayLotField_(state, n));
+        const at = fields.findIndex((f, i) => i > 0 && f.lot === newLot);
 
         let newLotAndTgOk = false;
         let completedHoursOnServer = 0;
 
-        if (lot2 === newLot) {
-          newLotAndTgOk =
-            Math.round(Number(state.tgOriginal2 || 0)) === Math.round(newTG);
-          completedHoursOnServer = Number(state.workingHours || 0);
-        } else if (lot3 === newLot) {
-          newLotAndTgOk =
-            Math.round(Number(state.tgOriginal3 || 0)) === Math.round(newTG);
-          completedHoursOnServer =
-            Number(state.workingHours || 0) +
-            Number(state.workingHours2 || 0);
+        if (at > 0) {
+          newLotAndTgOk = Math.round(fields[at].tg) === Math.round(newTG);
+          completedHoursOnServer = fields.slice(0, at).reduce((sum, f) => sum + f.hours, 0);
         }
 
         const savedClosing =
@@ -3575,8 +3532,8 @@
       return;
     }
 
-    if (!isExistingLot && localUsedLots.length >= 3) {
-      alert("วันนี้มีครบ 3 LOT แล้ว สามารถกลับ LOT เดิมได้ แต่เพิ่ม LOT ใหม่ลำดับที่ 4 ไม่ได้");
+    if (!isExistingLot && localUsedLots.length >= MAX_DAY_LOTS) {
+      alert("วันนี้มีครบ " + MAX_DAY_LOTS + " LOT แล้ว สามารถกลับ LOT เดิมได้ แต่เพิ่ม LOT ใหม่ลำดับที่ " + (MAX_DAY_LOTS + 1) + " ไม่ได้");
       return;
     }
 

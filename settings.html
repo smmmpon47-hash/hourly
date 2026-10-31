@@ -704,7 +704,7 @@
     else if (st.lot) {
       const span = st.moved.length ? `${st.moved[0].slot.split('-')[0]}–${st.moved[st.moved.length - 1].slot.split('-')[1]}` : '';
       t = `${st.cur} → ${st.lot}${st.repeat ? ' (กลับ LOT เดิม ใช้เป้าเดิม)' : ''} · ช่วง ${span} (${st.moved.length} ช่อง) · ยอดที่กรอกแล้ว ${savedN} ช่องจะย้ายเป็น ${st.lot}`;
-      if (!st.repeat && day.lots.length >= 3) t = 'วันนั้นมีครบ 3 LOT แล้ว เพิ่ม LOT ใหม่ไม่ได้ (สลับกลับ LOT เดิมได้)';
+      if (!st.repeat && day.lots.length >= 5) t = 'วันนั้นมีครบ 5 LOT แล้ว เพิ่ม LOT ใหม่ไม่ได้ (สลับกลับ LOT เดิมได้)';
       if (!st.repeat && st.sam !== '' && !day.manpower) t += ' · คิดเป้าจาก SAM ต้องมีจำนวนคนก่อน';
     }
     $('swHint').textContent = t;
@@ -742,7 +742,7 @@
     if (!st.lot) { alert('กรุณาใส่เลข LOT ใหม่'); return; }
     if (st.lot === st.cur) { alert(`ช่อง ${st.slot} เป็น ${st.lot} อยู่แล้ว`); return; }
     if (!st.repeat) {
-      if (day.lots.length >= 3) { alert('วันนั้นมีครบ 3 LOT แล้ว'); return; }
+      if (day.lots.length >= 5) { alert('วันนั้นมีครบ 5 LOT แล้ว'); return; }
       if (st.sam !== '' && !(Number(st.sam) > 0)) { alert('ค่า SAM ต้องมากกว่า 0'); return; }
       if (st.sam !== '' && !day.manpower) { alert('คิดเป้าจาก SAM ต้องมีจำนวนคน — กรอกจำนวนคนแล้วบันทึกก่อน'); return; }
       if (st.sam === '' && !(Number(st.tg) > 0)) { alert('กรุณาใส่ SAM หรือเป้าทั้งวันของ LOT ใหม่'); return; }
