@@ -93,6 +93,9 @@
     .lot { font-weight: 700; }
     .lot small { display: block; color: var(--muted); font-weight: 600; font-size: .74rem; }
     td .inp { padding: 7px 9px; border-radius: 8px; }
+    .rmk { display: flex; flex-direction: column; gap: 4px; min-width: 170px; }
+    .rmk .inp[hidden] { display: none; }
+    .rmk select.inp { font-size: .82rem; }
     td .inp.qty { width: 92px; text-align: right; font-weight: 800; }
     .inp.changed { background: var(--edit); border-color: #eab308; }
     .who { color: var(--muted); font-size: .76rem; white-space: nowrap; }
@@ -456,6 +459,68 @@
     if ($('swSlot')) swPreview();
   }
 
+  // ===== หมายเหตุรายช่วง: หัวข้อใหญ่ → หัวข้อย่อย → รายละเอียด (รายการเดียวกับฟอร์มกรอกยอด hourly.html) =====
+  // ค่าที่บันทึก = ข้อความเดียวในช่องหมายเหตุเดิม เช่น "ของเข้าไม่ทัน › อุปกรณ์: ยางขอบเอว" · หมายเหตุเก่าที่พิมพ์เอง = "อื่น ๆ" + ข้อความเดิม
+  const REMARK_CATS = [
+    { key: 'เย็บ', label: 'เย็บ', subs: ['งานติดขั้นตอน', 'งานซ่อม', 'ขึ้นงานรุ่นใหม่'] },
+    { key: 'ของเข้าไม่ทัน', label: 'ของเข้าไม่ทันเวลา', subs: ['อุปกรณ์', 'กระเป๋าปัก/Screen'] },
+    { key: 'เครื่องจักร/Eton', label: 'เครื่องจักร / Eton', subs: [] },
+    { key: 'อื่น ๆ', label: 'อื่น ๆ', subs: [] }
+  ];
+  const REMARK_NO_DETAIL = ['ขึ้นงานรุ่นใหม่'];
+  function parseRemark(text) {
+    text = String(text || '').trim();
+    if (!text) return { cat: '', sub: '', detail: '' };
+    for (const c of REMARK_CATS) {
+      for (const s of c.subs) {
+        const head = c.key + ' › ' + s;
+        if (text === head || text.indexOf(head + ':') === 0) return { cat: c.key, sub: s, detail: text.slice(head.length).replace(/^:\s*/, '') };
+      }
+      if (!c.subs.length && (text === c.key || text.indexOf(c.key + ':') === 0)) return { cat: c.key, sub: '', detail: text.slice(c.key.length).replace(/^:\s*/, '') };
+    }
+    return { cat: 'อื่น ๆ', sub: '', detail: text };
+  }
+  function remarkSubOptions(cat, sub) {
+    const c = REMARK_CATS.find(x => x.key === cat);
+    return '<option value="">— หัวข้อย่อย —</option>' + (c ? c.subs.map(s => `<option value="${esc(s)}"${s === sub ? ' selected' : ''}>${esc(s)}</option>`).join('') : '');
+  }
+  function remarkCellHtml(slot, remark, changed) {
+    const p = parseRemark(remark);
+    const c = REMARK_CATS.find(x => x.key === p.cat);
+    const showSub = !!(c && c.subs.length);
+    const showDetail = !!c && (!c.subs.length || (p.sub && REMARK_NO_DETAIL.indexOf(p.sub) < 0));
+    return `<div class="rmk">
+      <select class="inp rmk-cat ${changed ? 'changed' : ''}" data-slot="${slot}" onchange="editRemarkPart(this)" aria-label="หัวข้อหมายเหตุ ${slot}">
+        <option value="">— ไม่มี —</option>${REMARK_CATS.map(x => `<option value="${esc(x.key)}"${x.key === p.cat ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}
+      </select>
+      <select class="inp rmk-sub" data-slot="${slot}" onchange="editRemarkPart(this)" aria-label="หัวข้อย่อย ${slot}" ${showSub ? '' : 'hidden'}>${remarkSubOptions(p.cat, p.sub)}</select>
+      <input class="inp rmk-detail" data-slot="${slot}" maxlength="150" placeholder="รายละเอียด" value="${esc(p.detail)}" oninput="editRemarkPart(this)" ${showDetail ? '' : 'hidden'}>
+      <input type="hidden" class="remark" data-slot="${slot}" value="${esc(String(remark || '').trim())}">
+    </div>`;
+  }
+  // เปลี่ยนหัวข้อ / หัวข้อย่อย / รายละเอียด → รวมเป็นข้อความใน .remark แล้วใช้ editSlot เดิม
+  function editRemarkPart(el) {
+    const box = el.closest('.rmk');
+    const catEl = box.querySelector('.rmk-cat'), subEl = box.querySelector('.rmk-sub'), detEl = box.querySelector('.rmk-detail');
+    const c = REMARK_CATS.find(x => x.key === catEl.value);
+    if (el === catEl) subEl.innerHTML = remarkSubOptions(catEl.value, '');
+    subEl.hidden = !(c && c.subs.length);
+    const sub = c && c.subs.length ? subEl.value : '';
+    const needDetail = !!c && (!c.subs.length || (sub && REMARK_NO_DETAIL.indexOf(sub) < 0));
+    detEl.hidden = !needDetail;
+    let text = '';
+    if (c && (!c.subs.length || sub)) {
+      const head = c.subs.length ? c.key + ' › ' + sub : c.key;
+      const d = needDetail ? detEl.value.trim() : '';
+      text = d ? head + ': ' + d : head;
+    }
+    // เลือกหัวข้อใหญ่แล้วยังไม่เลือกหัวข้อย่อย = ยังไม่เปลี่ยนค่า (รอเลือกให้ครบ)
+    if (c && c.subs.length && !sub) return;
+    const hidden = box.querySelector('.remark');
+    hidden.value = text;
+    editSlot(hidden);
+  }
+
   function renderSlotRows() {
     // OT = ช่องที่เริ่มหลังทำงานครบ 8 ชม. (นับตามนาทีจริง ช่อง 0.5 ไม่ทำให้นับเพี้ยน)
     let workedMin = 0;
@@ -485,7 +550,7 @@
         <td class="lot">${esc(s.lot || '-')}<small>${esc(lotModel(s.lot))}</small></td>
         <td class="num">${s.target === null || s.target === undefined ? '-' : fmtNum(s.target)}</td>
         <td class="num"><input class="inp qty ${d ? 'changed' : ''}" type="number" min="0" step="1" value="${esc(qty)}" placeholder="-" data-slot="${s.slot}" oninput="editSlot(this)"></td>
-        <td><input class="inp remark ${d ? 'changed' : ''}" value="${esc(remark)}" maxlength="200" data-slot="${s.slot}" oninput="editSlot(this)"></td>
+        <td>${remarkCellHtml(s.slot, remark, !!d)}</td>
         <td class="who">${who}</td>
         <td>${(saved || d) ? `<button class="x-btn" title="ลบยอดช่วงนี้" onclick="removeSlot('${s.slot}')">✕</button>` : ''}</td>
       </tr>`;
@@ -509,7 +574,7 @@
     if (qty === savedQty && remark === savedRemark) delete slotDraft[slot];
     else if (qty === '') { if (s.saved) slotDraft[slot] = { remove: true }; else delete slotDraft[slot]; }
     else slotDraft[slot] = { qty: qty, remark: remark };
-    [qtyEl, remarkEl].forEach(el => el.classList.toggle('changed', !!slotDraft[slot]));
+    [qtyEl, row.querySelector('.rmk-cat') || remarkEl].forEach(el => el.classList.toggle('changed', !!slotDraft[slot]));
     updateSum(); updateSaveBar();
   }
   function removeSlot(slot) {
