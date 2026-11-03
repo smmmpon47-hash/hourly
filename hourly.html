@@ -239,6 +239,7 @@
     .slot-problem-fields[hidden],
     .slot-problem-detail[hidden],
     .slot-remark-sub[hidden]{ display:none !important; }
+    .slot-row-attn{ outline:3px solid #F59E0B; outline-offset:2px; border-radius:14px; transition:outline-color .3s; }
     .slot-remark-field{
       width:100%;
       min-width:0;
@@ -2693,6 +2694,25 @@
       '\n\nกด "ตกลง" ถ้ายอดนี้ถูกต้องจริง\nกด "ยกเลิก" เพื่อกลับไปแก้';
   }
 
+  // ===== ยอดตกหนัก (ไม่เกินครึ่งของเป้าช่อง) แต่ยังไม่ใส่หมายเหตุ → เตือนก่อนบันทึก (กดตกลง = บันทึกต่อได้) =====
+  const LOW_OUTPUT_RATIO = 0.5;
+  function lowOutputMessage_(rows) {
+    return '⚠️ ยอดต่ำกว่าครึ่งของเป้า แต่ยังไม่ได้ใส่หมายเหตุ\n\n' +
+      rows.map(x => `• ${x.label}: ได้ ${x.qty.toLocaleString()} (เป้าช่อง ${x.target.toLocaleString()})`).join('\n') +
+      '\n\nช่วยติ๊กหมายเหตุว่าเพราะอะไร (ของไม่มา / เครื่องเสีย / ขึ้นรุ่นใหม่ / อื่น ๆ) จะได้รู้ว่าเวลาหายไปไหน' +
+      '\n\nกด "ยกเลิก" เพื่อกลับไปใส่หมายเหตุ\nกด "ตกลง" เพื่อบันทึกไปก่อนโดยไม่ใส่';
+  }
+  // พากลับไปที่ช่องนั้น: ติ๊กหมายเหตุให้ แล้วเปิดหัวข้อให้เลือก
+  function openLowOutputRemark_(row) {
+    const check = row && row.querySelector('.slot-problem-check');
+    if (!check) return;
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    row.classList.add('slot-row-attn');
+    setTimeout(() => row.classList.remove('slot-row-attn'), 4000);
+    if (!check.checked) { check.checked = true; onSlotRemarkChange_(check); }
+    else { const cat = row.querySelector('.slot-remark-cat'); if (cat) cat.focus(); }
+  }
+
   // เป้าของช่อง + ความยาวช่องที่ไม่ใช่ 1 ชม. (ช่อง 0.5 / 1.5 ชม.)
   function slotTargetTagHtml_(label) {
     const info = currentSlotTargets[label];
@@ -4347,6 +4367,18 @@
         label => Object.keys(dayQty).reduce((s, k) => s + (k === label ? 0 : dayQty[k]), 0)
       );
       if (spikeMsg && !confirm(spikeMsg)) return;
+
+      // ยอดตกหนักแต่ยังไม่ใส่หมายเหตุ (เฉพาะช่องที่เพิ่งกรอก/แก้)
+      const lowRows = [];
+      document.querySelectorAll('.slot-row').forEach(row => {
+        const label = row.dataset.slotLabel;
+        if (row.dataset.breakTime === 'true' || !entries.some(e => e.slot === label)) return;
+        const target = Number((currentSlotTargets[label] || {}).target) || 0;
+        const qty = formQty[label];
+        const remark = String(row.querySelector('.slot-remark-input')?.value || '').trim();
+        if (target > 0 && qty <= target * LOW_OUTPUT_RATIO && !remark) lowRows.push({ row: row, label: label, qty: qty, target: target });
+      });
+      if (lowRows.length && !confirm(lowOutputMessage_(lowRows))) { openLowOutputRemark_(lowRows[0].row); return; }
     }
 
     let loadInToday = null;
