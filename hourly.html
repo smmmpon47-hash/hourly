@@ -2965,7 +2965,9 @@
 
     const now = new Date();
     const currentMinutes = (now.getHours() * 60) + now.getMinutes();
-    const finalEnded = currentMinutes >= Number(finalSlot.endMin || 0);
+    // ช่องสุดท้ายเปิดให้กรอกก่อนจบ 30 นาที → ช่องเข้าโหลด/ออกโหลดต้องเปิดพร้อมกัน
+    // (เดิมรอให้ช่องจบก่อน: ไลน์ที่เข้า 08.30 อย่าง B C กรอกตอน 17.00–17.29 จะไม่มีช่องเข้าโหลดเลย)
+    const finalEnded = currentMinutes >= Number(finalSlot.endMin || 0) - 30;
     const finalVisible = (visibleSlots || []).some(
       slot => String(slot && slot.label || '') === finalSlot.label
     );
